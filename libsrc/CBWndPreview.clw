@@ -1,7 +1,4 @@
                     MEMBER()
-!TODO finish the INC file How To Docs                    
-!TODO Change to PROPLIST Sort Header stuff
-!MRU selected list
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
@@ -49,7 +46,7 @@ ClaListColResizable PROCEDURE(WINDOW WndRef, LONG ListFEQ)
 ClaPicture          PROCEDURE(LONG CtrlFEQ, LONG CtrlType),STRING,PRIVATE
 ClaSTDprop          PROCEDURE(LONG PropStd),STRING,PRIVATE
 
-HelpCW              PROCEDURE(STRING HelpTxt),PRIVATE
+HelpCW              PROCEDURE(STRING HelpTxt, BYTE IsPROP=1),PRIVATE
 Hex8                PROCEDURE(LONG LongNum, SHORT Digits=0, BYTE AddH=1,BYTE SpaceAt5=0),STRING,PRIVATE
 Binary8             PROCEDURE(LONG  Num),STRING,PRIVATE
 HexEval             PROCEDURE(*string HexNumber, byte Digits),LONG    !Convert HEX String to LONG,PRIVATE
@@ -90,7 +87,7 @@ TypeHasAltKey       PROCEDURE(LONG PropType, LONG FEQ=0),BOOL
 TypeIsLIST          PROCEDURE(LONG PropType),BYTE ! 1=List 2=Combo Drop +10h
 DB                  PROCEDURE(STRING DbTxt),PRIVATE
         MODULE('RTL')
-ClaFieldName        PROCEDURE(LONG pFEQ),CSTRING,RAW,NAME('Cla$FIELDNAME')
+ClaFieldNameRTL     PROCEDURE(LONG pFEQ),CSTRING,RAW,NAME('Cla$FIELDNAME')
 LenFastClip         PROCEDURE(CONST *STRING Text2Measure),LONG,NAME('Cla$FASTCLIP')
         END
         MODULE('Win32') !Win API at line 320
@@ -376,28 +373,31 @@ PHide     STRING(1)   !FldQ:PHide       1
 PDisable  STRING(1)   !FldQ:PDisable    2
 PReadOnly STRING(1)   !FldQ:PReadOnly   3
 PSkip     STRING(1)   !FldQ:PSkip       4
-FeqNo     LONG        !FldQ:FeqNo       5
-Type      STRING(16)  !FldQ:Type        6
-FeqName   CSTRING(64) !FldQ:FeqName     7
-Text      STRING(256) !FldQ:Text        8
-TabName   CSTRING(32) !FldQ:TabName     9
-AtX       LONG        !FldQ:AtX         10
-AtY       LONG        !FldQ:AtY         11
-AtW       STRING(5)   !FldQ:AtW         12
-AtH       STRING(5)   !FldQ:AtH         13
-Align     STRING(8)   !FldQ:Align       14
-SeeMore   STRING(256) !FldQ:SeeMore     15  !see below SeeMore:ColNum     
-TypeNo    LONG        !FldQ:TypeNo      16
-QMark     PSTRING(2)  !FldQ:QMark       17
-AtWGet    LONG        !FldQ:AtWGet      18 GetPos W, if NoWidth this = Default Full Width
-AtHGet    LONG        !FldQ:AtHGet      19
-Parent    LONG        !FldQ:Parent      20
-TabFEQ    LONG        !FldQ:TabFEQ      21
-SheetFEQ  LONG        !FldQ:SheetFEQ    22
-Precedes  LONG        !FldQ:Precedes    23
-Follows   LONG        !FldQ:Follows     24
+FolSEQ    LONG        !FldQ:FolFEQ      5
+FeqNo     LONG        !FldQ:FeqNo       6
+Type      STRING(16)  !FldQ:Type        7
+FeqName   CSTRING(64) !FldQ:FeqName     8
+Text      STRING(256) !FldQ:Text        9
+TabName   CSTRING(32) !FldQ:TabName     10
+AtX       LONG        !FldQ:AtX         11
+AtY       LONG        !FldQ:AtY         12
+AtW       STRING(5)   !FldQ:AtW         13
+AtH       STRING(5)   !FldQ:AtH         14
+Align     STRING(8)   !FldQ:Align       15
+SeeMore   STRING(256) !FldQ:SeeMore     16  !see below SeeMore:ColNum     
+TypeNo    BYTE        !FldQ:TypeNo  BAND(,FFh)
+Type16    USHORT      !FldQ:Type16
+QMark     PSTRING(2)  !FldQ:QMark       
+AtWGet    LONG        !FldQ:AtWGet       GetPos W, if NoWidth this = Default Full Width
+AtHGet    LONG        !FldQ:AtHGet
+Parent    LONG        !FldQ:Parent
+TabFEQ    LONG        !FldQ:TabFEQ
+SheetFEQ  LONG        !FldQ:SheetFEQ
+Precedes  LONG        !FldQ:Precedes
+Follows   LONG        !FldQ:Follows
+
         END
-SeeMore:ColNum EQUATE(15)
+SeeMore:ColNum EQUATE(16)
 Check0n EQUATE('<163>')   !"n"=Now Checked Wingdings 2  !These sort ascending to put checked first
 Check1n EQUATE('<84>')            
 Check0w EQUATE('<153>')   !"w"=was but you unchk
@@ -440,55 +440,68 @@ ConsolasFQ BYTE,THREAD
 !    BUTTON('G'),AT(14,2,10,10),USE(?SysMenuTip),SKIP,FONT('Wingdings',12),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.'),flat
 !    BUTTON('<235>'),AT(2,2,10,10),USE(?UnderBtn),SKIP,FONT('Wingdings'),TIP('Move Preview under this Window')
 !    BUTTON('<74>'),AT(14,2,10,10),USE(?SysMenuTip),flat,SKIP,FONT('Wingdings 2',13),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.')
-Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPage),FONT('Segoe UI',9),RESIZE
-        BUTTON('<50>'),AT(2,2,10,10),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under this Window'),FLAT
-        BUTTON('<45>'),AT(14,2,10,10),USE(?SysMenuTip),SKIP,FONT('Wingdings 3',13),TIP('TIP: There are 8 special items o' & |
-                'n System Menu. This is on EVERY window.'),FLAT
-        BUTTON('?'),AT(32,2,12,11),USE(?HelpBtn),SKIP,FONT(,,,FONT:bold),TIP('Clarion Help on selected Control - F2'),FLAT,KEY(F2Key)
-        BUTTON('<37h>'),AT(63,2,13,10),USE(?AltKeyAnalBtn),SKIP,FONT('Wingdings',12),TIP('ALT+Key Analysis<13,10>Show co' & |
-                'ntrols that can or have Alt+Key or KEY().<13,10>After can use Rt Mouse Delete TAB Controls'),FLAT
-        BUTTON('8'),AT(225,14,13,10),USE(?RightTip),SKIP,FONT('Wingdings',12),TIP('TIP: Right-Click on List for Popup of' & |
-                ' Options'),FLAT
+Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPage),FONT('Segoe UI',9), |
+            RESIZE
+        BUTTON('<50>'),AT(2,2,10,10),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under th' & |
+                'is Window'),FLAT
+        BUTTON('<45>'),AT(14,2,10,10),USE(?SysMenuTip),SKIP,FONT('Wingdings 3',13),TIP('TIP: There a' & |
+                're 8 special items on System Menu. This is on EVERY window.'),FLAT
+        BUTTON('?'),AT(32,2,12,11),USE(?HelpBtn),KEY(F2Key),SKIP,FONT(,,,FONT:bold),TIP('Clarion Hel' & |
+                'p on selected Control - F2'),FLAT
+        BUTTON('<37h>'),AT(63,2,13,10),USE(?AltKeyAnalBtn),SKIP,FONT('Wingdings',12),TIP('ALT+Key An' & |
+                'alysis<13,10>Show controls that can or have Alt+Key or KEY().<13,10>After can use R' & |
+                't Mouse Delete TAB Controls'),FLAT
+        BUTTON('8'),AT(225,14,13,10),USE(?RightTip),SKIP,FONT('Wingdings',12),TIP('TIP: Right-Click ' & |
+                'on List for Popup of Options'),FLAT
         BUTTON('T'),AT(225,2,13,10),USE(?SettingsBtn),SKIP,FONT('Wingdings',12),TIP('Settings...'),FLAT
-        BUTTON('&ALL...'),AT(2,13,26,12),USE(?AllUncheckBtn),SKIP,TIP('Selectively Uncheck All, or Ctrl+Click to Uncheck' & |
-                ' Everything')
+        BUTTON('&ALL...'),AT(2,13,26,12),USE(?AllUncheckBtn),SKIP,TIP('Selectively Uncheck All, or C' & |
+                'trl+Click to Uncheck Everything')
         BUTTON('Cl&ose'),AT(32,13,26,12),USE(?CancelBtn),SKIP,STD(STD:Close)
         BUTTON('&Tricks'),AT(63,13,25,12),USE(?TricksBtn),SKIP,TIP('Tricks Menu')
-        BUTTON('S&ystem'),AT(320,13,29,12),USE(?SystemBtn),SKIP,TIP('System PROP:<13,10>PRINTER PROP:<13,10>System Metrics')
+        BUTTON('S&ystem'),AT(320,13,29,12),USE(?SystemBtn),SKIP,TIP('System PROP:<13,10>PRINTER PROP' & |
+                ':<13,10>System Metrics')
         BUTTON('&Win Prop:'),AT(242,13,37,12),USE(?WndPropBtn),SKIP,TIP('Window PROPs')
         BUTTON('W R&esize'),AT(283,13,34,12),USE(?WndResizeBtn),SKIP,TIP('Resize Window')
-        BUTTON('&Con Prop:'),AT(99,13,40,12),USE(?ConPropBtn),SKIP,TIP('Control PROP: List<13,10>Ctrl + or Alt+ Double C' & |
-                'lick on List<13,10>or Double Click on List ("2M Resize" unchecked) ')
-        BUTTON('&Resize'),AT(142,13,30,12),USE(?ConResizeBtn),SKIP,TIP('Resize Control and Change Properties - WYSIWYG D' & |
-                'esigner <13,10>Shift + Double Click on List<13,10>or Double Click on List ("2M Resize" checked) ')
+        BUTTON('&Con Prop:'),AT(99,13,40,12),USE(?ConPropBtn),SKIP,TIP('Control PROP: List<13,10>Ctr' & |
+                'l + or Alt+ Double Click on List<13,10>or Double Click on List ("2M Resize" unchecked) ')
+        BUTTON('&Resize'),AT(142,13,30,12),USE(?ConResizeBtn),SKIP,TIP('Resize Control and Change Pr' & |
+                'operties - WYSIWYG Designer <13,10>Shift + Double Click on List<13,10>or Double Cli' & |
+                'ck on List ("2M Resize" checked) ')
         BUTTON('&LIST'),AT(175,13,22,12),USE(?LISTsBtn),SKIP,TIP('LIST FORMAT() & PropList')
         BUTTON('&Find'),AT(357,2,22,10),USE(?FindNext),SKIP,FONT(,8)
         BUTTON('Pre&v'),AT(421,2,22,10),USE(?FindPrev),SKIP,FONT(,8)
-        ENTRY(@s64),AT(357,14,85,11),USE(FindTxt),SKIP,FONT('Consolas',9),TIP('Text to Locate, (Ctrl F) to Select.<13>' & |
-                '<10>Prefix with % for RegEx MATCH'),KEY(CtrlF),ALRT(EnterKey)
+        ENTRY(@s64),AT(357,14,85,11),USE(FindTxt),SKIP,FONT('Consolas',9),TIP('Text to Locate, (Ctrl' & |
+                ' F) to Select.<13><10>Prefix with % for RegEx MATCH'),KEY(CtrlF),ALRT(EnterKey)
         BUTTON('Ta&b'),AT(201,13,20,12),USE(?TabPickBtn),SKIP,TIP('Change Tab')
-        BUTTON('ALRTs'),AT(567,14,29,11),USE(?ALRTsBtn),DISABLE,SKIP,HIDE,TIP('See all ALRT() and KEY()'),FLAT
-        BUTTON('See &More...'),AT(447,13,42,12),USE(?SeeMoreButs),SKIP,TIP('Select the See More Column Data'),LEFT
-        ENTRY(@s30),AT(492,15,39,9),USE(AnyPropH),SKIP,TIP('Type any PROP in Hex "h", Decimal or Expression<13,10>e.g. 7' & |
-                'C00h is PROP:Text<13,10>Defined Range 7200-7DFF')
+        BUTTON('ALRTs'),AT(567,14,29,11),USE(?ALRTsBtn),DISABLE,SKIP,HIDE,TIP('See all ALRT() and KEY()'), |
+                FLAT
+        BUTTON('See &More...'),AT(447,13,42,12),USE(?SeeMoreButs),SKIP,TIP('Select the See More Colu' & |
+                'mn Data'),LEFT
+        ENTRY(@s30),AT(492,15,39,9),USE(AnyPropH),SKIP,TIP('Type any PROP in Hex "h", Decimal or Exp' & |
+                'ression<13,10>e.g. 7C00h is PROP:Text<13,10>Defined Range 7200-7DFF')
         BUTTON('...'),AT(533,13,13,12),USE(?SeeMorePickBtn),SKIP,TIP('Property Pick List')
         BUTTON('&Halt'),AT(557,13,22,12),USE(?HaltBtn),SKIP
         BUTTON,AT(586,13,12,12),USE(?CopyBtn),SKIP,ICON(ICON:Copy),TIP('Copy Field Q'),FLAT
-        CHECK('Hide'),AT(175,2,26),USE(Glo:Hide),SKIP,TRN,FONT(,8),TIP('Hide this Window when open other window')
-        CHECK('Select'),AT(99,2,30),USE(ReOpenSELECT),SKIP,TRN,FONT(,8),TIP('SELECT Control on Preview window before ope' & |
-                'n Control Properties<13,10>Requires Close and ReOpen Window.')
-        CHECK('2mRsz'),AT(141,2,30),USE(Cfg:ResizeOnMouse2),SKIP,TRN,FONT(,8),TIP('Check for Control Resize on Double Cl' & |
-                'ick<13><10>Uncheck to show Control PROPs<13,10>Context menu offers either')
-        CHECK('Consola&s'),AT(553,2,43),USE(ConsolasFQ),SKIP,LEFT,FONT(,8),TIP('Field LIST in Consolas font')
+        CHECK('Hide'),AT(175,2,26),USE(Glo:Hide),SKIP,TRN,FONT(,8),TIP('Hide this Window when open o' & |
+                'ther window')
+        CHECK('Select'),AT(99,2,30),USE(ReOpenSELECT),SKIP,TRN,FONT(,8),TIP('SELECT Control on Previ' & |
+                'ew window before open Control Properties<13,10>Requires Close and ReOpen Window.')
+        CHECK('2mRsz'),AT(141,2,30),USE(Cfg:ResizeOnMouse2),SKIP,TRN,FONT(,8),TIP('Check for Control' & |
+                ' Resize on Double Click<13><10>Uncheck to show Control PROPs<13,10>Context menu off' & |
+                'ers either')
+        CHECK('Consola&s'),AT(553,2,43),USE(ConsolasFQ),SKIP,LEFT,FONT(,8),TIP('Field LIST in Consol' & |
+                'as font')
         CHECK('Menus'),AT(317,2),USE(?MenuItems),SKIP,DISABLE,HIDE,FONT(,8),TIP('TODO - MENU ITEM')
-        LIST,AT(1,28),FULL,USE(?ListF),HVSCROLL,VCR,FROM(FieldQ),FORMAT('[12C|F~H~@s1@Z(1)12C|F~D~@s1@Z(1)12C|F~RO~@s1@Z' & |
-                '(1)13L(2)F~Skip~L(0)@s1@Z(1)]|M~Hide Disable...~22R(2)|FM~FEQ<13,10>No.~C(0)@n-_6@40L(2)|FM~Control<13>' & |
-                '<10> Type~C(0)@s16@80L(2)|M~FEQ Name~C(0)@s63@?120L(2)|M~Text / Description~@s255@40L(2)|M~Tab Name~@s3' & |
-                '1@[16R(2)|M~X~C(0)@n-7@16R(2)|M~Y~C(0)@n-7@16R(2)|M~Wd~C(0)@s5@16R(2)|M~Ht~C(0)@s8@18L(2)|M~Aln~C(0)@s8' & |
-                '@]|~Position~120L(2)|M~See More....~@s255@'),ALRT(EnterKey), ALRT(MouseRight2), ALRT(DeleteKey), |
-                 ALRT(CtrlMouseLeft2), ALRT(ShiftMouseLeft2), ALRT(AltMouseLeft2), ALRT(CtrlEnter), ALRT(ShiftEnter), |
+        LIST,AT(1,28),FULL,USE(?ListF),HVSCROLL,VCR,FROM(FieldQ),FORMAT('[12C|F~H~@s1@Z(1)12C|F~D~@s' & |
+                '1@Z(1)12C|F~RO~@s1@Z(1)13L(2)F~Skip~L(0)@s1@Z(1)]|M~Hide Disable...~16R(2)|FM~Flw' & |
+                '<13,10>Seq~C(0)@n3@22R(2)|FM~FEQ<13,10>No.~C(0)@n-_6@36L(2)|FM~Control<13><10> Type' & |
+                '~C(0)@s16@76L(2)|M~FEQ Name~C(0)@s63@?112L(2)|M~Text / Description~@s255@40L(2)|M~T' & |
+                'ab Name~@s31@[16R(2)|M~X~C(0)@n-7@16R(2)|M~Y~C(0)@n-7@16R(2)|M~Wd~C(0)@s5@16R(2)|M~' & |
+                'Ht~C(0)@s8@18L(2)|M~Aln~C(0)@s8@]|~Position~120L(2)|M~See More....~@s255@'), |
+                ALRT(EnterKey), ALRT(MouseRight2), ALRT(DeleteKey), ALRT(CtrlMouseLeft2), |
+                 ALRT(ShiftMouseLeft2), ALRT(AltMouseLeft2), ALRT(CtrlEnter), ALRT(ShiftEnter), |
                  ALRT(AltEnter), ALRT(CtrlC)
-    END 
+    END
 SysMenuCls SysMenuClass
 AtNoSetXY   BYTE(1)
 EVENT       ITEMIZE(Event:User),PRE
@@ -500,7 +513,7 @@ DoMouseRight  EQUATE()
 MouseRightSent SHORT
 SortCls CBSortClass
 !------------------
-  CODE 
+  CODE
   SYSTEM{7A58h}=1 ; SYSTEM{7A7Dh}=MSGMODE:CANCOPY !PROP:PropVScroll PROP:MsgModeDefault
   PWnd &= SELF.WndRef
   IF ~ConfigGrp_DidGet THEN SELF.ConfigGetAll().    
@@ -576,9 +589,10 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?ConPropBtn ; POST(Event:ControlPROPs) 
     OF ?ConResizeBtn ; POST(EVENT:ResizeControl) 
     OF ?ConsolasFQ ; IF ConsolasFQ THEN SETFONT(?ListF,'Consolas',9) ELSE SETFONT(?ListF,'Segoe UI',9). ; DISPLAY 
-    OF ?CopyBtn ; F=5 ; R=14 ; IF 2=POPUPunder(?,'Visible List|Debug Queue') THEN F=1 ; R=99. ; SetClip2Queue(FieldQ,1,,'FldQ:',F,R)
+    OF ?CopyBtn ; F=5 ; R=14 ; P=POPUPunder(?,'Visible List|Debug Queue|TabQ') ; IF P=2 THEN F=1 ; R=99. 
+                  IF P<3 THEN SetClip2Queue(FieldQ,1,,'FldQ:',F,R) ELSE SetClip2Queue(TabQ).
     OF ?HaltBtn ; HALT
-    OF ?HelpBtn ; GET(FieldQ,CHOICE(?ListF)) ; HelpCW(UPPER(ClaControlTypeName(BAND(FldQ:TypeNo,0FFh))))
+    OF ?HelpBtn ; GET(FieldQ,CHOICE(?ListF)) ; HelpCW(UPPER(ClaControlTypeName(FldQ:TypeNo)))
     OF ?LISTsBtn ; DO LISTsBtnRtn
     OF ?RightTip   ; DO MouseRightMenuRtn ; MouseRightSent=0  
     OF ?SeeMoreButs ; DO SeeMoreButsRtn
@@ -639,7 +653,7 @@ SettingsRtn ROUTINE
    BEGIN ; SELF.ButtonShowsMsg=CHOOSE(~SELF.ButtonShowsMsg) ; END  
   END      
 SortListOpenWindowRtn ROUTINE 
-    ?ListF{PROPLIST:HdrSortBackColor} = 8000001Bh  !COLOR:GradientActiveCaption
+    ?ListF{PROPLIST:HdrSortTextColor} = COLOR:CaptionText ; ?ListF{PROPLIST:HdrSortBackColor} = 8000001Bh  !COLOR:GradientActiveCaption
     ?ListF{PROPLIST:HasSortColumn}=1 
     ?ListF{PROPLIST:SortColumn}=ABS(SrtOne)
     ?ListF{PROPList:MouseDownField}=ABS(SrtOne)
@@ -668,7 +682,7 @@ NoTab PSTRING('~')
 TabFEQ LONG   
 ShtFEQ LONG   
     CODE
-    R=0 ; TypNo=BAND(FldQ:TypeNo,0FFh) ; TypNm=UPPER(ClaControlTypeName(TypNo)) 
+    R=0 ; TypNo=FldQ:TypeNo ; TypNm=UPPER(ClaControlTypeName(TypNo)) 
     TabFEQ=FldQ:TabFEQ ; ShtFEQ=FldQ:SheetFEQ
     IF TabFEQ THEN NoTab='' ; TabNm=PopClean(CHOOSE(TabFEQ<>FldQ:FeqNo, FldQ:TabName,CLIP(FldQ:text) &' ?'&FldQ:FeqName)).
     SETKEYCODE(0)
@@ -703,7 +717,7 @@ ShtFEQ LONG
     LOOP F=RECORDS(FieldQ) TO 1 BY -1
         GET(FieldQ,F)
         CASE R
-        OF 1 OROF -1 ; IF R<>CHOOSE(TypNo=BAND(FldQ:TypeNo,0FFh),1,-1) THEN CYCLE.
+        OF 1 OROF -1 ; IF R<>CHOOSE(TypNo=FldQ:TypeNo,1,-1) THEN CYCLE.
         OF 2  ; IF FldQ:TabFEQ <> TabFEQ OR FldQ:FeqNo=TabFEQ THEN CYCLE.  !Delete ON tab
         OF -2 ; IF FldQ:TabFEQ=TabFEQ OR FldQ:TabFEQ=0 OR FldQ:Parent=ShtFEQ THEN CYCLE.  !Delete NOT on tab
         ELSE ; CYCLE
@@ -748,6 +762,7 @@ AT_         CSTRING(192)
        END
 CRLFSp      STRING('<13,10,32>')       
   CODE
+  SYSTEM{PROP:TipDelay}=6000
   SETTARGET(PWnd)
   LOOP R=1 TO RECORDS(FieldQ)
      GET(FieldQ,R) ; CLEAR(TpGroup)
@@ -891,7 +906,7 @@ AAP BYTE
         IF NOT(FldQ:TabFEQ=TabQ:TbFEQ OR FldQ:TabFEQ=0 OR FldQ:Parent=TabQ:ShFEQ) THEN DELETE(FieldQ).  
     END ; DISPLAY     
   END
-  FieldQ:SeeMore='>Alt+Key<' ; DO SeeMoreButsRtn 
+  FieldQ:SeeMore='>Alt+Key<' ; DO SeeMoreButsRtn
   SETTARGET(PWnd)
   LOOP R=RECORDS(FieldQ) TO 1 BY -1
      GET(FieldQ,R)
@@ -975,13 +990,13 @@ WFont   PSTRING(32),DIM(4)
 CFont   PSTRING(32),DIM(4)
 WHlp    PSTRING(64) 
 N          USHORT
-PopMenu    PSTRING(256)
 X          USHORT
 L          LONG
 NXY     LONG,DIM(4)
 PXY     LONG,DIM(4)
 First1  USHORT
 PriorFldQ   GROUP(FieldQ),PRE(PrFQ).
+PopMenu    CSTRING(34*17)
 PUName     PSTRING(32),DIM(16)
 PUProp            LONG,DIM(16)
 AK STRING('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'',-./;=')
@@ -1004,7 +1019,7 @@ K1 STRING(1)
   N += 1 ; PUProp[N]=-1*PROP:Value; PUName[N]='VALUE() or FROM()'
   N += 1 ; PUProp[N]=PROP:Value   ; PUName[N]='Value PROP:Value'
   N += 1 ; PUProp[N]=PROP:Visible ; PUName[N]='Visible PROP:Visible'
-  N += 1 ; PUProp[N]=-1*PROP:XPos ; PUName[N]='X / Y Delta from Preceding'  !#14
+  N += 1 ; PUProp[N]=-1*PROP:XPos ; PUName[N]='X / Y Delta from Preceding'
 !**MUST change DIM(16)** to Add New 
   PopMenu=PUName[1] ; LOOP P=2 TO N ; PopMenu=PopMenu &'|'& PUName[P] ; END
   SeeX=POPUPunder(?SeeMoreButs, PopMenu) ; IF ~SeeX THEN EXIT.
@@ -1088,14 +1103,13 @@ FType   LONG
       IF F{PROP:Parent} < 0 THEN CYCLE.     !TODO Right? 
       CLEAR(FieldQ)
       FldQ:FeqNo = F 
-      FldQ:FeqName=FeqNameUpLow(ClaFieldName(F)) !04/30/20 UpLow !; message('#1 FldQ:FeqName=' & FldQ:FeqName )
+      FldQ:FeqName=FeqNameUpLow(ClaFeqName(F)) !04/30/20 UpLow !; message('#1 FldQ:FeqName=' & FldQ:FeqName )
       SELF.FeqNmQ.FEQ = F ; SELF.FeqNmQ.Name=CLIP(FldQ:FeqName) ; ADD(SELF.FeqNmQ,SELF.FeqNmQ.FEQ)  !Store for use by 
       IF FldQ:FeqName[1]='?' THEN FldQ:FeqName=FldQ:FeqName[2 : SIZE(FldQ:FeqName)] ; FldQ:QMark='?'; END
       FldQ:Text=F{PROP:Text} ; IF FldQ:FeqName[1]='V' AND FldQ:Text[1:16]='The TEXT control' THEN FldQ:Text=SUB(FldQ:Text,1,47).
       FType=F{Prop:Type}       
-      FldQ:TypeNo=BAND(FType,0FFh)
+      FldQ:TypeNo=BAND(FType,0FFh) ; FldQ:Type16=FType 
       FldQ:Type = UPPER(ClaControlTypeName(FType))
-
       CASE FldQ:TypeNo
       OF CREATE:BUTTON
          IF ~FldQ:Text THEN  !Btn No Text then show Icon
@@ -1139,14 +1153,8 @@ FType   LONG
             FldQ:Text='LINE DIAGONAL (' & FldQ:AtWGet &','& FldQ:AtHGet &')'
          END
       END        
-!        IF F{PROP:InToolBar} THEN               !
-!        ELSIF TabOrdPre AND TabOrdFlw  THEN     !If both Blank then not in Tab Order
-!        ELSE
-!        END
       ADD(FieldQ,FldQ:FeqNo)
-      !OrigFQ = FieldQ; ADD(OrigFQ,OrgQ:FeqNo)
-    END
-    DO LoadParentsRtn
+    END ; DO LoadParentsRtn
 LoadParentsRtn ROUTINE
   DATA
 PT   BYTE
@@ -1157,9 +1165,31 @@ TbFEQ LONG
 Name  STRING(32)
      END
 PopCnt BYTE
+ZeroFlwFEQ LONG
+FlwSeqNo LONG
+FlwNextFEQ LONG(0) !1st follows 0=Window
   CODE
-  CLEAR(ParQ) ; ADD(ParQ,1) ; FREE(TabQ) ; SheetCnt=0   
-  LOOP R=1 TO RECORDS(FieldQ) ; GET(FieldQ,R) ; F=FldQ:FeqNo ; IF F>32000 THEN CYCLE.
+  !Hidden companion controls for Drop list/combo have Follow=0 are problem
+  F=10^INT(LOG10(RECORDS(FieldQ)+2)+.999)-1 !F=99 999
+  SORT(FieldQ,-FldQ:FeqNo)
+  LOOP R=1 TO RECORDS(FieldQ) ; GET(FieldQ,R) ; FldQ:FolSEQ=F ; PUT(FieldQ) ; F-=1
+  !  FldQ:SeeMore='Feq:' & FldQ:FeqNo &' Fol:' & FldQ:Follows &' Pre:' & FldQ:Precedes &' Type16:' & FldQ:Type16 &' F=' & F ; PUT(FieldQ)
+    IF FldQ:Follows=0 AND (FldQ:Precedes<>0 OR FldQ:Type16<100h) THEN ZeroFlwFEQ=FldQ:FeqNo. !First Control Follows zero and ...
+  END
+  IF ZeroFlwFEQ THEN !First "user" control that Follows Zero
+     FldQ:FeqNo=ZeroFlwFEQ
+     GET(FieldQ,FldQ:FeqNo) ; FlwSeqNo += 1 ; FldQ:FolSEQ = FlwSeqNo ; PUT(FieldQ)
+     FlwNextFEQ=FldQ:FeqNo !Who Follows ME?
+  END
+  LOOP 32000 TIMES  !Build FieldQ FldQ:FolSEQ in Follows order, controls w/o FEQ Name get 30000+ and are out of FEQ order
+     FldQ:Follows=FlwNextFEQ
+     GET(FieldQ,FldQ:Follows) ; IF ERRORCODE() THEN BREAK.
+     FlwSeqNo += 1 ; FldQ:FolSEQ = FlwSeqNo ; PUT(FieldQ)
+     FlwNextFEQ=FldQ:FeqNo !Who Follows ME?
+  END  !PROP:NextField is NOT in this order
+  SORT(FieldQ,FldQ:FolSEQ,FldQ:FeqNo)
+  CLEAR(ParQ) ; ADD(ParQ,1) ; FREE(TabQ) ; SheetCnt=0
+  LOOP R=1 TO RECORDS(FieldQ) ; GET(FieldQ,R) ; F=FldQ:FeqNo 
     IF FldQ:Parent <> ParQ:PFeq THEN  !next Control has diff parent, Pop Stack 
        LOOP ; GET(ParQ,1) ; IF ParQ:PFeq=FldQ:Parent OR ParQ:PFeq=0 OR ERRORCODE() THEN BREAK. ; DELETE(ParQ) ; END 
     END
@@ -1174,7 +1204,7 @@ PopCnt BYTE
            FldQ:TabFEQ=F ; PUT(FieldQ)
     END
     IF PT<3 THEN ParQ:Name=TabQ:Name ; ParQ:ShFEQ=TabQ:ShFEQ ; ParQ:TbFEQ=TabQ:TbFEQ . ; ADD(ParQ,1) !Push
-  END
+  END !; SetClip2Queue(FieldQ) ; Message('CB FieldQ') 
 TabPickRtn ROUTINE
   DATA
 PU ANY
@@ -1273,7 +1303,7 @@ LISTsBtnRtn ROUTINE
     DATA
 LcQ QUEUE,PRE(LcQ)
 F    LONG !LcQ:F
-   END
+    END
 PU  ANY
     CODE
     LOOP F=1 TO RECORDS(FieldQ)
@@ -1353,13 +1383,16 @@ FindTxt STRING(64),STATIC
 Window WINDOW('ControlPROPs'),AT(,,250,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
         BUTTON('<50>'),AT(2,2,12,12),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under th' & |
                 'is Window'),FLAT
-        BUTTON('&Close'),AT(18,2,27,12),USE(?CloseBtn),SKIP,STD(STD:Close)
-        BUTTON('LIST'),AT(51,2,27,12),USE(?LISTBtn),DISABLE,SKIP,TIP('PROPLIST Viewer')
-        BUTTON('Resize'),AT(81,2,27,12),USE(?ResizeBtn),SKIP,TIP('Reposition i.e. Move or Resize')
-        BUTTON('&Scan'),AT(111,2,27,12),USE(?ScanBtn),SKIP,TIP('Scan for undocumented PROPs 7900h-7DFF?')
-        BUTTON('&Copy'),AT(141,2,27,12),USE(?CopyBtn),SKIP
-        BUTTON('?'),AT(171,2,12,12),USE(?HelpBtn),SKIP,FONT(,,,FONT:bold),TIP('Clarion Help - F2'),KEY(F2Key)
-        CHECK('Hide'),AT(192,4,26,8),USE(Glo:Hide),SKIP,TIP('Hide this Window when open others')
+        BUTTON('&Close'),AT(17,2,27,12),USE(?CloseBtn),SKIP,STD(STD:Close)
+        BUTTON('LIST'),AT(78,2,27,12),USE(?LISTBtn),DISABLE,SKIP,TIP('PROPLIST Viewer')
+        BUTTON('Resize'),AT(47,2,27,12),USE(?ResizeBtn),SKIP,TIP('Reposition i.e. Move or Resize')
+        BUTTON('&Scan'),AT(154,2,27,12),USE(?ScanBtn),SKIP,TIP('Scan for undocumented PROPs 7900h-7DFF?')
+        BUTTON('&Copy'),AT(123,2,27,12),USE(?CopyBtn),SKIP
+        BUTTON('?'),AT(108,2,12,12),USE(?HelpBtn),KEY(F2Key),SKIP,FONT(,,,FONT:bold),TIP('Clarion He' & |
+                'lp - F2')
+        BUTTON('3'),AT(186,2,12,12),USE(?TrashBtn),SKIP,FONT('WingDings 2',14),TIP('Delete Clutter' & |
+                '<13,10>Ctrl+Click to leave only Clutter')
+        CHECK('Hide'),AT(205,4,25,8),USE(Glo:Hide),SKIP,TIP('Hide this Window when open others')
         BUTTON('Test'),AT(229,2,17,12),USE(?TestsBtn),SKIP,TIP('Carl Tests'),FLAT
         ENTRY(@s64),AT(31,19,182,10),USE(FindTxt),SKIP,FONT('Consolas')
         BUTTON('&Find'),AT(2,18,25,11),USE(?FindNext),SKIP
@@ -1389,9 +1422,8 @@ SortCls CBSortClass
         OF ?ScanBtn ; DISABLE(?) ; DO ScanRtn
         OF ?LISTBtn ; HIDE(0) ; SELF.ListPROPs(FEQ,FeqTypeNo,FeqTypeName,FeqName) ; UNHIDE(0) 
         OF ?ResizeBtn ; SELF.ResizeControl(FEQ, FeqTypeNo, FeqTypeName, FeqName) 
-        OF ?HelpBtn   ; GET(PQ,CHOICE(?LIST:PQ))
-                IF UPPER(PQ:Name[1:5])='LIST:' THEN  PQ:Name='Prop' & PQ:Name.
-                X=INSTRING(',',PQ:Name) ; IF X THEN PQ:Name=SUB(PQ:Name,1,X-1). ; HelpCW(PQ:Name)
+        OF ?HelpBtn ; GET(PQ,CHOICE(?LIST:PQ)) ; HelpCW(PQ:Name,1)
+        OF ?TrashBtn  ; DO TrashBtnRtn
         OF ?TestsBtn  ; DO TestsRtn
         END
         IF FIELD()=?LIST:PQ THEN 
@@ -1412,6 +1444,22 @@ SortCls CBSortClass
     CLOSE(Window)
     RETURN
 !-----------------    
+TrashBtnRtn ROUTINE
+    DATA
+Bad_Prop STRING('7C5Bh 7C96h 7CB4h 7CFAh 7C5Bh 7C5Dh 7CA8h 7CFAh 7A3Ah 7C12h 7C10h 7C11h 7C13h 7C57h 7C58h 7A1Bh 7CFBh 7CFCh 7A10h 7A52h 7CA7h Win32 ' & | !CPI Enabled Handle Visible WNDProc 
+                '7C29h 7C23h 7C20h 7C26h 7C24h 7C21h 7C27h 7C25h 7C22h 7C28h ') !List
+Bad_Zero STRING('7CE9h 7CE5h 7CE4h 7CE6h ') ! Angle Bevel
+    CODE
+    LOOP X=RECORDS(PQ) TO 1 BY -1 ; GET(PQ,X)
+        PE=INSTRING(CLIP(PQ:EqtHex),Bad_Zero,1) !Case
+        IF PE THEN  !Zero
+           IF PE AND PQ:Value<>'0' AND PQ:Value<>'' THEN PE=0.  !Keeper
+        ELSE
+           PE=INSTRING(CLIP(PQ:EqtHex),Bad_Prop,1) !Case
+        END   
+        L=BAND(KEYSTATE(),0200h) !CtrlDown        
+        IF ~L AND PE THEN DELETE(PQ) ; ELSIF L AND ~PE THEN DELETE(PQ).
+    END ; DISPLAY 
 TestsRtn ROUTINE
     DATA
 F   LONG    
@@ -1610,10 +1658,7 @@ SortCls CBSortClass
     IF EVENT()=EVENT:OpenWindow THEN SELECT(?LIST:PQ,1).
     CASE ACCEPTED()
     OF ?SelectBtn ; RetBool=1 ; BREAK
-    OF ?HelpBtn ; GET(PQ,CHOICE(?LIST:PQ))
-        IF UPPER(PQ:Name[1:5])='LIST:' THEN  PQ:Name='Prop' & PQ:Name.
-        X=INSTRING(',',PQ:Name) ; IF X THEN PQ:Name=SUB(PQ:Name,1,X-1).
-        HelpCW(PQ:Name)
+    OF ?HelpBtn ; GET(PQ,CHOICE(?LIST:PQ)) ; HelpCW(PQ:Name,1)
     OF ?Copy ; SetClip2Queue(PQ,1,'Equate<9>Property',,1,2)
     END
     IF FIELD()=?LIST:PQ THEN 
@@ -1650,12 +1695,14 @@ Window WINDOW('SYSTEM / PRINTER Properties'),AT(,,250,250),GRAY,SYSTEM,FONT('Seg
         BUTTON,AT(74,2,17,14),USE(?PrinterBtn),SKIP,ICON(ICON:Print1),TIP('Change Printer'),FLAT
         CHECK('ALL'),AT(98,4,24),USE(AllProp),SKIP,TIP('Show All Properties (blank values)')
         BUTTON('Sys &Met'),AT(124,2,31,14),USE(?SysMetBtn),SKIP,TIP('Windows System Metrics')
-        BUTTON('&Copy'),AT(160,2,25,14),USE(?CopyBtn),SKIP,TIP('Copy Prop list to Clipboard')
-        BUTTON('Fo&nt'),AT(190,2,25,14),USE(?FontBtn),SKIP,TIP('Change System, Tip, or Status Font')
-        BUTTON('Scan'),AT(221,2,26,14),USE(?ScanBtn),SKIP,TIP('Scan for undocumented props 7900h-7DFF?')
-        ENTRY(@s64),AT(32,19,185,10),USE(FindTxt),SKIP,FONT('Consolas')
+        BUTTON('&Copy'),AT(221,18,25,11),USE(?CopyBtn),SKIP,TIP('Copy Prop list to Clipboard')
+        BUTTON('Fo&nt'),AT(162,2,25,14),USE(?FontBtn),SKIP,TIP('Change System, Tip, or Status Font')
+        BUTTON('?'),AT(199,3,12,12),USE(?HelpBtn),KEY(F2Key),SKIP,FONT(,,,FONT:bold),TIP('Clarion He' & |
+                'lp - F2')
+        BUTTON('Scan'),AT(221,2,25,14),USE(?ScanBtn),SKIP,TIP('Scan for undocumented props 7900h-7DFF?')
+        ENTRY(@s64),AT(32,19,155,10),USE(FindTxt),SKIP,FONT('Consolas')
         BUTTON('&Find'),AT(2,18,25,11),USE(?FindNext),SKIP
-        BUTTON('Pre&v'),AT(221,18,26,11),USE(?FindPrev),SKIP
+        BUTTON('Pre&v'),AT(191,18,26,11),USE(?FindPrev),SKIP
         LIST,AT(0,33),FULL,USE(?LIST:PQ),VSCROLL,FONT('Consolas',10),FROM(PQ),FORMAT('27L(3)|FM~Equa' & |
                 'te~L(1)@s5@80L(2)|FM~Property~@s32@?20L(2)F~Value~@s255@'),ALRT(DeleteKey)
     END
@@ -1680,6 +1727,7 @@ SortCls CBSortClass
     OF ?ScanBtn ; DISABLE(?) ; DO ScanRtn 
     OF ?SysMetBtn ; HIDE(0) ; SELF.SystemMetrics() ; UNHIDE(0)
     OF ?FontBtn ; DO FontRtn
+    OF ?HelpBtn ; GET(PQ,CHOICE(?LIST:PQ)) ; HelpCW(PQ:Name)
     END
     IF FIELD()=?LIST:PQ THEN 
        GET(PQ,CHOICE(?LIST:PQ))
@@ -2692,45 +2740,44 @@ Clr        LONG
 C   SHORT
 Pop CSTRING(1000)
 Clp STRING(1000)
-    CODE
-    Prop:Clr[1]=PROP:FontColor         ; Prop:Clr[5]=PROP:GradientFromColor  ; Prop:Clr[ 9]=PROPLIST:DefHdrTextColor
-    Prop:Clr[2]=Prop:Color             ; Prop:Clr[6]=PROP:GradientToColor    ; Prop:Clr[10]=PROPLIST:DefHdrBackColor
-    Prop:Clr[3]=Prop:SelectedColor     ; Prop:Clr[7]=Prop:Fill               ; Prop:Clr[11]=PROPLIST:HdrSortBackColor
-    Prop:Clr[4]=Prop:SelectedFillColor ; Prop:Clr[8]=PROPLIST:Grid           ; Prop:Clr[12]=PROPList:HdrSortTextColor
-                                                                               Prop:Clr[13]=PROPList:SortBackColor
-                                                                               Prop:Clr[14]=PROPList:SortTextColor  
+  CODE
+  Prop:Clr[1]=PROP:FontColor         ; Prop:Clr[5]=PROP:GradientFromColor  ; Prop:Clr[ 9]=PROPLIST:DefHdrTextColor
+  Prop:Clr[2]=Prop:Color             ; Prop:Clr[6]=PROP:GradientToColor    ; Prop:Clr[10]=PROPLIST:DefHdrBackColor
+  Prop:Clr[3]=Prop:SelectedColor     ; Prop:Clr[7]=Prop:Fill               ; Prop:Clr[11]=PROPLIST:HdrSortBackColor
+  Prop:Clr[4]=Prop:SelectedFillColor ; Prop:Clr[8]=PROPLIST:Grid           ; Prop:Clr[12]=PROPList:HdrSortTextColor
+                                                                             Prop:Clr[13]=PROPList:SortBackColor
+                                                                             Prop:Clr[14]=PROPList:SortTextColor
 !TODO these colors could be in a LIST so Sample could show        
-    LOOP C=1 TO MaxClr
-         IF C>=8 AND ~IsLIST THEN BREAK. ; IF ~Prop:Clr[C] THEN CYCLE.
-         ClrNow[C]=PWnd$FEQ{Prop:Clr[C]}
-         PropName = |
-            CHOOSE(C,'Prop:FontColor','Prop:Color (Background)','Prop:SelectedColor','Prop:SelectedFillColor', |
-                     '-|Prop:GradientFromColor','Prop:GradientToColor','-|Prop:Fill (Box Panel)', |
-                     '-|PropList:Grid','PropList:DefHdrTextColor','PropList:DefHdrBackColor' , |
-                     '-|PropList:HdrSortBackColor','PropList:HdrSortTextColor','PropList:SortBackColor','PropList:SortTextColor', |
-                     '?C='&C) 
-         Pop=CHOOSE(C=1,'',Pop&'|') & CLIP(PropName) & |
-             CHOOSE(ClrNow[C]=0 or ClrNow[C]=-1,'','<9>'& ClaColorEquate(ClrNow[C])) 
-         IF SUB(PropName,1,2)='-|' THEN PropName=SUB(PropName,3,99).
-         X=INSTRING('(',PropName) ; IF X THEN PropName=SUB(PropName,1,X-1).
-         Prop:ClrNm[C]=CLIP(PropName)
-    END
-    C=POPUPunder(?ColorBtn,'Colors (Ctrl+Click to Copy)|-|' & Pop)
-    IF BAND(KEYSTATE(),200h) THEN 
-       Clp=Pop ; ReplaceInto(Clp,'<9>',' ') ; ReplaceInto(Clp,'|','<13,10>') ; SETCLIPBOARD(Clp) ; EXIT
-    END
-    IF C<2 THEN EXIT. ; C -= 1
-    Clr=ClrNow[C] 
-    IF   Clr=-1 THEN Clr=0 
-    ELSIF Clr<0 THEN Clr=GetSysColor(BAND(Clr,7Fh)) 
-    END
-   ! IF BAND(KEYSTATE(),200h) THEN SETCLIPBOARD('Color ' & ClrNow[C] & CHOOSE(Clr=ClrNow[C],'','  SysColor=' & Clr).
-    IF COLORDIALOG('Select Color ' & C,Clr) THEN 
-       PWnd$FEQ{Prop:Clr[C]}=Clr 
-       Pop='Set Color ' & Prop:ClrNm[C] & ' = '& Clr &' was '& ClrNow[C]
-       PWnd$FEQ{Prop:Tip}=Pop &'<13,10>'& PWnd$FEQ{Prop:Tip}
-       ?ColorBtn{PROP:Tip}=Pop &'<13,10>'& ?ColorBtn{PROP:Tip}
-    END
+  LOOP C=1 TO MaxClr
+     IF C>=8 AND ~IsLIST THEN BREAK. ; IF ~Prop:Clr[C] THEN CYCLE.
+     ClrNow[C]=PWnd$FEQ{Prop:Clr[C]}
+     PropName=CHOOSE(C,'Prop:FontColor','Prop:Color '& CHOOSE(IsLine or FeqTypeNo=CREATE:Region,'(Border Line)','(Background)'),|
+       'Prop:SelectedColor','Prop:SelectedFillColor','-|Prop:GradientFromColor','Prop:GradientToColor','-|Prop:Fill (Box Panel)', |
+       '-|PropList:Grid','PropList:DefHdrTextColor','PropList:DefHdrBackColor' , |
+       '-|PropList:HdrSortBackColor','PropList:HdrSortTextColor','PropList:SortBackColor','PropList:SortTextColor', |
+       '?C='&C) 
+     Pop=CHOOSE(C=1,'',Pop&'|') & CLIP(PropName) & |
+         CHOOSE(ClrNow[C]=0 or ClrNow[C]=-1,'','<9>'& ClaColorEquate(ClrNow[C])) 
+     IF SUB(PropName,1,2)='-|' THEN PropName=SUB(PropName,3,99).
+     X=INSTRING('(',PropName) ; IF X THEN PropName=SUB(PropName,1,X-1).
+     Prop:ClrNm[C]=CLIP(PropName)
+  END
+  C=POPUPunder(?ColorBtn,'Colors (Ctrl+Click to Copy)|-|' & Pop)
+  IF BAND(KEYSTATE(),200h) THEN 
+     Clp=Pop ; ReplaceInto(Clp,'<9>',' ') ; ReplaceInto(Clp,'|','<13,10>') ; SETCLIPBOARD(Clp) ; EXIT
+  END
+  IF C<2 THEN EXIT. ; C -= 1
+  Clr=ClrNow[C] 
+  IF   Clr=-1 THEN Clr=0 
+  ELSIF Clr<0 THEN Clr=GetSysColor(BAND(Clr,7Fh)) 
+  END
+ ! IF BAND(KEYSTATE(),200h) THEN SETCLIPBOARD('Color ' & ClrNow[C] & CHOOSE(Clr=ClrNow[C],'','  SysColor=' & Clr).
+  IF COLORDIALOG('Select Color ' & C,Clr) THEN 
+     PWnd$FEQ{Prop:Clr[C]}=Clr 
+     Pop='Set Color ' & Prop:ClrNm[C] & ' = '& Clr &' was '& ClrNow[C]
+     PWnd$FEQ{Prop:Tip}=Pop &'<13,10>'& PWnd$FEQ{Prop:Tip}
+     ?ColorBtn{PROP:Tip}=Pop &'<13,10>'& ?ColorBtn{PROP:Tip}
+  END
 !TODO make a LIST color tool to set individual column colors {PROPLLIST:TextColor,Col} :Backcolor :TextSelected :BackSelected
 !       probably part of a LIST WYSIWYG tool
 !---------------
@@ -3199,15 +3246,20 @@ Ph LONG
     SETTARGET()
     RETURN
 !=====================================================================
-ClaFeqName PROCEDURE(LONG Feq)!,STRING
-c CSTRING(64)
+ClaFeqName PROCEDURE(LONG F)!,STRING
+c CSTRING(80)
   CODE
-  IF ~Feq then return 'Window'. ; c=ClaFieldName(Feq)
-  return choose(~c,clip(feq),c)
+  IF ~F then return 'Window'. ; c=ClaFieldNameRTL(F)
+  return choose(c<=' ','__Feq_'& F &'__',c)
 !------------------------------
-HelpCW PROCEDURE(STRING HelpTxt)
+HelpCW PROCEDURE(STRING HelpTxt, BYTE IsPROP)
 CWHlp CwHelpCls
-  CODE ; CWHlp.OpenHelp(HelpTxt)
+X LONG,AUTO
+  CODE
+  IF IsPROP THEN
+     IF UPPER(SUB(HelpTxt,1,5))='LIST:' THEN  HelpTxt='Prop' & HelpTxt.
+     X=INSTRING(',',HelpTxt) ; IF X THEN HelpTxt=SUB(HelpTxt,1,X-1). !E.g. Child,2
+  END ; CWHlp.OpenHelp(LEFT(HelpTxt))
 !------------------------------
 Hex8 PROCEDURE(LONG _Lng, SHORT Digits=0, BYTE AddH=1,BYTE SpaceAt5=0)!,STRING
 LngAdj  LONG,AUTO,STATIC 
