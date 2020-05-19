@@ -88,6 +88,7 @@ CBWndPreviewClass    CLASS,TYPE,MODULE('CBWndPreview.CLW'),LINK('CBWndPreview.CL
 !You Only Call Init(Window). 
 Init            PROCEDURE(BYTE SecretBtnType=1, LONG SecretKey=1879) !1879=Alt+Ctrl+Shift+W
 Init            PROCEDURE(Window W, BYTE SecretBtnType=2, LONG SecretKey=1879) !1879=Alt+Ctrl+Shift+W
+InitList        PROCEDURE(LONG ListFEQ, *QUEUE ListFromQueue, <STRING NameOfQ>) !Set List{'FromQ'}
 AllOffHDRS      PROCEDURE(BOOL UnHide=1, BOOL UnDisable=1, BOOL UnReadOnly=1, BOOL UnSkip=1) !1=Turn Off (Hide,Disable,Readonly,Skip) - UNLESS Control Key is down
 AllFixNumbers   PROCEDURE() !Fix #####.## numbers to 9999.99 - CANNOT do in SECTION('AfterOpen'), must do in Once SECTION('InAccept')
 Start           PROCEDURE() ! START HERE Open the Controls List i.e. Reflection

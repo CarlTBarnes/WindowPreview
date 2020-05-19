@@ -289,6 +289,15 @@ Now LONG,AUTO
     XQ:Name=lower(XQ:Name) ; GLO:IsPreviewEXE=CHOOSE(XQ:Name[1:10]='winpreview' OR INSTRING('test',XQ:Name,1)) 
 !    Message(XQ:Name &'|'&  GLO:IsPreviewEXE &'|'&EXE)
     RETURN
+CBWndPreviewClass.InitList PROCEDURE(LONG FEQ,*QUEUE FrmQ,<STRING NameQ>)
+Ref GROUP,AUTO
+Q    &QUEUE
+L    LONG,OVER(Q)
+  END
+  CODE
+  Ref.Q &=FrmQ ; FEQ{'FromQ'}=Ref.L
+  FEQ{'FromWho'}=CHOOSE(~OMITTED(NameQ),NameQ,'Queue' & Ref.L)
+  RETURN
 !-----------------------------------
 CBWndPreviewClass.AllOffHDRS  PROCEDURE(BOOL UnHide=1, BOOL UnDisa=1, BOOL UnRead=1, BOOL UnSkip=1) !Turn off Hide,Disable,Readonly,Skip - Save clicking
 F LONG
@@ -4396,7 +4405,7 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                 'urn here to see the column widths.<13,10>')
         BUTTON('&Copy'),AT(198,2,27,14),USE(?CopyBtn),SKIP
         BUTTON('Format'),AT(230,2,45,14),USE(?FORMATBtn),SKIP,ICON(ICON:Copy),TIP('Copy PROP:Format to Clipboard'),LEFT
-        BUTTON('? CW'),AT(305,2,23,14),USE(?HelpBtn),SKIP,KEY(F2Key)
+        BUTTON('? CW'),AT(305,2,23,14),USE(?HelpBtn),KEY(F2Key),SKIP
         BUTTON('&Scan'),AT(366,2,25,14),USE(?ScanBtn),SKIP,TIP('Scan for undocumented ListProp 7335h-733Fh')
         BUTTON('Halt'),AT(398,2,25,14),USE(?HaltBtn),SKIP,FONT(,8)
         BUTTON('Tests'),AT(429,2,19,14),USE(?TestsBtn),SKIP,TIP('Carl Tests'),FLAT
@@ -4404,6 +4413,7 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
         SHEET,AT(2,20),FULL,USE(?Sheet1),NOSHEET,BELOW
             TAB(' &List Columns '),USE(?TAB:Cols)
                 BUTTON('See More'),AT(293,23,37,12),USE(?SeeMoreBtn),SKIP,TIP('See a PROPLIST for all Columns')
+                BUTTON('From(Q)'),AT(334,23,33,12),USE(?FromQBtn),SKIP,TIP('From(Q) Fields')
                 LIST,AT(0,36),FULL,USE(?LIST:ListQ),VSCROLL,FONT('Consolas',10),FROM(ListQ),FORMAT('38L(2)|FMT(B)~Column' & |
                         '~C(0)@s5@18C|FM~Fld~L(1)@n4b@18C|FM~Grp~L(1)@n4b@80L(2)|FM~Header~C(0)@s32@?39L(2)|FM~Picture~L' & |
                         '(1)@s16@25L(2)|FM~Width~L(1)@s8@23L(2)|FM~Align~L(0)@s5@20L(2)|FM~Hdr~@s5@26L(2)|FM~Mods~L(1)@s' & |
@@ -4489,6 +4499,7 @@ SortPQCls CBSortClass
         ?List:ListQ{PROP:Selected}=X
         DO Show1ColumnRtn
     OF ?SeeMoreBtn ; DO SeeMoreRtn
+    OF ?FromQBtn ; DO FromQRtn
     OF ?StyleMin OROF ?StyleMax ; CList.SQLoadStyles() 
     OF ?TestsBtn ; DO TestsRtn
     END    
@@ -4523,12 +4534,26 @@ SortPQCls CBSortClass
   RETURN
 SeeMoreRtn ROUTINE
   IF ~Self.PropPickList(Val,All7Q) THEN EXIT.
-  CLEAR(All7Q) ; All7Q:EqtHex=Val ; GET(All7Q,All7Q:EqtHex) ; PE=All7Q:EqtLong ; Val=CLIP(All7Q:Name)&' '&Val     
+  CLEAR(All7Q) ; All7Q:EqtHex=Val ; GET(All7Q,All7Q:EqtHex) ; PE=All7Q:EqtLong
+  Val=CLIP(All7Q:Name)&' '&Val ; DO MoreHeadRtn
+  LOOP X=1 TO RECORDS(ListQ)
+      GET(ListQ,X) ; LQ:More=PWnd$ListFEQ{PE+CHOOSE(~LQ:IsGroup,0,PROPLIST:Group),LQ:ColNo} ; PUT(ListQ)
+  END ; DISPLAY ; EXIT
+MoreHeadRtn ROUTINE
   L=?LIST:ListQ ; PY=MoreColNo ; L{PROPLIST:Header,PY}=Val ;L{PROPLIST:DefaultTip,PY}=Val
   IF MoreColWd THEN L{PROPLIST:Width,PY}=MoreColWd. ; MoreColWd=0
-  LOOP X=1 TO RECORDS(ListQ) ; GET(ListQ,X)
-     IF LQ:IsGroup THEN LQ:IsGroup=PROPLIST:Group. ; LQ:More=PWnd$ListFEQ{PE+LQ:IsGroup,LQ:ColNo} ;  PUT(ListQ)
-  END ; DISPLAY ; EXIT   
+FromQRtn ROUTINE
+  DATA
+FromA   LONG
+FromQ   &QUEUE
+  CODE
+  FromA=PWnd$ListFEQ{'FromQ'}
+  IF FromA>=0 AND FromA<4097 THEN Message('From() needs ?List{{''FromQ''}=&Q set by .InitList().|'&FromA,'LIST') ; EXIT.
+  Val=PWnd$ListFEQ{'FromWho'} ; IF ~Val THEN Val='From(Q)'. ; DO MoreHeadRtn
+  FromQ&=(FromA) ; IF FromQ&=NULL THEN EXIT.
+  LOOP X=1 TO RECORDS(ListQ)
+     GET(ListQ,X) ; IF LQ:IsGroup THEN LQ:More='' ELSE LQ:More=Who(FromQ,LQ:ColX). ; PUT(ListQ)
+  END ; DISPLAY ; EXIT
 Load1ColumnRtn ROUTINE
   GET(ListQ,CHOICE(?LIST:ListQ)) ; IF ERRORCODE() THEN EXIT.
   Format1Col = LQ:Format
