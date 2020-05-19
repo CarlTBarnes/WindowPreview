@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+# Clarion 2.1.0.2447
+Project("{12B76EC0-1D7B-4FA7-A7D0-C524288B48A1}") = "PPT_WndPrevPrj", "PPT_WndPrevPrj.cwproj", "{A6E07563-2AEB-4B63-9D04-E2F54E67A944}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Included Files", "Included Files", "{D6143387-036A-4794-9AD8-56F7A0ADF9F5}"
+	ProjectSection(SolutionItems) = postProject
+		..\..\..\..\Clarion11\accessory\libsrc\win\WindowPreviewer.INC = ..\..\..\..\Clarion11\accessory\libsrc\win\WindowPreviewer.INC
+		..\..\..\..\Clarion11\accessory\libsrc\win\CBWndPreview.CLW = ..\..\..\..\Clarion11\accessory\libsrc\win\CBWndPreview.CLW
+		..\..\..\..\Clarion11\accessory\libsrc\win\CBWndPreview.INC = ..\..\..\..\Clarion11\accessory\libsrc\win\CBWndPreview.INC
+		..\..\..\..\Clarion11\accessory\libsrc\win\CbWndPrvHelpHook.clw = ..\..\..\..\Clarion11\accessory\libsrc\win\CbWndPrvHelpHook.clw
+		..\..\..\..\Clarion11\accessory\libsrc\win\CbWndPrvHelpHook.inc = ..\..\..\..\Clarion11\accessory\libsrc\win\CbWndPrvHelpHook.inc
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A6E07563-2AEB-4B63-9D04-E2F54E67A944}.Debug|Win32.Build.0 = Debug|Win32
+		{A6E07563-2AEB-4B63-9D04-E2F54E67A944}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A6E07563-2AEB-4B63-9D04-E2F54E67A944}.Release|Win32.Build.0 = Release|Win32
+		{A6E07563-2AEB-4B63-9D04-E2F54E67A944}.Release|Win32.ActiveCfg = Release|Win32
+	EndGlobalSection
+EndGlobal
