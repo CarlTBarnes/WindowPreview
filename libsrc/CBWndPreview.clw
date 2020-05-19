@@ -57,6 +57,7 @@ EquateXStringParse  PROCEDURE(Parse7QType P7Q, BYTE HexLen, *STRING CP, BYTE IsD
 FeqNameUpLow        PROCEDURE(STRING FeqName),STRING,PRIVATE
 FmtNumSM            PROCEDURE(STRING Numbr,BYTE pWidth),STRING,PRIVATE  !To align SeeMore Numbers "sort of" add 2 spaces per blank
 GroupMoveChildren   PROCEDURE(LONG FromGroup, LONG ToControl, LONG XAdjust=0, LONG YAdjust=0),PRIVATE 
+KeyStateSCA         PROCEDURE(BYTE Shft1_Ctrl2_Alt4),BYTE,PRIVATE
 ListHelpCW          PROCEDURE(LONG SetBtnTip=0),PRIVATE
 ListHelpMods        PROCEDURE(),STRING,PRIVATE
 LocateInLIST        PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn),PRIVATE
@@ -302,7 +303,7 @@ L    LONG,OVER(Q)
 CBWndPreviewClass.AllOffHDRS  PROCEDURE(BOOL UnHide=1, BOOL UnDisa=1, BOOL UnRead=1, BOOL UnSkip=1) !Turn off Hide,Disable,Readonly,Skip - Save clicking
 F LONG
     CODE
-    IF BAND(KEYSTATE(),0200h) THEN RETURN. !Ctrl is down
+    IF KeyStateSCA(2) THEN RETURN. !Ctrl is down
     LOOP 2 TIMES  !With GROUPs Disable required 2 passes
       LOOP ; F=0{PROP:NextField,F} ; IF ~F THEN BREAK. ; IF SELF.FeqCreatedByCB(F) THEN CYCLE.
          IF UnDisa THEN F{PROP:Disable}=''. ; IF UnRead THEN F{PROP:ReadOnly}=''. 
@@ -633,8 +634,8 @@ AcceptLoopRtn ROUTINE !--------------------
           OF MouseRight ;  MouseRightSent+=1 ; IF MouseRightSent=1 THEN POST(EVENT:DoMouseRight,?ListF).
           OF MouseLeft2 OROF CtrlMouseLeft2 OROF ShiftMouseLeft2 OROF AltMouseLeft2 
           OROF EnterKey OROF CtrlEnter OROF ShiftEnter OROF AltEnter ; SetKeycode(0)
-             IF BAND(KEYSTATE(),0100h) THEN POST(EVENT:ResizeControl) ; CYCLE.
-             IF BAND(KEYSTATE(),0600h) THEN POST(Event:ControlPROPs)  ; CYCLE.
+             IF KeyStateSCA(1) THEN POST(EVENT:ResizeControl) ; CYCLE.
+             IF KeyStateSCA(2+4) THEN POST(Event:ControlPROPs)  ; CYCLE.
              POST(CHOOSE(~Cfg:ResizeOnMouse2,Event:ControlPROPs,EVENT:ResizeControl) ) ; CYCLE             
           END
           P=?ListF{PROPLIST:MouseDownField}
@@ -1266,7 +1267,7 @@ P2 BYTE
 X2 BYTE
 PLWG EQUATE(PROPLIST:Width+PROPLIST:Group)  
   CODE
-  IF BAND(KEYSTATE(),0200h) THEN 
+  IF KeyStateSCA(2) THEN 
      P=5
   ELSE
      P=POPUPunder(?AllUncheckBtn,|
@@ -1294,7 +1295,7 @@ PLWG EQUATE(PROPLIST:Width+PROPLIST:Group)
   SETTARGET(PWnd)
   LOOP X2=1 TO 2 !Seen take 2 times when GROUPs Disable
     LOOP F=1 TO RECORDS(FieldQ)
-      GET(FieldQ,F) 
+      GET(FieldQ,F) ; IF FldQ:Type16 > 0FFh THEN CYCLE. !FFh are Drop List and Buttons
       LOOP P=P2 TO P1 BY -1
         R=INLIST(FldQ:HDRSchk[P],Check1n,Check1w)
         IF R THEN
@@ -1466,7 +1467,7 @@ Bad_Zero STRING('7CE9h 7CE5h 7CE4h 7CE6h ') ! Angle Bevel
         ELSE
            PE=INSTRING(CLIP(PQ:EqtHex),Bad_Prop,1) !Case
         END   
-        L=BAND(KEYSTATE(),0200h) !CtrlDown        
+        L=KeyStateSCA(2) !CtrlDown        
         IF ~L AND PE THEN DELETE(PQ) ; ELSIF L AND ~PE THEN DELETE(PQ).
     END ; DISPLAY 
 TestsRtn ROUTINE
@@ -2772,7 +2773,7 @@ Clp STRING(1000)
      Prop:ClrNm[C]=CLIP(PropName)
   END
   C=POPUPunder(?ColorBtn,'Colors (Ctrl+Click to Copy)|-|' & Pop)
-  IF BAND(KEYSTATE(),200h) THEN 
+  IF KeyStateSCA(2) THEN 
      Clp=Pop ; ReplaceInto(Clp,'<9>',' ') ; ReplaceInto(Clp,'|','<13,10>') ; SETCLIPBOARD(Clp) ; EXIT
   END
   IF C<2 THEN EXIT. ; C -= 1
@@ -2780,7 +2781,6 @@ Clp STRING(1000)
   IF   Clr=-1 THEN Clr=0 
   ELSIF Clr<0 THEN Clr=GetSysColor(BAND(Clr,7Fh)) 
   END
- ! IF BAND(KEYSTATE(),200h) THEN SETCLIPBOARD('Color ' & ClrNow[C] & CHOOSE(Clr=ClrNow[C],'','  SysColor=' & Clr).
   IF COLORDIALOG('Select Color ' & C,Clr) THEN 
      PWnd$FEQ{Prop:Clr[C]}=Clr 
      Pop='Set Color ' & Prop:ClrNm[C] & ' = '& Clr &' was '& ClrNow[C]
@@ -2862,7 +2862,7 @@ TabFEQ LONG
     T=PopupBeside(?TabPickBtn,PUP)-1 ; IF T < 1 THEN EXIT.
     SETTARGET(PWnd)
     TabFEQ=FEQ{PROP:Child,T}
-    IF ~BAND(KEYSTATE(),200h) THEN 
+    IF ~KeyStateSCA(2) THEN 
         TabFEQ{PROP:Hide}=0
         FEQ{PROP:Selected}=T
     ELSE
@@ -3204,7 +3204,7 @@ Clp STRING(1000)
          Prop:ClrNm[C]=CLIP(PropName)
     END
     C=POPUPunder(?ColorBtn,'Colors (Ctrl+Click to Copy)|-|' & Pop)
-    IF BAND(KEYSTATE(),200h) THEN 
+    IF KeyStateSCA(2) THEN 
        Clp=Pop ; ReplaceInto(Clp,'<9>',' ') ; ReplaceInto(Clp,'|','<13,10>') ; SETCLIPBOARD(Clp) ; EXIT
     END    
     IF C<2 THEN EXIT. ; C -= 1
@@ -3212,7 +3212,6 @@ Clp STRING(1000)
     IF   Clr=-1 THEN Clr=0 
     ELSIF Clr<0 THEN Clr=GetSysColor(BAND(Clr,7Fh)) 
     END
-   ! IF BAND(KEYSTATE(),200h) THEN SETCLIPBOARD('Color ' & ClrNow[C] & CHOOSE(Clr=ClrNow[C],'','  SysColor=' & Clr).
     IF COLORDIALOG('Select Color ' & Prop:ClrNm[C],Clr) THEN 
        PWnd$FEQ{Prop:Clr[C]}=Clr ; Message('Set Color ' & Prop:Clr[C] & ' = '& Clr &' was '& ClrNow[C] )
     END 
@@ -3598,7 +3597,11 @@ ChildFEQ LONG,AUTO
      SETPOSITION(ChildFEQ,FX+DX,FY+DY) ! IF Ndx=1 THEN  Message('Idx 1 To From  AT( ' & FX &','& FY &'||TO AT( ' & DX+FX &','& DY+FY) .
   END
   RETURN
-!-----------
+!---------
+KeyStateSCA PROCEDURE(BYTE S1C2A4)
+  CODE !Shft 0100h, Ctrl 0200h, Alt 0400h
+  RETURN BSHIFT(BAND(KEYSTATE(),BSHIFT(S1C2A4,8)),-8)
+!---------
 ListHelpCW PROCEDURE(LONG BtnTip=0)
 Nm PSTRING(64),DIM(12)
 Hlp PSTRING(64),DIM(12)
@@ -5401,7 +5404,7 @@ Clp STRING(1000)
      Prop:ClrNm[C]=CLIP(PropName)
   END
   C=POPUP('Colors (Ctrl+Click to Copy)|-|' & Pop)
-  IF BAND(KEYSTATE(),200h) THEN 
+  IF KeyStateSCA(2) THEN 
      Clp=Pop ; ReplaceInto(Clp,'<9>',' ') ; ReplaceInto(Clp,'|','<13,10>') ; SETCLIPBOARD(Clp) ; EXIT
   END
   IF C<2 THEN EXIT. ; C -= 1
@@ -5409,7 +5412,6 @@ Clp STRING(1000)
   IF   Clr=-1 THEN Clr=0 
   ELSIF Clr<0 THEN Clr=GetSysColor(BAND(Clr,7Fh)) 
   END
- ! IF BAND(KEYSTATE(),200h) THEN SETCLIPBOARD('Color ' & ClrNow[C] & CHOOSE(Clr=ClrNow[C],'','  SysColor=' & Clr).
   IF COLORDIALOG('Select Color ' & C,Clr) THEN 
      PWnd$FEQ{Prop:Clr[C]}=Clr 
      Pop='Set Color ' & Prop:ClrNm[C] & ' = '& Clr &' was '& ClrNow[C]
