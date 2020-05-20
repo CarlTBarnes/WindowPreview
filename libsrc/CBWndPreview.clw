@@ -2,6 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
+VersionWndPrv EQUATE('WndPrv 05-20-20.1412')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -118,7 +119,7 @@ HtmlHelp_fp LONG,NAME('HtmlHelpA')
 PWnd &WINDOW,THREAD,PRIVATE     !MOst data should be THREAD incase this is Run in a Real EXE
 Globals     GROUP,PRE(),PRIVATE
 Glo:IsPreviewEXE  BYTE         !Is WinPreview or Test EXE?
-Glo:Built         PSTRING(36)
+Glo:Built         PSTRING(38)
 Glo:Caption       PSTRING(200) !Caption of Preview window
 Glo:ResizeControl LONG
 Glo:ReFormatList  LONG
@@ -278,7 +279,7 @@ Now LONG,AUTO
     END
     Btn{PROP:Flat}=1                    !Flat so invsible until hover
     !Btn{PROP:Tip}='Carl''s Window Preview Features...UnHide, Enable, UnReadOnly, UnSkip, see PROP:s' & |
-    Btn{PROP:Tip}='Carl''s Window Inspect & Perfect ... or Reflect & Correct' & |
+    Btn{PROP:Tip}='Carl''s Window Inspect & Perfect ... or Reflect & Correct - ' & VersionWndPrv & |
                   '<13,10,13,10>' & CLIP(EXE) & |
                   '<13,10,13,10>' & CHOOSE(Now-XQ:Time<999,'','Run: ' & FORMAT(Now,@t1)&'   --   ') & |
                     'Built: ' & FORMAT(XQ:Time,@t4)&' on '&FORMAT(XQ:Date,@d01-) & |
@@ -536,7 +537,7 @@ ReOpenLOOP:Label:
   FldQ:FeqName = 0{PROP:Text}     
   OPEN(Window) ; SysMenuCls.Init(Window) ; SELF.AtSetOrSave(1, AtWndReflect[], AtNoSetXY) ; AtNoSetXY=0 
   ?MenuItems{PROP:Use}=SELF.MenuItemShows
-  0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built
+  0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv
   IF Format_ListF THEN ?ListF{PROP:Format}=Format_ListF.
   ?ListF{PROP:LineHeight} = 1 + ?ListF{PROP:LineHeight} 
   ?ListF{PROPSTYLE:FontName,1}='Wingdings 2'
@@ -4439,7 +4440,7 @@ StyleMax   LONG(255),STATIC
 ListQ QUEUE,PRE(LQ)
 ColNo    STRING(5)   !1  LQ:ColNo  
 Level    LONG        !-     LQ:Level Tree
-FieldNo  USHORT      !2  LQ:FieldNo   PROPLIST:FieldNo
+FieldNo  USHORT      !2  LQ:FieldNo   PROPLIST:FieldNo  *only* when <>ColNo so #Fld#
 GroupNo  USHORT      !3  LQ:GroupNo   PL:GroupNo
 Header   STRING(32)  !4  LQ:Header    PL:Header
 Picture  STRING(16)  !5  LQ:Picture   PL:Picture
@@ -4452,6 +4453,7 @@ Format   STRING(256) !11 LQ:Format    PL:Format
 Level2   LONG        !-     LQ:Level2 
 ColX     SHORT       !12 LQ:ColX
 IsGroup  SHORT       !13 LQ:IsGroup   is grp cnt# ,2,3
+FieldX   USHORT      !   LQ:FieldX    PROPLIST:FieldNo  *Always* even if =ColNo
       END
 MoreColNo EQUATE(10)     
 MoreColWd BYTE(36)
@@ -4618,7 +4620,7 @@ FromQ   &QUEUE
   Val=PWnd$ListFEQ{'FromWho'} ; IF ~Val THEN Val='From(Q)'. ; DO MoreHeadRtn
   FromQ&=(FromA) ; IF FromQ&=NULL THEN EXIT.
   LOOP X=1 TO RECORDS(ListQ)
-     GET(ListQ,X) ; IF LQ:IsGroup THEN LQ:More='' ELSE LQ:More=Who(FromQ,LQ:ColX). ; PUT(ListQ)
+     GET(ListQ,X) ; IF LQ:IsGroup THEN LQ:More='' ELSE LQ:More=Who(FromQ,LQ:FieldX). ; PUT(ListQ)
   END ; DISPLAY ; EXIT
 Load1ColumnRtn ROUTINE
   GET(ListQ,CHOICE(?LIST:ListQ)) ; IF ERRORCODE() THEN EXIT.
@@ -4806,7 +4808,7 @@ FmtGrpNo SHORT
      LQ:Level = CHOOSE(ColsInGrp=0,1,2) ; LQ:Level2 = LQ:Level
      LQ:ColX =ColX
      LQ:ColNo=ColX
-     LQ:FieldNo = ListFEQ{PROPLIST:FieldNo, ColX}   ; IF LQ:FieldNo=ColX THEN LQ:FieldNo=0.
+     LQ:FieldX = ListFEQ{PROPLIST:FieldNo, ColX} ; IF LQ:FieldX<>ColX THEN LQ:FieldNo=LQ:FieldX. !20
      LQ:GroupNo = GrpNo         
      LQ:Picture = ListFEQ{PROPLIST:Picture, ColX}
      LQ:Width   = ListFEQ{PROPLIST:width, ColX}
