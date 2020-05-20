@@ -56,8 +56,10 @@ Equate7StringParse  PROCEDURE(Parse7QType Parse7Q, *STRING Prop7String),PRIVATE
 EquateXStringParse  PROCEDURE(Parse7QType P7Q, BYTE HexLen, *STRING CP, BYTE IsDecimal=0),PRIVATE
 FeqNameUpLow        PROCEDURE(STRING FeqName),STRING,PRIVATE
 FmtNumSM            PROCEDURE(STRING Numbr,BYTE pWidth),STRING,PRIVATE  !To align SeeMore Numbers "sort of" add 2 spaces per blank
+If1Clear            PROCEDURE(*? TFV, LONG AcceptFEQ),BOOL,PROC,PRIVATE
 GroupMoveChildren   PROCEDURE(LONG FromGroup, LONG ToControl, LONG XAdjust=0, LONG YAdjust=0),PRIVATE 
 KeyStateSCA         PROCEDURE(BYTE Shft1_Ctrl2_Alt4),BYTE,PRIVATE
+ListDrop            PROCEDURE(LONG ListFEQ, BYTE Down0_Up1=0),PRIVATE
 ListHelpCW          PROCEDURE(LONG SetBtnTip=0),PRIVATE
 ListHelpMods        PROCEDURE(),STRING,PRIVATE
 LocateInLIST        PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn),PRIVATE
@@ -2079,6 +2081,9 @@ TRN         LONG       ! Poz:TRN     Haz:TRN
 Flat        LONG       ! Poz:Flat    Haz:Flat
 Items       LONG       ! Poz:Items   Haz:Items
 LineHt      LONG       ! Poz:LineHt  Haz:LineHt
+Selectd     LONG       ! Poz:Selectd  Haz:Selectd
+DropCnt     LONG       ! Poz:DropCnt  Haz:DropCnt
+DropWd      LONG       ! Poz:DropWd  Haz:DropWd
 Angle10     LONG       ! Poz:Angle10  Haz:Angle10
 AngleSpin   DECIMAL(5,1)  ! Poz:AngleSpin
 LineWd      LONG       ! Poz:LineWd  Haz:LineWd
@@ -2118,9 +2123,8 @@ Picture     STRING(64) ! Poz:Picture    Haz:Picture  For Entry Spin String
 WndResize   BYTE       ! Poz:WndResize Haz:WndResize     WINDOW
 WndWide    LONG        ! Poz:WndWide Haz:WndWide 
 WndHigh    LONG        ! Poz:WndHigh Haz:WndHigh
+         END !PosDataType
 
-         END
-!TODO DROP Width - but then I need a way to DROP it else cannot see
 Prop_UpDown  LONG,DIM(3)
 Try2:Disable BYTE,DIM(2)       ![1]=Was [2]=Now
 Try2:Hide    BYTE,DIM(2)       !
@@ -2130,6 +2134,7 @@ Poz     GROUP(PosDataType),PRE(Poz).    !This Screen Position
 Haz     GROUP(PosDataType),PRE(Haz).    !Preview Position Now
 IsBEVEL SHORT
 IsDROP  SHORT
+Dropped BYTE
 IsENTRY SHORT !For Picture, also does STRING(@pic)
 IsLINE  SHORT
 IsLIST  SHORT
@@ -2164,7 +2169,8 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
                     TIP('Pick Color PROPs')
             BUTTON('<176>'),AT(63,14,13,12),USE(?GdLinesBtn),SKIP,FONT('Wingdings',14,Color:GrayText,FONT:bold),tip('Guide and Grid Lines')
             BUTTON('<0a8h>'),AT(63+15,14,13,12),USE(?BoxItBtn),SKIP,FONT('Wingdings 2',14,COLOR:maroon),tip('Box in Red to find it on window')
-        BUTTON('Tip...'),AT(93,14,27,12),USE(?SeeTipBtn),SKIP,TIP('See Control Tool Tip')
+            BUTTON('Tip'),AT(93,14,17,12),USE(?SeeTipBtn),SKIP,TIP('See Control Tool Tip')
+            BUTTON('?'),AT(112,14,11,12),USE(?HelpBtn),KEY(F2Key),SKIP,FONT(,,,FONT:bold),TIP('Clarion Help on Control')
             BUTTON('Test'),AT(125,14,21,12),USE(?TestBtn),SKIP
             BUTTON('G...'),AT(165,14,17,12),USE(?GradBtn),SKIP,TIP('GradientTypes')
         END
@@ -2198,7 +2204,7 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
             STRING('Spot1: (2,95 x 112,13)'),AT(3,97),USE(?Spot1:Pmt)
         END
         GROUP,AT(359,30,117,98),USE(?Group:Spotz)
-            GROUP,AT(360,32,115,26),USE(?Group:LIST),HIDE
+            GROUP,AT(360,32,115,28),USE(?Group:LIST),HIDE
                 PROMPT('Line Height:'),AT(363,35),USE(?LineHt:Pmt),TRN
                 SPIN(@n2),AT(402,34,20,11),USE(Poz:LineHt),RIGHT,TIP('LIST PROP:LineHeight'), |
                         RANGE(1,99),STEP(1)
@@ -2207,10 +2213,18 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
                         '<10>Nudge it +1/-1 to get a List Height with no partial Lines showing.<13>' & |
                         '<10>Can set ?PROP:Items=?PROPItems at runtime to fo rnow partial lines.'), |
                         RANGE(1,999),STEP(1)
+                BUTTON('<47h>'),AT(363,46,12,11),USE(?DropBtn),DISABLE,SKIP,FONT('Wingdings 3',14),TIP('Drop the List'),FLAT, |
+                        TRN
+                PROMPT('Drop:'),AT(381,48),USE(?DropCnt:Pmt),DISABLE,TRN
+                SPIN(@n2),AT(402,47,20,11),USE(Poz:DropCnt),DISABLE,RIGHT,TIP('LIST PROP:Drop'),RANGE(2,99),STEP(1)
+                PROMPT('Width:'),AT(427,48),USE(?DropWd:Pmt),DISABLE,TRN
+                SPIN(@n3),AT(450,47,22,11),USE(Poz:DropWd),DISABLE,RIGHT,TIP('LIST PROP:DropWidth'),RANGE(0,999),STEP(5)
+                PROMPT('List Select:'),AT(363,61),USE(?Selectd:Pmt),TRN
+                SPIN(@n3),AT(402,60,20,11),USE(Poz:Selectd),RIGHT,TIP('LIST Selected'),RANGE(0,999),STEP(1)                        
             END
-            GROUP,AT(360,66,115,12),USE(?Group:Line),HIDE
-                PROMPT('Line Width:'),AT(363,66),USE(?LineWd:Pmt)
-                SPIN(@n3),AT(401,66,32,10),USE(Poz:LineWd),HVSCROLL,RIGHT,RANGE(0,999)
+            GROUP,AT(360,70,115,12),USE(?Group:Line),HIDE
+                PROMPT('Line Width:'),AT(363,70),USE(?LineWd:Pmt)
+                SPIN(@n3),AT(401,70,32,10),USE(Poz:LineWd),HVSCROLL,RIGHT,RANGE(0,999)
             END
             GROUP,AT(360,81,115,12),USE(?Group:String),HIDE
                 PROMPT('Angle:'),AT(363,82),USE(?Angle:Pmt)
@@ -2249,7 +2263,7 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
             CHECK('Disable'),AT(153,31,33),USE(Try2:Disable[2]),SKIP
             CHECK('Flat'),AT(123,41),USE(Poz:Flat),SKIP
             CHECK('TRN'),AT(153,41),USE(Poz:TRN),SKIP
-            CHECK('Hide/UnHide'),AT(190,38),USE(HideUnHide),SKIP,TIP('Hide, Change, then UnHide. Wor' & |
+            CHECK('Hide/UnHide'),AT(196,38),USE(HideUnHide),SKIP,TIP('Hide, Change, then UnHide. Wor' & |
                     'ks better espcially with groups.<13,10>TODO could have a Hide/Unhide Children o' & |
                     'f Group.')
         END
@@ -2294,17 +2308,16 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
                 BUTTON('L'),AT(173,83,10,11),USE(?BtnLO7),SKIP
                 BUTTON('l'),AT(189,83,10,11),USE(?BtnLI8),SKIP
                 BUTTON('A'),AT(173,108,10,11),USE(?BevAllEdgeBtn),SKIP,TIP('Set All Edges')
+                BUTTON('<170>'),AT(226,108,10,11),USE(?BevPopBtn),SKIP,TIP('Bevel edge pattern choices'),font('Wingdings 2')
             END
         END
         PROMPT('@Pic:'),AT(3,119),USE(?Picture:Pmt)
-        ENTRY(@s64),AT(24,119,88,11),USE(Poz:Picture),DISABLE,TIP('Clear to reset to original picture')
+        ENTRY(@s64),AT(24,119,88,11),USE(Poz:Picture),DISABLE,TIP('Clear to reset to original picture'),DISABLE
         PROMPT('Value:'),AT(3,136),USE(?EntryV:Pmt)
-        ENTRY(@s255),AT(24,135,,11),FULL,USE(EntryV),DISABLE,TIP('Change ENTRY Value to try differen' & |
+        ENTRY(@s255),AT(24,135,,11),FULL,USE(EntryV),TIP('Change ENTRY Value to try differen' & |
                 't sizes')
-        PROMPT('Before:'),AT(2,3),USE(?AtWaz:Pmt),HIDE
         TEXT,AT(2,3,,11),FULL,USE(B4Waz:AtCODE),SKIP,FONT('Consolas'),COLOR(COLOR:BTNFACE), |
                 TIP('Before AT()'),SINGLE
-        PROMPT('After:'),AT(2,17),USE(?AtPoz:Pmt),HIDE
         TEXT,AT(2,16,,11),FULL,USE(Poz:AtCODE),SKIP,FONT('Consolas'),COLOR(COLOR:BTNFACE), |
                 TIP('After AT()'),SINGLE
         STRING('--Bottom--'),AT(165,162),USE(?YBottom),HIDE
@@ -2320,7 +2333,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     IsENTRY=INLIST(FeqTypeNo,CREATE:Entry,CREATE:Combo,CREATE:Spin,CREATE:SString)
     IsLINE=INLIST(FeqTypeNo,CREATE:Line,CREATE:box,CREATE:ellipse)
     IsLIST=INLIST(FeqTypeNo,CREATE:List,CREATE:Combo,CREATE:DropList,CREATE:DropCombo)
-        IF IsLIST THEN IsDROP=PWnd$FEQ{PROP:Drop}.
+        IF IsLIST=1 THEN IsDROP=PWnd$FEQ{PROP:Drop}. !Combo won't drop
     IsTEXT=INLIST(FeqTypeNo,CREATE:Text,CREATE:singleline) !na CREATE:rtf
     IsSHEET=CHOOSE(FeqTypeNo=CREATE:sheet)
     IsSTRING=INLIST(FeqTypeNo,CREATE:String,CREATE:sString) 
@@ -2331,7 +2344,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
 !Region After OPENed Window -- Prepare for ACCEPT - After OPEN(Window)
     IF ~AtReszCont[3] THEN 
       ! 0{PROP:Width}=?Try2:Disable_2{PROP:XPos}+6 
-       0{PROP:Width}=?Cfg:ResizeSnapTo{PROP:XPos} +6 + ?Cfg:ResizeSnapTo{PROP:Width}
+       0{PROP:Width}=?Cfg:ResizeSnapTo{PROP:XPos} +14 + ?Cfg:ResizeSnapTo{PROP:Width}
        0{PROP:Height}=?YBottom{PROP:YPos}+10+ ?TOOLBAR1{PROP:Height}
     END
     SELF.AtSetOrSave(1, AtReszCont[]) ; 0{PROP:MinWidth}=?VertRightPanel{PROP:XPos}+10 ; 0{PROP:MinHeight}=?Poz:FullWd{PROP:YPos}+20+ ?TOOLBAR1{PROP:Height}
@@ -2377,6 +2390,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
                        END ; DISPLAY ; SETTARGET() ; CYCLE
         OF ?BtnBO1 TO ?BtnLI8 ; BevCls.BtnClick(?) 
         OF ?BevAllEdgeBtn     ; BevCls.AllBtn()
+        OF ?BevPopBtn ; DO BevPopRtn
         OF ?SeeTipBtn ; Message(PWnd$FEQ{PROP:Tip},'Tip: ' & FEQ &' '& CLIP(FeqTypeName) & FeqName)
         OF ?FontBtn     ; DO FontRtn
         OF ?ColorBtn    ; DO ColorRtn
@@ -2385,7 +2399,6 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
         OF ?Try2:Disable_2 ; PWnd$FEQ{PROP:Disable}=Try2:Disable[2] ; CYCLE
         OF ?Try2:Hide_2 ; PWnd$FEQ{PROP:Hide}=Try2:Hide[2] ; CYCLE 
         OF ?TabPickBtn ; DO TabPickBtnRtn
-        OF ?TestBtn ; DO TestBtnRtn 
         OF ?BoxItBtn 
             SETTARGET(PWnd)
             IF BoxItFEQ THEN DESTROY(BoxItFEQ) ; BoxItFEQ=0
@@ -2393,7 +2406,10 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
                 X=CREATE(0,Create:Box) ; BoxItFEQ=X; SETPOSITION(X, Poz:X-2,Poz:Y-2,Poz:Wd+4,Poz:Ht+4) !;F{PROP:TRN}=1
                 X{PROP:Fill}=COLOR:Yellow ; X{PROP:Color}=COLOR:Red ; UNHIDE(X)
             END
-            SETTARGET()            
+            SETTARGET()
+        OF ?DropBtn ; ListDrop(FEQ,Dropped) ; Dropped=1-Dropped ; CYCLE !PostMessage(PWnd$Feq{PROP:Handle}, 14Fh, 1, 0) ! ; PostMessage(PWnd$Feq{PROP:Handle}, 14Fh, 1, 0)
+        OF ?HelpBtn ; HelpCW(FeqTypeName)
+        OF ?TestBtn ; DO TestBtnRtn
         END
         IF ACCEPTED() THEN DO AcceptOrSpinSizesRtn.        
 !TODO add ENTRY value to set
@@ -2405,7 +2421,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
 !05/06/20 fixed this to work in April, it undoes change to Hide/Disable... let it be, can do in the Fields List
 !    IF Try2:Disable[2]<>Try2:Disable[1] THEN FEQ{PROP:Disable}=Try2:Disable[1].
 !    IF Try2:Hide[2]<>Try2:Hide[1] THEN FEQ{PROP:Hide}=Try2:Hide[1]. 
-    IF BoxItFEQ THEN DESTROY(BoxItFEQ).
+    IF BoxItFEQ THEN DESTROY(BoxItFEQ). ; IF IsDROP THEN ListDrop(FEQ,1).
     SETTARGET()
     RETURN
 !-----------------
@@ -2455,7 +2471,7 @@ AcceptOrSpinSizesRtn ROUTINE ! OF ?Poz:X  TO ?Poz:Ht ;  DO AcceptedSizesRtn
     Poz:FullPr=CHOOSE(Poz:FullWd OR Poz:FullHt)
     DO SizeChangeRtn    
 SizeChangeRtn ROUTINE
-    DO SyncRtn ; DISPLAY ; DO SetPosition_Poz2PreviewRtn ; DO Poz:AtCODERtn
+    DO SyncRtn ; DISPLAY ; DO SetPosition_Poz2PreviewRtn
     EXIT
 SyncRtn ROUTINE    
     ?Poz:Wd{PROP:Disable}=CHOOSE(Poz:DeftWd+Poz:FullWd)
@@ -2528,9 +2544,16 @@ S1QWindowOpenRtn ROUTINE
     ELSIF ?Group:Line{PROP:Visible}   THEN GroupMoveChildren(?Group:Line,?Group:Spot1)
     ELSIF ?Group:Slider{PROP:Visible} THEN GroupMoveChildren(?Group:Slider,?Group:Spot1)
     ELSIF IsLIST THEN GroupMoveChildren(?Group:LIST,?Group:Spot1) ; UNHIDE(?Group:LIST)
+          IF IsENTRY THEN !Combo
+             HIDE(?Selectd:Pmt,?Poz:Selectd)
+          ELSIF ~IsDROP THEN
+             ?Selectd:Pmt{PROP:YPos}=?DropWd:Pmt{PROP:YPos}
+             ?Poz:Selectd{PROP:YPos}=?Poz:DropWd{PROP:YPos}
+          END    
     ELSIF IsENTRY OR IsText THEN
           GroupMoveChildren(?Group:Margin,?Group:Spot1) ; UNHIDE(?Group:Margin)  !TODO a LIST can have Margins (I think)    
     END
+    IF IsDROP THEN ENABLE(?DropBtn,?Poz:DropWd) ELSE HIDE(?DropBtn,?Poz:DropWd).       
     IF IsSheet THEN 
         HIDE(?Group:Checks) ; UNHIDE(?Group:Sheet) ; HIDE(?Group:Bevel2) ; GroupMoveChildren(?Group:Sheet,?Group:Checks,,4)
     ELSIF IsBevel THEN
@@ -2540,19 +2563,14 @@ S1QWindowOpenRtn ROUTINE
         HIDE(?Group:Sheet) ; HIDE(?Group:Bevel2) 
     END
    
-    IF IsENTRY OR IsTEXT THEN 
-       ENABLE(?EntryV) ; UNHIDE(?EntryV) !; EntryV=PWnd$FEQ{PROP:Value} below have  EntryV=CONTENTS(FEQ)
-    ELSE
+    IF NOT(IsENTRY OR IsTEXT) THEN !Combo ISEntry=1
        EntryV=PWnd$FEQ{PROP:Text}
-       IF EntryV OR ~INLIST(FeqTypeNo,CREATE:region,CREATE:line,CREATE:box,CREATE:ellipse,CREATE:progress,CREATE:Slider_MIA,CREATE:sheet,CREATE:panel)
-          ENABLE(?EntryV) ; UNHIDE(?EntryV) ; 
+       IF EntryV OR ~INLIST(FeqTypeNo,CREATE:region,CREATE:line,CREATE:list,CREATE:box,CREATE:ellipse,CREATE:progress,CREATE:Slider_MIA,CREATE:sheet,CREATE:panel)
           ?EntryV{PROP:Tip}='Change PROP:Text'
           ?EntryV:Pmt{PROP:Text}='Text:'
+       ELSE
+          HIDE(?EntryV:Pmt,?EntryV)
        END
-!    ELSIF PWnd$FEQ{PROP:Text} OR ~INLIST(FeqTypeNo,CREATE:region,CREATE:line,CREATE:box,CREATE:ellipse,CREATE:progress,CREATE:Slider_MIA,CREATE:sheet,CREATE:panel)
-!       ENABLE(?EntryV) ; UNHIDE(?EntryV) ; EntryV=PWnd$FEQ{PROP:Text}
-!       ?EntryV{PROP:Tip}='Change PROP:Text'
-!       ?EntryV:Pmt{PROP:Text}='Text:'
     END 
     IF IsENTRY THEN 
        IF Poz:Picture THEN ENABLE(?Poz:Picture).
@@ -2587,8 +2605,8 @@ GetPositionOnceRtn ROUTINE !Setup the Initial Poz, Haz and Waz
     
     IF IsENTRY THEN Poz:Picture=FEQ{PROP:Text}.
     IF IsENTRY OR IsTEXT THEN EntryV=CONTENTS(FEQ).  !SString needs Contents
-    IF IsLIST THEN Poz:Items=Feq{PROP:Items} ; Poz:LineHt=Feq{PROP:LineHeight} .
-
+    IF IsLIST THEN Poz:Items=Feq{PROP:Items} ; Poz:LineHt=Feq{PROP:LineHeight} ; Poz:Selectd=PWnd$FEQ{PROP:Selected}.
+    IF IsDROP THEN Poz:DropCnt=PWnd$FEQ{PROP:Drop} ; Poz:DropWd =PWnd$FEQ{PROP:DropWidth}.
     LOOP X=1 TO 5     !Check Align e.g. PROP:Left or if NONE the Default 
         GET(AlignQ,X) !Must Leave Q Loaded
         IF X=5 THEN 
@@ -2626,6 +2644,9 @@ Poz:AtCODERtn ROUTINE
   IF IsBEVEL AND (Poz:BevelOut OR Poz:BevelIn OR Poz:BevelSty) THEN
      Poz:AtS1Attr=Poz:AtS1Attr&',Bevel('&Poz:BevelOut &','& Poz:BevelIn & |
         CHOOSE(~Poz:BevelSty,'', ','& HEX8(Poz:BevelSty,4,1)) &')'
+  END
+  IF IsDROP THEN
+     Poz:AtS1Attr=Poz:AtS1Attr&',Drop('&Poz:DropCnt & CHOOSE(~Poz:DropWd,'', ','& Poz:DropWd &')')
   END
   Poz:AtCODE='AT('& CHOOSE(~Poz:No_X,Poz:X&','  ,',') &|
      CHOOSE(~Poz:No_Y,Poz:Y&','  ,',') &|
@@ -2674,6 +2695,11 @@ SetPosition_Poz2PreviewRtn ROUTINE
     END
     IF Poz:LineHt <> Haz:LineHt THEN FEQ{PROP:LineHeight}=Poz:LineHt.
 
+    IF Poz:Selectd<>Haz:Selectd THEN PWnd$FEQ{PROP:Selected}=Poz:Selectd ; X=1 ELSE X=0.
+    IF Poz:DropCnt<>Haz:DropCnt OR Poz:DropWd<>Haz:DropWd THEN 
+       X=1 ; PWnd$FEQ{PROP:Drop}=Poz:DropCnt ; PWnd$FEQ{PROP:DropWidth}=Poz:DropWd       
+    END ; IF X=1 AND IsDROP THEN ListDrop(FEQ) ; Dropped=1.
+
     IF Haz:DeftWd + Haz:FullWd THEN Haz:Wd=0. !Clear so if uncheck Deft/Full the Width gets set
     IF Haz:DeftHt + Haz:FullHt THEN Haz:Ht=0.
     
@@ -2701,13 +2727,9 @@ SetPosition_Poz2PreviewRtn ROUTINE
     IF IsLIST THEN Poz:Items=FEQ{PROP:Items}. 
     IF HideUnHide AND ~Try2:Hide[1] THEN UNHIDE(FEQ) ; DISPLAY.
     SETTARGET()
+    DO Poz:AtCODERtn
     Haz=Poz
     DISPLAY
-!---------------    
-    
-!TODO Idea LIST Columns in a LIST with Edit in Place Spinner to Set Width    
-!---------------    
-
 !---------------    
 FontRtn ROUTINE
     DATA
@@ -2870,7 +2892,40 @@ TabFEQ LONG
         IF ~Hid THEN FEQ{PROP:Selected}=T. !Select if Unhiding
     END
     DISPLAY ; SETTARGET()
-!---------------    
+!---------
+BevPopRtn ROUTINE
+  DATA
+Ib &LONG    
+Ob &LONG    
+Sb &LONG    
+Wb LONG    
+Hb LONG    
+  CODE 
+  Ib&=Poz:BevelIn ; Ob&=Poz:BevelOut ; Sb&=Poz:BevelSty
+  EXECUTE POPUP('Rectange{{Sunk|Raised|Ridge|Valley|Entry|Button}|Line{{Vert Grab|Vert Spacer|Vert Sunk|-|Horz Grab|Hort Spacer|Horz Sunk}')
+  BEGIN ; Ib=0  ; Ob=-3 ; Sb=0            ; .
+  BEGIN ; Ib=0  ; Ob=3  ; Sb=0            ; .
+  BEGIN ; Ib=-2 ; Ob=2  ; Sb=0            ; .
+  BEGIN ; Ib=2  ; Ob=-2 ; Sb=0            ; .
+  BEGIN ; Ib=-1 ; Ob=-1 ; Sb=0            ; .
+  BEGIN ; Ib=1  ; Ob=1  ; Sb=0            ; .
+  BEGIN ; Ib=0  ; Ob=0  ; Sb=4488h ; Wb=2 ; .
+  BEGIN ; Ib=0  ; Ob=0  ; Sb=6000h ; Wb=1 ; .
+  BEGIN ; Ib=0  ; Ob=2  ; Sb=6000h ; Wb=1 ; .
+  BEGIN ; Ib=0  ; Ob=0  ; Sb=4488h ; Hb=2 ; .
+  BEGIN ; Ib=0  ; Ob=0  ; Sb=0600h ; Hb=2 ; .
+  BEGIN ; Ib=0  ; Ob=2  ; Sb=0600h ; Hb=2 ; .
+  ELSE ; EXIT
+  END 
+  IF Wb THEN
+    Poz:Wd=Wb ; Poz:Ht=B4Waz:Ht   !Rest FULL ?
+    If1Clear(Poz:FullWd,?Poz:FullWd) ; If1Clear(Poz:DeftWd,?Poz:DeftWd) 
+  END
+  IF Hb THEN
+     Poz:Ht=Hb ; Poz:Wd=B4Waz:Wd   !Rest FULL ?
+     If1Clear(Poz:FullHt,?Poz:FullHt) ; If1Clear(Poz:DeftHt,?Poz:DeftHt)
+  END  !; POST(EVENT:Accepted,?Poz:BevelSty)      
+!---------    
 TestBtnRtn ROUTINE
     CASE POPUPunder(?TestBtn,'Select Random Tab|Tab Pick|Drop List (todo)')
     OF 1 ; X=PWnd$FEQ{PROP:NumTabs} ; IF X<2 THEN EXIT. ; X=RANDOM(1,X) ; PWnd$FEQ{PROP:Selected}=X ; PWnd$0{PROP:Text}='Tab ' & X 
@@ -3597,11 +3652,19 @@ ChildFEQ LONG,AUTO
      SETPOSITION(ChildFEQ,FX+DX,FY+DY) ! IF Ndx=1 THEN  Message('Idx 1 To From  AT( ' & FX &','& FY &'||TO AT( ' & DX+FX &','& DY+FY) .
   END
   RETURN
+!----------
+If1Clear PROCEDURE(*? TFV, LONG AcceptFEQ)!,BOOL
+  CODE
+  IF ~TFV THEN RETURN False.
+  CLEAR(TFV) ; IF AcceptFEQ THEN POST(EVENT:Accepted,AcceptFEQ). ; RETURN True
 !---------
 KeyStateSCA PROCEDURE(BYTE S1C2A4)
   CODE !Shft 0100h, Ctrl 0200h, Alt 0400h
   RETURN BSHIFT(BAND(KEYSTATE(),BSHIFT(S1C2A4,8)),-8)
 !---------
+ListDrop PROCEDURE(LONG F, BYTE U=0)  !0=Dn 1=Up
+  CODE  !CB_SHOWDROPDOWN = &H14F
+  PostMessage(PWnd$F{PROP:Handle},14Fh,U-1,0)
 ListHelpCW PROCEDURE(LONG BtnTip=0)
 Nm PSTRING(64),DIM(12)
 Hlp PSTRING(64),DIM(12)
