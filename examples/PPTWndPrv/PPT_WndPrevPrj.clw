@@ -1,7 +1,9 @@
-!Project for PPT on Window Previewer CIDC 2019 by Carl Barnes
+!09/01/2019  Project for PPT on Window Previewer CIDC 2019 by Carl Barnes
+!05/20/2020 Browse adds example of  CbWndPrv.InitList()
+!-------------------------------------------------------------------------------------
   PROGRAM
   INCLUDE('KEYCODES.CLW')
-  INCLUDE('CbWndPreview.INC'),ONCE  !File was in CIDC 2019 Download. Put in ths folder or Accessory\LibSrc\Win
+  INCLUDE('CbWndPreview.INC'),ONCE  !File was in CIDC 2019 Download. Put in this folder or Accessory\LibSrc\Win
   MAP
 Main         PROCEDURE()
 LoginTest    PROCEDURE()
@@ -34,9 +36,10 @@ Window WINDOW('PPT Window Preview Code'),AT(,,110,129),CENTER,GRAY,SYSTEM,FONT('
         BUTTON('Login Window'),AT(23,8,65),USE(?LoginBtn)
         BUTTON('Sample Browse'),AT(23,28,65),USE(?BrowseBtn)
         BUTTON('Sample Form'),AT(23,46,65),USE(?FormBtn)
-        BUTTON('Halt'),AT(39,75),USE(?HaltBtn)
-        PROMPT('Ctrl+Shift+W on these turns on CB Wnd Preview. A secret flat button is at the top-left.'), |
-                AT(2,98,106,29),USE(?PROMPT1)
+        BUTTON('Close'),AT(21,75),USE(?CloseBtn),STD(STD:Close)
+        BUTTON('Halt'),AT(57,75),USE(?HaltBtn)
+        PROMPT('Ctrl+Shift+W on these turns on CB Wnd Preview. A secret flat button is at the top-left.'),AT(2,98,106,29), |
+                USE(?PROMPT1)
     END
     CODE
     OPEN(Window)
@@ -50,17 +53,17 @@ Window WINDOW('PPT Window Preview Code'),AT(,,110,129),CENTER,GRAY,SYSTEM,FONT('
     END
 !=============================================
 LoginTest    PROCEDURE()
-ShowYes EQUATE('1')  !,VALUE(ShowYes,ShowNo)
-ShowNo  EQUATE('0')
 bShowName STRING(1)
 User STRING(20)  
 Pwd  STRING(20)
+
+ShowYes EQUATE('1')  !,VALUE(ShowYes,ShowNo)
+ShowNo  EQUATE('0')                                                             !,VALUE(ShowYes,ShowNo)
 Window WINDOW('Login'),AT(,,187,101),CENTER,GRAY,SYSTEM,FONT('Segoe UI',9)
         PROMPT('User Name:'),AT(14,11),USE(?Name:Pmt)
         ENTRY(@s20),AT(54,11,50),USE(User),PASSWORD
         PROMPT('Password:'),AT(14,29),USE(?Pwd:Pmt)
         ENTRY(@s20),AT(54,29,50),USE(Pwd),PASSWORD
-        !,VALUE(ShowYes,ShowNo)
         CHECK('&Show Name'),AT(108,11),USE(bShowName),SKIP
         BUTTON('Login'),AT(50,49),USE(?LoginBtn),STD(STD:Close)
         BUTTON('Cancel'),AT(93,49),USE(?CancelBtn),STD(STD:Close)
@@ -108,9 +111,25 @@ BRW1::TYP:BrdTrsInsRate_2_ LIKE(TYP:BrdTrsInsRate[2])      ! Queue Display field
 BRW1::TYP:EmpTrsInsRate_2_ LIKE(TYP:EmpTrsInsRate[2])      ! Queue Display field
 BRW1::TYP:EEOCReportable LIKE(TYP:EEOCReportable)          ! Queue Display field
                      END                                   ! END (Browsing Queue)
-
-Window WINDOW('Employee Types'),AT(,,686,254),CENTER,GRAY,SYSTEM,FONT('Microsoft Sans Serif',8), |
-            ALRT(CtrlShiftW)
+Window WINDOW('Employee Types'),AT(,,686,254),CENTER,GRAY,SYSTEM,FONT('Microsoft Sans Serif',8),ALRT(CtrlShiftW)
+        LIST,AT(8,25,668,179),USE(?BrowseEmpTypes),IMM,VSCROLL,MSG('Browsing Records'),FROM(Queue:Browse),FORMAT('21C|M~' & |
+                'Type~@n3@140L(3)|~Description~L(1)@s30@27R(3)|*~Normal<0DH,0AH>Hours~C(0)@n4.2@29C|~Certified~@s1@30C|~' & |
+                'Teacher<0DH,0AH>Sub.~@s1@24C|~TRS<0DH,0AH>Job~@s1@29C(3)|~Student ~C(0)@s1@26R(6)|~Pay<0DH,0AH>Group~C(' & |
+                '0)@n_2@[33C(3)|~Brd.~C(0)@n6.5b@37R(3)|~Emp.~C(0)@n6.5b@](67)|~TRS Rates This Yr~[37R(3)|~Brd.~C(0)@n7.' & |
+                '6b@37R(3)|~Emp.~C(0)@n7.6b@]|~TRS Ins. Rates This Yr~[37R(3)|~Brd~C(0)@n6.5b@37R(3)|~Emp.~C(0)@n6.5b@]|' & |
+                '~TRS Rates Next Yr~[37R(3)|~Brd.~C(0)@n7.6b@37R(3)|~Emp.~C(0)@n7.6b@]|~TRS Ins. Rates Next Yr.~27C(3)|~' & |
+                'EEOC~C(0)@s1@')
+        BUTTON('&Select'),AT(205,209,33,14),USE(?Select)
+        BUTTON('&View'),AT(241,209,33,14),USE(?View)
+        BUTTON('&Insert'),AT(277,209,33,14),USE(?Insert),KEY(InsertKey)
+        BUTTON('Co&py'),AT(317,209,33,14),USE(?CopyBtn),KEY(CtrlInsert)
+        BUTTON('&Change'),AT(353,209,33,14),USE(?Change),KEY(CtrlEnter)
+        BUTTON('&Delete'),AT(389,209,33,14),USE(?Delete),KEY(DeleteKey)
+        BUTTON('Close'),AT(428,209,33,14),USE(?Close),STD(STD:Close)
+        BUTTON('Print With TRS Rates'),AT(501,225,79,14),USE(?PrintEmployeeTypesWithTrsRatesButton)
+        BUTTON('Print Employee Types'),AT(501,209,79),USE(?BUTTON1)
+        BUTTON('Update Employee Master With TRS Job Types'),AT(583,209,93,31),USE(?UpdatrPrf100WithJobTypes)
+        CHECK('Show Types With TRS Rates'),AT(7,230,149),USE(ShowTrsRatesOnly),SKIP
         SHEET,AT(5,3,677,245),USE(?SHEET1)
             TAB(' By Code '),USE(?TAB1)
             END
@@ -119,40 +138,34 @@ Window WINDOW('Employee Types'),AT(,,686,254),CENTER,GRAY,SYSTEM,FONT('Microsoft
             TAB(' EEOC Only '),USE(?TAB3)
             END
         END
-        LIST,AT(8,25,668,179),USE(?BrowseEmpTypes),IMM,VSCROLL,MSG('Browsing Records'),FROM(Queue:Browse), |
-                FORMAT('21C|M~Type~@n3@140L(3)|~Description~L(1)@s30@27R(3)|*~Normal<0DH,0AH>Hours~C' & |
-                '(0)@n4.2@29C|~Certified~@s1@30C|~Teacher<0DH,0AH>Sub.~@s1@24C|~TRS<0DH,0AH>Job~@s1@' & |
-                '29C(3)|~Student ~C(0)@s1@26R(6)|~Pay<0DH,0AH>Group~C(0)@n_2@[33C(3)|~Brd.~C(0)@n6.5' & |
-                'b@37R(3)|~Emp.~C(0)@n6.5b@](67)|~TRS Rates This Yr~[37R(3)|~Brd.~C(0)@n7.6b@37R(3)|' & |
-                '~Emp.~C(0)@n7.6b@]|~TRS Ins. Rates This Yr~[37R(3)|~Brd~C(0)@n6.5b@37R(3)|~Emp.~C(0' & |
-                ')@n6.5b@]|~TRS Rates Next Yr~[37R(3)|~Brd.~C(0)@n7.6b@37R(3)|~Emp.~C(0)@n7.6b@]|~TR' & |
-                'S Ins. Rates Next Yr.~27C(3)|~EEOC~C(0)@s1@')
-        BUTTON('&Select'),AT(205,209,33,14),USE(?Select)
-        BUTTON('&View'),AT(241,209,33,14),USE(?View)
-        BUTTON('&Insert'),AT(277,209,33,14),USE(?Insert),KEY(InsertKey)
-        BUTTON('Co&py'),AT(317,209,33,14),USE(?CopyBtn),KEY(CtrlInsert)
-        BUTTON('&Change'),AT(353,209,33,14),USE(?Change),KEY(CtrlEnter)
-        BUTTON('&Delete'),AT(389,209,33,14),USE(?Delete),KEY(DeleteKey)
-        BUTTON('Close'),AT(428,209,33,14),USE(?Close)
-        BUTTON('Print With TRS Rates'),AT(501,225,79,14),USE(?PrintEmployeeTypesWithTrsRatesButton)
-        CHECK('Move This Year''s Trs Data To Last Year.'),AT(12,230),USE(MoveThisYrTrsDataToLastYr)
-        BUTTON('Print Employee Types'),AT(501,209,79),USE(?BUTTON1)
-        BUTTON('Update Employee Master With TRS Job Types'),AT(583,209,93,31),USE(?UpdatrPrf100WithJobTypes) |
-                
-        CHECK('Show Types With TRS Rates'),AT(12,209,149),USE(ShowTrsRatesOnly),SKIP
+        PROMPT('Press Ctrl+Shift+W to New and Open CB Window Preview. A secret flat button is at the top-left.'),AT(178,2), |
+                USE(?PROMPT1:2),FONT(,,COLOR:Red)
+        PROMPT('On CB winspect Field List press LIST button then From(Q) button Queue Fields'), |
+                AT(143,230),USE(?PROMPT1),FONT(,,COLOR:Red)                
     END
 Ndx LONG
 CbWndPrv &CBWndPreviewClass  !In live code I implement with a Hot key CtrlShiftW that NEWs the Object so it ca nhave no effect
     CODE
     DO LoadQRtn
     OPEN(Window)  
+!    SetKEYCODE(CtrlShiftW) ; POST(EVENT:AlertKey)  !Show Prv Class on open
     ACCEPT
         IF EVENT()=EVENT:AlertKey AND KEYCODE()=CtrlShiftW THEN 
            IF CbWndPrv &= NULL THEN 
               CbWndPrv &= NEW(CBWndPreviewClass)
               CbWndPrv.Init()
+
+              CbWndPrv.InitList(?BrowseEmpTypes,Queue:Browse,'Queue:Browse')
+
+!05/20/20 New InitList() sets User Property List{'FromQ'} so LIST Window new "From(Q)" button can show Queue Fields in See more column
+!           Open Sample Browse and press Ctrl+Shift+W
+!           Click the Secret button at top of Browse window 
+!           Click the LIST button to open List Format() 
+!           Click the "From(Q)" button and see the Queue colun unhide to show Queue:Browse
+
            END !ELSE
-              CbWndPrv.Reflection()     !Display it on CtrlShiftW
+              !CbWndPrv.Reflection()    !Display it on CtrlShiftW
+              CbWndPrv.Start()          !"Start" is alternate name for Bruce
            !END
         END
     END
@@ -280,7 +293,7 @@ Window WINDOW('Update Employee Type'),AT(,,479,266),GRAY,SYSTEM,FONT('Microsoft 
         END
         PROMPT('BRD.:'),AT(9,207),USE(?TYP:BrdTrsRate:Prompt:4)
         BUTTON('OK'),AT(192,244,45,14),USE(?OK),DEFAULT,REQ
-        BUTTON('Cancel'),AT(241,244,45,14),USE(?Cancel)
+        BUTTON('Cancel'),AT(241,244,45,14),USE(?Cancel) ,STD(STD:Close)
         PROMPT('EMP.:'),AT(9,217),USE(?TYP:EmpTrsRate:Prompt:4)
         PROMPT('I know all UPPER is UGLY. I didn''t make this.'),AT(163,127),USE(?PROMPT1)
     END
