@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 05-21-20.1408')
+VersionWndPrv EQUATE('WndPrv 05-21-20.1640')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -113,6 +113,7 @@ PropHuntLoadP7Q     PROCEDURE(Parse7QType OutP7Q, LONG FeqTypeNo),PRIVATE
 PropText1           PROCEDURE(LONG FEQ, LONG FType, *STRING AltText, BOOL QuoteIt=0),STRING,PRIVATE
 PropTFName          PROCEDURE(LONG CtrlFEQ, LONG PROPNumber, STRING TrueName,<STRING FalseName>),STRING,PRIVATE
 PropViewWindow      PROCEDURE(STRING CapTxt, PropQType PQ, STRING ValueOnly),PRIVATE
+QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName, FrmFldQtype FrmFldQ),PRIVATE
 ReplaceInto         PROCEDURE(*string Into, string FindTxt,string ReplaceTxt, BYTE ClipInto=0),LONG,PROC,PRIVATE
 ReplaceText         PROCEDURE(string InText, string Find,string Repl, BYTE ClipInto=0),STRING
 SeeMore             PROCEDURE(LONG PropMore, LONG CtrlFEQ, LONG CtrlTypeNo),STRING,PRIVATE
@@ -4171,7 +4172,7 @@ SysMenuCls SysMenuClass
 !    Value       STRING(255)    !PQ:Value        !TODO Have RawValue without Description
 !    ValueBIG    &STRING        !PQ:ValueBIG 
 !    EqtLong     LONG           !PQ:EqtLong  
-PropViewWindow  PROCEDURE(STRING CapTxt, PropQType PQ, STRING ValueOnly)
+PropViewWindow PROCEDURE(STRING CapTxt, PropQType PQ, STRING ValueOnly)
 Txt         STRING(4096),AUTO
 HexTxt      STRING(4096*5),AUTO
 !!!LenVO       LONG    !Also first time Flag
@@ -4207,8 +4208,8 @@ SysMenuCls SysMenuClass
 !TOTO    SELF.AtSetOrSave(2, AtPropView[])
     CLOSE(Window) 
     RETURN
-!-------------------------------
-HexDumpString PROCEDURE (*STRING SrcStr, BOOL ClipSpaces=0) !,STRING
+!----------------------
+HexDumpString PROCEDURE(*STRING SrcStr, BOOL ClipSpaces=0) !,STRING
 SrcSize     LONG,AUTO
   CODE
   IF ~ClipSpaces THEN
@@ -4489,7 +4490,71 @@ DB PROCEDURE(STRING DbTxt)
 CStr CSTRING(SIZE(DbTxt)+11)
   CODE
   CStr='WndPrv: ' & CLIP(DbTxt)&'<13,10>' ; OutputDebugString(CStr) ; RETURN
-!----------------  
+!----------------
+QueueViewListVLB PROCEDURE(QUEUE VlbQ, STRING QName, FrmFldQtype FrmFldQ)
+VlbCls CLASS !From Mark Goldberg, but I hacked it to death
+FEQ    LONG
+ClmCnt USHORT
+Chgs   LONG
+Init   PROCEDURE(SIGNED xFEQ, USHORT xClmCnt)
+VLBprc PROCEDURE(LONG xRow, USHORT xCol),STRING
+Contrt PROCEDURE(USHORT ColWd=16)
+Expand PROCEDURE()
+      END
+VMapQ QUEUE,PRE(VMapQ) !Map for HasValue, no &Ref columns
+FieldX USHORT
+      END
+X USHORT
+P USHORT
+Hdg STRING(80)
+Fmt ANY
+Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE,ALRT(MouseRight)
+        LIST,AT(1,1),FULL,USE(?List:VLB),HVSCROLL,VCR,FORMAT('40L(1)|M~Col1~Q''NAME''')
+  END
+  CODE
+  LOOP X=1 TO RECORDS(FrmFldQ)
+    GET(FrmFldQ,X) ; IF ~FrmFldQ:HasValue THEN CYCLE.
+    VMapQ:FieldX = FrmFldQ:FieldX ; ADD(VMapQ)
+    Hdg=FrmFldQ:Name
+    P=INSTRING('::',Hdg,1)+1 ; IF P<2 THEN P=INSTRING(':',Hdg,1). ; IF P THEN Hdg=SUB(Hdg,P+1,99). !Cutoff Pre:
+    Fmt=Fmt&'40L(1)|M~' & FrmFldQ:FieldX & '. '& CLIP(Hdg) & |
+            '~Q'' Field: <9>'& FrmFldQ:FieldX & '<13,10> Col#: <9>' &FrmFldQ:Column & |  !Q=Col Tip
+            '<13,10> Name: <9>'& CLIP(FrmFldQ:Name) &' <13,10> Type: <9>'& CLIP(FrmFldQ:DType) &' '''
+  END
+  OPEN(Window)
+  ?List:VLB{PROP:Format}=Fmt ; CLEAR(Fmt)
+  0{PROP:Text}='Queue View: ' & QName &' - '& records(VlbQ) & ' Records - '& records(VMapQ) &' Columns  -  Right-Click for Options'
+  VlbCls.Init(?List:VLB, Records(VMapQ))
+  ACCEPT
+    IF EVENT()=EVENT:AlertKey AND KEYCODE()=MouseRight THEN
+       SETKEYCODE(0)
+       EXECUTE POPUP('Contract Column Widths|Expand Column Widths|-|Copy Queue to Clipboard')
+        VlbCls.Contrt()
+        VlbCls.Expand()
+        SetClip2Queue(VlbQ)
+       END
+    END
+  END
+  RETURN
+VlbCls.Init PROCEDURE(SIGNED xFEQ, USHORT xClmCnt)
+  CODE
+  SELF.FEQ=xFEQ ; SELF.ClmCnt=xClmCnt
+  xFEQ{PROP:VLBval} =ADDRESS(SELF) ; xFEQ{PROP:VLBproc}=ADDRESS(SELF.VLBprc)
+  RETURN
+VlbCls.VLBprc PROCEDURE(LONG xRow, USHORT xCol)
+Chg LONG,AUTO
+  CODE
+  CASE xRow
+  OF -1 ; RETURN RECORDS(VlbQ) !Rows
+  OF -2 ; RETURN SELF.ClmCnt   !Columns
+  OF -3 ; Chg=SELF.Chgs ; SELF.Chgs=CHANGES(VlbQ) ; RETURN CHOOSE(Chg<>SELF.Chgs)
+  END
+  GET(VlbQ,xRow) ; GET(VMapQ,xCol) ; RETURN WHAT(VlbQ,VMapQ:FieldX)
+VlbCls.Contrt PROCEDURE(USHORT ColWd=16)
+  CODE ; LOOP X=1 TO SELF.ClmCnt ; SELF.FEQ{PROPLIST:Width,X}=ColWd ; END ; DISPLAY
+VlbCls.Expand PROCEDURE()
+  CODE ; SELF.Contrt(SELF.FEQ{PROP:Width}/SELF.ClmCnt)
+!----------------------
 CBWndPreviewClass.ListPROPs  PROCEDURE(LONG ListFEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
 !TODO Tab for FROM if it is Text, as 1 string and split into lines 
 !add  BUTTON('FORMAT'),AT(254,2,52,14),USE(?FORMATBtn),SKIP,ICON(ICON:Copy)
@@ -4644,6 +4709,7 @@ SortPQCls CBSortClass
         DO Show1ColumnRtn
     OF ?SeeMoreBtn ; DO SeeMoreRtn
     OF ?FromQBtn ; DO FromQRtn
+    OF ?FromQViewBtn ; QueueViewListVLB(FromQ, FromWho, FrmFldQ)
     OF ?StyleMin OROF ?StyleMax ; CList.SQLoadStyles() 
     OF ?TestsBtn ; DO TestsRtn
     END    
@@ -4799,13 +4865,15 @@ Pfx STRING(' FORMAT(''')
   SETCLIPBOARD(Fm)
 CopyLBRtn ROUTINE
   CLEAR(CBAny)
-  EXECUTE PopupUnder(?CopyBtn,'List Columns Tab|-|One Column''s PropLIST|All Columns'' PropLIST|-|Styles' & |
+  EXECUTE PopupUnder(?CopyBtn,'List Columns Tab|-|One Column''s PropLIST|All Columns'' PropLIST|-|Styles' & | 
+                    CHOOSE(~RECORDS(FrmFldQ),'|~','|') &'From(Queue) Definition' & |
                       '|-|Debug{{ListQ|PQ Col Props|SQ Styles|All7Q Props}') 
   SetClip2Queue(ListQ,,'ColNo<9>Lvl<9>FldNo<9>GrpNo<9>Header<9>Picture<9>Width<9>Align<9>HdAln<9>Mods<9>Format',|
                   'LQ:',1,11)
   DO CopyLB1ColPropsRtn
   DO CopyLBAllColPropsRtn
   DO CopyLBStylesRtn
+  SetClip2Queue(FrmFldQ)
   SetClip2Queue(ListQ)
   SetClip2Queue(PQ) 
   SetClip2Queue(SQ) 
