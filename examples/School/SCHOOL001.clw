@@ -130,6 +130,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Classes,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon CLA:CourseNumber for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,CLA:KeyCourseNumber) ! Add the sort order for CLA:KeyCourseNumber for sort order 1
@@ -813,6 +814,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Students,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha,ScrollBy:Runtime) ! Moveable thumb based upon STU:LastName for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,STU:KeyLastName) ! Add the sort order for STU:KeyLastName for sort order 1
@@ -1418,6 +1420,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Courses,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort0:StepClass.Init(+ScrollSort:AllowAlpha,ScrollBy:Alpha) ! Moveable thumb based upon COU:Description for sort order 1
   BRW1.AddSortOrder(BRW1::Sort0:StepClass,COU:KeyDescription) ! Add the sort order for COU:KeyDescription for sort order 1
@@ -1622,6 +1625,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Teachers,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon TEA:Department for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,TEA:KeyDepartment) ! Add the sort order for TEA:KeyDepartment for sort order 1
@@ -2781,6 +2785,7 @@ ReturnValue          BYTE,AUTO
   DO REL1::ContractAll
   SELF.Open(window)                                        ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?RelTree,Queue:RelTree,'Queue:RelTree') !Tpl CBWndPrvListFromQ
   window{PROP:MinWidth} = 162                              ! Restrict the minimum window width
   window{PROP:MinHeight} = 174                             ! Restrict the minimum window height
   Resizer.Init(AppStrategy:Spread)                         ! Controls will spread out as the window gets bigger
@@ -3136,7 +3141,12 @@ Menu::DevCon2019 ROUTINE                                   ! Code for menu items
        END
     END    
     Message('Press Ctrl+Shift+F1 on Open Windows to see CB Window Preview Reflection List.' & |
-            '||Note: Any windows open now must be closed to work opening the Window Prv Class.')
+            '||Note: Any windows open now must be closed to work opening the Window Prv Class.'& |
+            '||This APP has the CBWndPrvListFromQ Template Global Extension.' & |
+             '||On any window with a LIST presss Ctrl+Shift+F1 to open CB Window Preview. ' & |
+             '|On the CB wInspect Controls window press the LIST button' & |
+             '|then press the From(Q) button and you can see the QUEUE that feeds the list.' & |
+             '|Press the "View From(Q)" to see all the data.')
     
     !Was declared as Ref so no chance affects live APP until it is NEW() on the hot key
     !Help2WndPreviewCls  &CbWndPrvHelpHookClass  
@@ -3442,6 +3452,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Classes,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon CLA:CourseNumber for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,CLA:KeyCourseNumber) ! Add the sort order for CLA:KeyCourseNumber for sort order 1

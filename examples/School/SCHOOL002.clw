@@ -93,9 +93,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?Browse:1
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -107,6 +107,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Courses,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort0:StepClass.Init(+ScrollSort:AllowAlpha,ScrollBy:Alpha) ! Moveable thumb based upon COU:Description for sort order 1
   BRW1.AddSortOrder(BRW1::Sort0:StepClass,COU:KeyDescription) ! Add the sort order for COU:KeyDescription for sort order 1
@@ -276,9 +277,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?Browse:1
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -291,6 +292,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Enrollment,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon ENR:ClassNumber for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,ENR:SeqStu)      ! Add the sort order for ENR:SeqStu for sort order 1
@@ -523,9 +525,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?Tea:Number:Prompt
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.HistoryKey = 734
   SELF.AddHistoryFile(TEA:Record,History::TEA:Record)
   SELF.AddHistoryField(?TEA:Number,1)
@@ -558,6 +560,7 @@ ReturnValue          BYTE,AUTO
   BRW2.Init(?Browse:2,Queue:Browse:2.ViewPosition,BRW2::View:Browse,Queue:Browse:2,Relate:Classes,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:2,Queue:Browse:2,'Queue:Browse:2') !Tpl CBWndPrvListFromQ
   BRW2.Q &= Queue:Browse:2
   BRW2::Sort0:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon CLA:TeacherNumber for sort order 1
   BRW2.AddSortOrder(BRW2::Sort0:StepClass,CLA:KeyTeacherNumber) ! Add the sort order for CLA:KeyTeacherNumber for sort order 1
@@ -872,15 +875,16 @@ ReturnValue          BYTE,AUTO
   LOC:DropControl = GLO:DropControl
   LOC:ThreadRef &= GLO:ThreadRef
   
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   Relate:Majors.SetOpenRelated()
   Relate:Majors.Open()                                     ! File Majors used by this procedure, so make sure it's RelationManager is open
   SELF.FilesOpened = True
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Majors,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha,ScrollBy:Runtime) ! Moveable thumb based upon MAJ:Description for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,MAJ:KeyDescription) ! Add the sort order for MAJ:KeyDescription for sort order 1
@@ -1166,9 +1170,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?MAJ:Description:Prompt
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.HistoryKey = 734
   SELF.AddHistoryFile(MAJ:Record,History::MAJ:Record)
   SELF.AddHistoryField(?MAJ:Description,2)
@@ -1194,6 +1198,8 @@ ReturnValue          BYTE,AUTO
   BRW4.Init(?Browse:4,Queue:Browse:4.ViewPosition,BRW4::View:Browse,Queue:Browse:4,Relate:Students,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:2,Queue:Browse:2,'Queue:Browse:2') !Tpl CBWndPrvListFromQ
+   CBListPropFromQ(?Browse:4,Queue:Browse:4,'Queue:Browse:4') !Tpl CBWndPrvListFromQ
   BRW2.Q &= Queue:Browse:2
   BRW2::Sort0:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon TEA:Department for sort order 1
   BRW2.AddSortOrder(BRW2::Sort0:StepClass,TEA:KeyDepartment) ! Add the sort order for TEA:KeyDepartment for sort order 1
@@ -1516,9 +1522,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?STU:FirstName:Prompt
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.HistoryKey = 734
   SELF.AddHistoryFile(STU:Record,History::STU:Record)
   SELF.AddHistoryField(?STU:FirstName,2)
@@ -1553,6 +1559,7 @@ ReturnValue          BYTE,AUTO
   BRW2.Init(?Browse:2,Queue:Browse:2.ViewPosition,BRW2::View:Browse,Queue:Browse:2,Relate:Enrollment,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:2,Queue:Browse:2,'Queue:Browse:2') !Tpl CBWndPrvListFromQ
   BRW2.Q &= Queue:Browse:2
   BRW2::Sort0:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon ENR:ClassNumber for sort order 1
   BRW2.AddSortOrder(BRW2::Sort0:StepClass,ENR:StuSeq)      ! Add the sort order for ENR:StuSeq for sort order 1
@@ -1943,9 +1950,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?Browse:1
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -1957,6 +1964,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Majors,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha,ScrollBy:Runtime) ! Moveable thumb based upon MAJ:Description for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,MAJ:KeyDescription) ! Add the sort order for MAJ:KeyDescription for sort order 1
@@ -2093,7 +2101,7 @@ MAJ:Number             LIKE(MAJ:Number)               !Related join file key fie
 Mark                   BYTE                           !Entry's marked status
 ViewPosition           STRING(1024)                   !Entry's view position
                      END
-QuickWindow          WINDOW('Browse the Students File'),AT(,,358,188),FONT('MS Sans Serif',8,COLOR:Black),RESIZE, |
+QuickWindow          WINDOW('Browse the Students File'),AT(,,358,201),FONT('MS Sans Serif',8,COLOR:Black),RESIZE, |
   CENTER,GRAY,IMM,MDI,HLP('~BrowseStudents'),SYSTEM
                        LIST,AT(8,20,342,143),USE(?Browse:1),HVSCROLL,FORMAT('[80L(2)M~Last Name~@S20@80L(2)|M~' & |
   'First Name~@S20@/80C(2)M~Major~C(0)@S20@40C(2)|M~Grad Year~C(0)@n4@/80C(2)|_M@s20@]|' & |
@@ -2103,15 +2111,18 @@ QuickWindow          WINDOW('Browse the Students File'),AT(,,358,188),FONT('MS S
                        BUTTON('&Change'),AT(256,148,45,14),USE(?Change:2),DEFAULT,HIDE
                        BUTTON('&Delete'),AT(305,148,45,14),USE(?Delete:2),HIDE
                        SHEET,AT(4,4,350,162),USE(?CurrentTab)
-                         TAB('by Major')
+                         TAB('by Major'),USE(?TAB1)
                          END
-                         TAB('by Last Name')
+                         TAB('by Last Name'),USE(?TAB2)
                          END
-                         TAB('by Grad Year')
+                         TAB('by Grad Year'),USE(?TAB3)
                          END
                        END
                        BUTTON('Close'),AT(260,170,45,14),USE(?Close)
                        BUTTON('Help'),AT(309,170,45,14),USE(?Help),STD(STD:Help)
+                       PROMPT('Press Ctrl+Shift+F1 to open CB wnd Preview. On the Controls list press the LIST' & |
+  ' button, then press the From(Q) button and you can see the QUEUE that feeds this lis' & |
+  't. Press the "View From(Q)" to see all the data.'),AT(7,170,249,27),USE(?PROMPT1)
                      END
 
 ThisWindow           CLASS(WindowManager)
@@ -2163,9 +2174,9 @@ ReturnValue          BYTE,AUTO
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
   BIND('Junk',Junk)                                        ! Added by: BrowseBox(ABC)
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -2177,6 +2188,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Students,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha,ScrollBy:Name) ! Moveable thumb based upon STU:LastName for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,STU:KeyLastName) ! Add the sort order for STU:KeyLastName for sort order 1
@@ -3002,9 +3014,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?RelTree
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -3017,6 +3029,7 @@ ReturnValue          BYTE,AUTO
   DO REL1::ContractAll
   SELF.Open(window)                                        ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?RelTree,Queue:RelTree,'Queue:RelTree') !Tpl CBWndPrvListFromQ
   window{PROP:MinWidth} = 162                              ! Restrict the minimum window width
   window{PROP:MinHeight} = 183                             ! Restrict the minimum window height
   Resizer.Init(AppStrategy:Spread)                         ! Controls will spread out as the window gets bigger
@@ -3347,9 +3360,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?Browse:1
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -3361,6 +3374,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?Browse:1,Queue:Browse:1.ViewPosition,BRW1::View:Browse,Queue:Browse:1,Relate:Teachers,SELF) ! Initialize the browse manager
   SELF.Open(QuickWindow)                                   ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?Browse:1,Queue:Browse:1,'Queue:Browse:1') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse:1
   BRW1::Sort1:StepClass.Init(+ScrollSort:AllowAlpha)       ! Moveable thumb based upon TEA:Department for sort order 1
   BRW1.AddSortOrder(BRW1::Sort1:StepClass,TEA:KeyDepartment) ! Add the sort order for TEA:KeyDepartment for sort order 1

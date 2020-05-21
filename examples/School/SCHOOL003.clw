@@ -126,9 +126,9 @@ ReturnValue          BYTE,AUTO
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
   BIND('FullName',FullName)                                ! Added by: BrowseBox(ABC)
   BIND('DummyColumn',DummyColumn)                          ! Added by: BrowseBox(ABC)
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -140,6 +140,7 @@ ReturnValue          BYTE,AUTO
   BRW1.Init(?List,Queue:Browse.ViewPosition,BRW1::View:Browse,Queue:Browse,Relate:Enrollment,SELF) ! Initialize the browse manager
   SELF.Open(BrowseWindow)                                  ! Open window
   Do DefineListboxStyle
+   CBListPropFromQ(?List,Queue:Browse,'Queue:Browse') !Tpl CBWndPrvListFromQ
   BRW1.Q &= Queue:Browse
   BRW1::Sort0:StepClass.Init(+ScrollSort:AllowNumeric)     ! Moveable thumb based upon ENR:ClassNumber for sort order 1
   BRW1.AddSortOrder(BRW1::Sort0:StepClass,ENR:SeqStu)      ! Add the sort order for ENR:SeqStu for sort order 1
@@ -1460,9 +1461,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?String2
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.Open(window)                                        ! Open window
   Do DefineListboxStyle
   TARGET{Prop:Timer} = 1000                                ! Close window on timer event, so configure timer

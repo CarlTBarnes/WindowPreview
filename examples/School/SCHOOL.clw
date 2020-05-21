@@ -60,6 +60,7 @@ CopyClasses            PROCEDURE   !Process the Classes_TPS File
 CopyCourses            PROCEDURE   !Process the Courses_TPS File
 CopyTeachers           PROCEDURE   !Process the Teachers_TPS File
      END
+         CBListPropFromQ(LONG FEQ,*QUEUE FrmQ,<STRING NameQ>)
    END
 
 GLO:SQLiteTableName  STRING('school.sqlite {7}')
@@ -294,6 +295,15 @@ Destruct               PROCEDURE
   INIMgr.Update
   INIMgr.Kill                                              ! Destroy INI manager
   FuzzyMatcher.Kill                                        ! Destroy fuzzy matcher
+    
+CBListPropFromQ PROCEDURE(LONG FEQ,*QUEUE FrmQ,<STRING NameQ>)
+Ref GROUP,AUTO
+Q    &QUEUE
+L    LONG,OVER(Q)
+  END
+  CODE
+  Ref.Q &=FrmQ ; FEQ{'FromQ'}=Ref.L ; FEQ{'FromWho'}=CHOOSE(~OMITTED(NameQ),NameQ,'Queue' & Ref.L)
+  RETURN
 
 
 Dictionary.Construct PROCEDURE
