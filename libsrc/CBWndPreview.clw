@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 05-20-20.1412')
+VersionWndPrv EQUATE('WndPrv 05-21-20.1408')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -24,9 +24,43 @@ EqtLong     LONG           !P7Q:EqtLong
 EqtHex      STRING(5)      !P7Q:EqtHex
 Name        STRING(32)     !P7Q:Name
           END
-GridQType QUEUE,PRE(GrdQ),TYPE
+GridQType QUEUE,TYPE
 LnFEQ       LONG
           END
+FrmFldQtype QUEUE,TYPE
+Column   STRING(3)
+FieldX   USHORT
+Name     STRING(64)
+DType    STRING(16)
+Value    STRING(64)
+HasValue BYTE
+DTypeNo  BYTE
+   END         
+UFOType INTERFACE,TYPE,PRIVATE
+_Type PROCEDURE(LONG _UfoAddr),LONG  !+00h Type of UFO
+_2  PROCEDURE
+_3  PROCEDURE
+_4  PROCEDURE
+_5  PROCEDURE
+_6  PROCEDURE
+_7  PROCEDURE
+_8  PROCEDURE
+_9  PROCEDURE
+_10 PROCEDURE
+_11 PROCEDURE
+_12 PROCEDURE
+_Address PROCEDURE(),LONG !+30h Address of a variable
+_14 PROCEDURE
+_15 PROCEDURE
+_16 PROCEDURE
+_17 PROCEDURE
+_18 PROCEDURE
+_19 PROCEDURE
+_20 PROCEDURE
+_Max  PROCEDURE(LONG),LONG !+50h Elements in first dimension of an array
+_Size PROCEDURE(LONG),LONG !+54h Size of an object
+BaseType PROCEDURE(LONG),LONG
+      END
 !EndRegion Global TYPE's             
     INCLUDE('CBWndPreview.INC'),ONCE
     MAP
@@ -37,6 +71,7 @@ ClaControlTypeName  PROCEDURE(LONG CtrlPropType),STRING,PRIVATE     !Pass FEQ{PR
 ClaCursorEquate     PROCEDURE(*STRING InOutCursorProp),PRIVATE
 ClaKeyCodeExplain   PROCEDURE(LONG KeyCodeEquate, BYTE Terse=0),STRING,PRIVATE    !Explain KeyCode() Alt+CtrL+Shift
 ClaAlign            PROCEDURE(LONG CtrlFEQ, LONG CtrlType),STRING,PRIVATE   !Pass FEQ,{PROP:Type} to get Left,R,C,D
+ClaDataType         PROCEDURE(*? DataAny, *STRING OutTypeName),LONG,PROC,PRIVATE
 ClaFont4            PROCEDURE(LONG CtrlFEQ, *PSTRING[] Font4),PRIVATE
 ClaFont4Net         PROCEDURE(*PSTRING[] WFont, *PSTRING[] CFont),STRING,PRIVATE
 ClaFont             PROCEDURE(LONG CtrlFEQ),STRING,PRIVATE
@@ -60,6 +95,7 @@ FmtNumSM            PROCEDURE(STRING Numbr,BYTE pWidth),STRING,PRIVATE  !To alig
 If1Clear            PROCEDURE(*? TFV, LONG AcceptFEQ),BOOL,PROC,PRIVATE
 GroupMoveChildren   PROCEDURE(LONG FromGroup, LONG ToControl, LONG XAdjust=0, LONG YAdjust=0),PRIVATE 
 KeyStateSCA         PROCEDURE(BYTE Shft1_Ctrl2_Alt4),BYTE,PRIVATE
+LineHt              PROCEDURE(LONG ListFEQ, SHORT LineHeightAdd=1),PRIVATE !List Prop:LineHeight +=1
 ListDrop            PROCEDURE(LONG ListFEQ, BYTE Down0_Up1=0),PRIVATE
 ListHelpCW          PROCEDURE(LONG SetBtnTip=0),PRIVATE
 ListHelpMods        PROCEDURE(),STRING,PRIVATE
@@ -539,7 +575,7 @@ ReOpenLOOP:Label:
   ?MenuItems{PROP:Use}=SELF.MenuItemShows
   0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv
   IF Format_ListF THEN ?ListF{PROP:Format}=Format_ListF.
-  ?ListF{PROP:LineHeight} = 1 + ?ListF{PROP:LineHeight} 
+  LineHt(?ListF)
   ?ListF{PROPSTYLE:FontName,1}='Wingdings 2'
   ?ListF{PROPSTYLE:FontSize,1}=12
   ?ListF{PROPSTYLE:TextSelected,1} = COLOR:WindowText  !COLOR:Black   don't let selecting inverse the Wingding character
@@ -3543,7 +3579,34 @@ SheetRtn ROUTINE  !Align shows Above/Below/Right/Left Up/Down wnshj for various 
         END 
     END
     RETURN SheetA & Offset
-!------------------------------------------
+!--------------------
+ClaDataType PROCEDURE(*? UAny, *STRING TypeName)!,LONG
+UFO &UFOType
+UAddr LONG,AUTO 
+T LONG,AUTO
+S LONG,AUTO
+M LONG,AUTO
+N PSTRING(24)
+L USHORT
+  CODE
+  UAddr=ADDRESS(UAny) ; UFO&=(UAddr) ; IF UAddr=0 OR UFO &= NULL THEN TypeName='Null?' ; RETURN 0.
+  T=UFO._Type(UAddr) ; S=UFO._Size(UAddr) ; M=UFO._Max(UAddr)
+  CASE T
+  OF 31 ; N='ANY_&REF'
+  OF 42 ; N='BSTRING'
+  OF 43 ; N='ASTRING'
+  OF 45 ; N='VARIANT'
+  ELSE
+    N=CHOOSE(T+1,'EndGroup','BYTE','SHORT','USHORT','DATE','TIME','LONG','ULONG','SREAL','REAL','DECIMALd','PDECIMALd',|
+               'Data12','BFLOAT4','BFLOAT8','Data15','Data16','Data17','STRINGs','CSTRINGs','PSTRINGs','MEMOs',|
+               'GROUPs','CLASS','Data23','Data24','QUEUE','BLOB','Data#'&T)  !Data#28
+  END
+  L=LEN(N)             
+  IF N[L]='s' THEN N=N[1:L-1] &'(' & S &')'.
+  IF N[L]='d' THEN N=N[1:L-1] &'(' & S * 2 &',)'.   
+  TypeName=N & CHOOSE(M=0,'',' Dim[' & M & ']')
+  RETURN T
+!-----------------
 ClaFont4 PROCEDURE(LONG F, *PSTRING[] Fnt)
 CN  LONG,AUTO
 CE  PSTRING(24)
@@ -3662,6 +3725,9 @@ If1Clear PROCEDURE(*? TFV, LONG AcceptFEQ)!,BOOL
 KeyStateSCA PROCEDURE(BYTE S1C2A4)
   CODE !Shft 0100h, Ctrl 0200h, Alt 0400h
   RETURN BSHIFT(BAND(KEYSTATE(),BSHIFT(S1C2A4,8)),-8)
+!-----------
+LineHt PROCEDURE(LONG F, SHORT L)
+  CODE ; F{PROP:LineHeight}=L+F{PROP:LineHeight}
 !---------
 ListDrop PROCEDURE(LONG F, BYTE U=0)  !0=Dn 1=Up
   CODE  !CB_SHOWDROPDOWN = &H14F
@@ -4461,6 +4527,9 @@ ViewColX  SHORT
 AllPropList BYTE,STATIC   !TODO Groups have less PROPs 
 Format1Col STRING(512)
 FormText CSTRING(10000)
+FromQ &QUEUE
+FromWho PSTRING(32)
+FrmFldQ QUEUE(FrmFldQtype),PRE(FrFQ).
 Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
         BUTTON('<50>'),AT(2,2,12,13),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under this Window'),FLAT
         BUTTON('Cl&ose'),AT(19,2,22,14),USE(?CloseBtn),SKIP,STD(STD:Close),FONT(,8)
@@ -4504,8 +4573,14 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                         '#6#28L(3)|FM~Equate~L(1)@s5@#1#85L(2)|FM~PROPSTYLE: Property~@s32@?20L(2)F~Value~@s255@#3#'), |
                         ALRT(DeleteKey)
             END
-            TAB(' FORMAT() '),USE(?TAB:Formt)
+            TAB(' &FORMAT() '),USE(?TAB:Formt)
                 TEXT,AT(0,36),FULL,USE(FormText),SKIP,HVSCROLL,FONT('Consolas',10)
+            END
+            TAB(' F&ROM Q '),USE(?TAB:FromQ),HIDE
+                BUTTON('&View From(Q)'),AT(290,23,,12),USE(?FromQViewBtn),SKIP,TIP('View From(Q) in List')
+                LIST,AT(0,36),FULL,USE(?LIST:FrmFldQ),VSCROLL,FONT('Consolas',10),FROM(FrmFldQ),FORMAT('28C|FM~List<13>' & |
+                        '<10>Column~@s3@28C|FM~Queue<13,10>Field~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
+                        '@20L(2)F~Value~@s64@')
             END
         END
     END
@@ -4540,11 +4615,12 @@ SortPQCls CBSortClass
   GETPOSITION(0,PX,PY) ; FEQ=ListFEQ
   CList.WndPrvCls &= SELF ; CList.LoadListQ()
   OPEN(Window) ; SysMenuCls.Init(Window) ; ?Sheet1{PROP:TabSheetStyle}=1    
-  L=?LIST:ListQ ; L{PROP:SELECTED}=1 ; L{PROP:LineHeight}=1+L{PROP:LineHeight} ; L{PROPLIST:Width,MoreColNo}=0
+  L=?LIST:ListQ ; L{PROP:SELECTED}=1 ; LineHt(L) ; L{PROPLIST:Width,MoreColNo}=0
   SETPOSITION(0,PX,PY) ; SELF.AtSetOrSave(1, AtListPROPs[])
   0{PROP:Text} = 'PROPLIST & Format() - FEQ '& ListFEQ &'  '& FeqName & ' - Columns: ' & ColumnCount & |
                    ' - Type: ' & FeqTypeNo &' '& FeqTypeName
   MakeOverList(?LIST:ListQ) ; MakeOverList(?LIST:PQ) ; MakeOverList(?LIST:SQ) ; MakeOverList(?FormText) ; MakeOverList(?Format1Col)
+  L=?LIST:FrmFldQ ; LineHt(L) ; MakeOverList(L)
   DO WindowOpenRtn ; SortPQCls.Init(PQ,?LIST:PQ,2) ; Do DevTipsRtn ; DO Load1ColumnRtn ; ListHelpCW(?HelpBtn)
   ACCEPT
     CASE ACCEPTED()
@@ -4613,15 +4689,45 @@ MoreHeadRtn ROUTINE
 FromQRtn ROUTINE
   DATA
 FromA   LONG
-FromQ   &QUEUE
+QA ANY
+DT LONG
   CODE
-  FromA=PWnd$ListFEQ{'FromQ'}
-  IF FromA>=0 AND FromA<4097 THEN Message('From() needs ?List{{''FromQ''}=&Q set by .InitList().|'&FromA,'LIST') ; EXIT.
-  Val=PWnd$ListFEQ{'FromWho'} ; IF ~Val THEN Val='From(Q)'. ; DO MoreHeadRtn
-  FromQ&=(FromA) ; IF FromQ&=NULL THEN EXIT.
+  Val=PWnd$ListFEQ{'FromWho'} ; IF ~Val THEN Val='From(Q)'. ; FromWho=CLIP(Val) 
+  DO MoreHeadRtn ; ?LIST:FrmFldQ{PROPLIST:Header,3}=FromWho
+  IF FromQ&=NULL THEN 
+     FromA=PWnd$ListFEQ{'FromQ'}
+     IF FromA>=0 AND FromA<4097 THEN Message('From() needs ?List{{''FromQ''}=&Q set by .InitList().|'&FromA,'LIST') ; EXIT.
+     FromQ&=(FromA) ; IF FromQ&=NULL THEN EXIT.
+     UNHIDE(?TAB:FromQ) ; SELECT(?TAB:FromQ)
+     LOOP X=1 TO 999 ; QA &= WHAT(FromQ,X) ; IF QA &= NULL THEN BREAK.
+       CLEAR(FrmFldQ) 
+       FrFQ:FieldX=X
+       FrFQ:Name=WHO(FromQ,X)
+       DT=ClaDataType(QA ,FrFQ:DType) ; FrFQ:DTypeNo=DT  ! DataType:xxx 
+       IF HOWMANY(FromQ,X) > 1 THEN FrFQ:Value='Array[]' 
+       ELSIF DT=31 THEN FrFQ:Value='ANY or &Ref'       
+       ELSIF DT<>43 AND DT>22 THEN FrFQ:Value='? ' & DT !>22 Group no value  43=AString
+       ELSE
+          FrFQ:Value=QA ; FrFQ:HasValue=1
+       END   
+       ADD(FrmFldQ)
+     END
+     !IF ~RECORDS(FrmFldQ) THEN EXIT.
+  END !IF ~FromQ
+  
   LOOP X=1 TO RECORDS(ListQ)
-     GET(ListQ,X) ; IF LQ:IsGroup THEN LQ:More='' ELSE LQ:More=Who(FromQ,LQ:FieldX). ; PUT(ListQ)
-  END ; DISPLAY ; EXIT
+     GET(ListQ,X) 
+     LQ:More=''
+     IF ~LQ:IsGroup THEN
+        FrFQ:FieldX=LQ:FieldX
+        GET(FrmFldQ,FrFQ:FieldX) ; IF ERRORCODE() THEN FrFQ:Name='Err#' & LQ:FieldX.
+        FrFQ:Column=LQ:ColNo ; PUT(FrmFldQ)
+        LQ:More=FrFQ:Name  !Who(FromQ,LQ:FieldX)
+     END 
+     PUT(ListQ)
+  END
+  DISPLAY ; EXIT
+!-------------  
 Load1ColumnRtn ROUTINE
   GET(ListQ,CHOICE(?LIST:ListQ)) ; IF ERRORCODE() THEN EXIT.
   Format1Col = LQ:Format
