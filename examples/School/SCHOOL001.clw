@@ -121,9 +121,9 @@ ReturnValue          BYTE,AUTO
   LOC:DropControl = GLO:DropControl
   LOC:ThreadRef &= GLO:ThreadRef
   
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   Relate:Classes.SetOpenRelated()
   Relate:Classes.Open()                                    ! File Classes used by this procedure, so make sure it's RelationManager is open
   SELF.FilesOpened = True
@@ -361,9 +361,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?ENR:StudentNumber:Prompt
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.HistoryKey = 734
   SELF.AddHistoryFile(ENR:Record,History::ENR:Record)
   SELF.AddHistoryField(?ENR:StudentNumber,1)
@@ -804,9 +804,9 @@ ReturnValue          BYTE,AUTO
   LOC:DropControl = GLO:DropControl
   LOC:ThreadRef &= GLO:ThreadRef
   
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   Relate:Students.SetOpenRelated()
   Relate:Students.Open()                                   ! File Students used by this procedure, so make sure it's RelationManager is open
   SELF.FilesOpened = True
@@ -1043,9 +1043,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?CLA:ClassNumber:Prompt
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.HistoryKey = 734
   SELF.AddHistoryFile(CLA:Record,History::CLA:Record)
   SELF.AddHistoryField(?CLA:ClassNumber,1)
@@ -1409,9 +1409,9 @@ ReturnValue          BYTE,AUTO
   LOC:DropControl = GLO:DropControl
   LOC:ThreadRef &= GLO:ThreadRef
   
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   Relate:Courses.SetOpenRelated()
   Relate:Courses.Open()                                    ! File Courses used by this procedure, so make sure it's RelationManager is open
   SELF.FilesOpened = True
@@ -1613,9 +1613,9 @@ ReturnValue          BYTE,AUTO
   LOC:DropControl = GLO:DropControl
   LOC:ThreadRef &= GLO:ThreadRef
   
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   Relate:Teachers.SetOpenRelated()
   Relate:Teachers.Open()                                   ! File Teachers used by this procedure, so make sure it's RelationManager is open
   SELF.FilesOpened = True
@@ -1826,9 +1826,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?COU:Description:Prompt
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.HistoryKey = 734
   SELF.AddHistoryFile(COU:Record,History::COU:Record)
   SELF.AddHistoryField(?COU:Description,2)
@@ -2766,9 +2766,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?RelTree
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE
@@ -3023,6 +3023,10 @@ AppFrame             APPLICATION('SV SQLite University + Carl''s WndPreview Clas
   ,600,370),FONT('MS Sans Serif',8,COLOR:Black),RESIZE,ALRT(MouseLeft2),CENTER,ICON('_SoftVUn.ico'), |
   IMM,MAX,HLP('~TopSpeedUniversity'),STATUS(-1,80,120,45),SYSTEM
                        MENUBAR,USE(?MENUBAR1)
+                         MENU('*DevCon2019*'),USE(?DevCon2019)
+                           ITEM('Enable F1 Hook to show CB Window Preview '),USE(?CbHlpHookEnableItem)
+                           ITEM('(Hide the above item for non-developer users'),USE(?CbHlpHookEnableItem2)
+                         END
                          MENU('&File'),USE(?MENU1)
                            ITEM('&Print Setup ...'),USE(?PrintSetup),MSG('Setup printer'),STD(STD:PrintSetup)
                            ITEM,USE(?SEPARATOR2),SEPARATOR
@@ -3044,7 +3048,7 @@ AppFrame             APPLICATION('SV SQLite University + Carl''s WndPreview Clas
                            ITEM('Teachers '),USE(?BrowseTeachers),MSG('Browse Teachers')
                            ITEM('Classes '),USE(?BrowseClasses),MSG('Browse Classes')
                            ITEM('Enrollment '),USE(?BrowseEnrollment),MSG('Browse Enrollment')
-                           ITEM('Courses'),USE(?BrowseCourses),MSG('Browse Courses')
+                           ITEM('Courses (no HLP())'),USE(?BrowseCourses),MSG('Browse Courses')
                            ITEM('Majors '),USE(?BrowseMajors),MSG('Browse Majors')
                            ITEM('Update Grades'),USE(?BrowseUpdateGrades)
                          END
@@ -3118,6 +3122,25 @@ DefineListboxStyle ROUTINE
 !|
 !---------------------------------------------------------------------------
 Menu::MENUBAR1 ROUTINE                                     ! Code for menu items on ?MENUBAR1
+Menu::DevCon2019 ROUTINE                                   ! Code for menu items on ?DevCon2019
+  CASE ACCEPTED()
+  OF ?CbHlpHookEnableItem
+    IF Help2WndPreviewCls &= NULL THEN   !<><><><><><><> CB Window Preview Hook <><><><><><>
+       Help2WndPreviewCls &= NEW(CbWndPrvHelpHookClass) 
+       IF ~Help2WndPreviewCls.IsInited THEN
+          RV# = Help2WndPreviewCls.Init('YourHelp.CHM')  !Help file does NOT need to exist, but need a Name
+          IF RV# THEN 
+             Message('Help2WndPreviewCls failed reason ' & RV# )
+             DISABLE(?) ; EXIT
+          END
+       END
+    END    
+    Message('Press Ctrl+Shift+F1 on Open Windows to see CB Window Preview Reflection List.' & |
+            '||Note: Any windows open now must be closed to work opening the Window Prv Class.')
+    
+    !Was declared as Ref so no chance affects live APP until it is NEW() on the hot key
+    !Help2WndPreviewCls  &CbWndPrvHelpHookClass  
+  END
 Menu::MENU1 ROUTINE                                        ! Code for menu items on ?MENU1
   CASE ACCEPTED()
   OF ?CreateDB
@@ -3192,9 +3215,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = 1
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   SELF.Open(AppFrame)                                      ! Open window
   Do DefineListboxStyle
   SELF.SetAlerts()
@@ -3245,6 +3268,7 @@ Looped BYTE
       END
     ELSE
       DO Menu::MENUBAR1                                    ! Process menu items on ?MENUBAR1 menu
+      DO Menu::DevCon2019                                  ! Process menu items on ?DevCon2019 menu
       DO Menu::MENU1                                       ! Process menu items on ?MENU1 menu
       DO Menu::MENU2                                       ! Process menu items on ?MENU2 menu
       DO Menu::Trees                                       ! Process menu items on ?Trees menu
@@ -3402,9 +3426,9 @@ ReturnValue          BYTE,AUTO
   SELF.FirstField = ?Browse:1
   SELF.VCRRequest &= VCRRequest
   SELF.Errors &= GlobalErrors                              ! Set this windows ErrorManager to the global ErrorManager
+  SELF.AddItem(Toolbar)
   CLEAR(GlobalRequest)                                     ! Clear GlobalRequest after storing locally
   CLEAR(GlobalResponse)
-  SELF.AddItem(Toolbar)
   IF SELF.Request = SelectRecord
      SELF.AddItem(?Close,RequestCancelled)                 ! Add the close control to the window manger
   ELSE

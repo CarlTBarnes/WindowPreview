@@ -240,6 +240,9 @@ Description                 STRING(20)                     !
 
 !endregion
 
+   INCLUDE('CbWndPrvHelpHook.INC'),ONCE   !<><><><><><><> CB Wnd Preview <><><><><><><>
+
+Help2WndPreviewCls  &CbWndPrvHelpHookClass  !Declare as Ref so no chance affects live APP
 Access:Students      &FileManager,THREAD                   ! FileManager for Students
 Relate:Students      &RelationManager,THREAD               ! RelationManager for Students
 Access:Teachers      &FileManager,THREAD                   ! FileManager for Teachers

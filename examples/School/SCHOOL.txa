@@ -79,19 +79,49 @@ WHEN  ('RelationManager:Teachers') ('')
 WHEN  ('RelationManager:Teachers_TPS') ('')
 WHEN  ('Translator') ('')
 
-%ClassLines DEPEND %ClassItem MULTI DEFAULT TIMES 12
-WHEN  ('RelationManager:Classes') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Classes_TPS') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Courses') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Courses_TPS') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Enrollment') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Enrollment_TPS') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Majors') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Majors_TPS') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Students') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Students_TPS') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Teachers') ('Init {19}PROCEDURE')
-WHEN  ('RelationManager:Teachers_TPS') ('Init {19}PROCEDURE')
+%ClassLines DEPEND %ClassItem MULTI DEFAULT TIMES 24
+WHEN  ('FileManager:Classes') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED', 'ValidateFieldServer    PROCEDURE(UNSIGNED Id,BYTE HandleErrors),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Classes_TPS') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Courses') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Courses_TPS') ('BindFields {13}PROCEDURE(),DERIVED', 'Init {19}PROCEDURE(),DERIVED', |
+  'Kill {19}PROCEDURE(),DERIVED', 'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Enrollment') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED', 'ValidateFieldServer    PROCEDURE(UNSIGNED Id,BYTE HandleErrors),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Enrollment_TPS') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED', 'ValidateFieldServer    PROCEDURE(UNSIGNED Id,BYTE HandleErrors),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Majors') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Majors_TPS') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Students') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED', 'ValidateFieldServer    PROCEDURE(UNSIGNED Id,BYTE HandleErrors),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Students_TPS') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Teachers') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED', 'ValidateFieldServer    PROCEDURE(UNSIGNED Id,BYTE HandleErrors),BYTE,PROC,DERIVED')
+WHEN  ('FileManager:Teachers_TPS') ('Init {19}PROCEDURE(),DERIVED', 'Kill {19}PROCEDURE(),DERIVED', |
+  'UseFile {16}PROCEDURE(BYTE UseType = UseType:Uses),BYTE,PROC,DERIVED')
+WHEN  ('RelationManager:Classes') ('Init {19}PROCEDURE', 'DeferedAddRelations    PROCEDURE(),DERIVED', |
+  'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Classes_TPS') ('Init {19}PROCEDURE', 'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Courses') ('Init {19}PROCEDURE', 'DeferedAddRelations    PROCEDURE(),DERIVED', |
+  'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Courses_TPS') ('Init {19}PROCEDURE', 'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Enrollment') ('Init {19}PROCEDURE', 'DeferedAddRelations    PROCEDURE(),DERIVED', |
+  'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Enrollment_TPS') ('Init {19}PROCEDURE', 'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Majors') ('Init {19}PROCEDURE', 'DeferedAddRelations    PROCEDURE(),DERIVED', |
+  'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Majors_TPS') ('Init {19}PROCEDURE', 'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Students') ('Init {19}PROCEDURE', 'DeferedAddRelations    PROCEDURE(),DERIVED', |
+  'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Students_TPS') ('Init {19}PROCEDURE', 'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Teachers') ('Init {19}PROCEDURE', 'DeferedAddRelations    PROCEDURE(),DERIVED', |
+  'Kill {19}PROCEDURE(),DERIVED')
+WHEN  ('RelationManager:Teachers_TPS') ('Init {19}PROCEDURE', 'Kill {19}PROCEDURE(),DERIVED')
 
 %ProgramAuthor DEFAULT  ('')
 %ProgramIcon DEFAULT  ('')
@@ -986,6 +1016,16 @@ PROPERTY:BEGIN
 PRIORITY 4000
 PROPERTY:END
   INCLUDE('prnprop.clw')
+[END]
+EMBED %AfterGlobalDataUser
+[DEFINITION]
+[SOURCE]
+PROPERTY:BEGIN
+PRIORITY 4000
+PROPERTY:END
+   INCLUDE('CbWndPrvHelpHook.INC'),ONCE   !<><><><><><><> CB Wnd Preview <><><><><><><>
+
+Help2WndPreviewCls  &CbWndPrvHelpHookClass  !Declare as Ref so no chance affects live APP
 [END]
 [END]
 [END]
@@ -10074,7 +10114,7 @@ NAME Main
 [COMMON]
 DESCRIPTION 'Clarion for Windows Wizard Application'
 FROM ABC Frame
-MODIFIED '2020/05/21' '17:09:32'
+MODIFIED '2020/05/21' '17:32:51'
 [DATA]
 [SCREENCONTROLS]
 ! PROMPT('OriginalRequest:'),USE(?OriginalRequest:Prompt)
@@ -10126,7 +10166,7 @@ ForceRefresh             LONG
 CurrentTab               STRING(80)
 !!> GUID('57c9ed8e-93d7-457c-98c8-bdd35043b2e9'),PROMPT('CurrentTab:'),HEADER('CurrentTab'),PICTURE(@s80)
 [PROMPTS]
-%ButtonAction DEPEND %Control DEFAULT TIMES 42
+%ButtonAction DEPEND %Control DEFAULT TIMES 44
 WHEN  ('?Arrange') ('No Special Action')
 WHEN  ('?BrowseClassTree') ('Call a Procedure')
 WHEN  ('?BrowseClasses') ('Call a Procedure')
@@ -10138,6 +10178,8 @@ WHEN  ('?BrowseStudentsTree') ('Call a Procedure')
 WHEN  ('?BrowseTeachers') ('Call a Procedure')
 WHEN  ('?BrowseUpdateGrades') ('Call a Procedure')
 WHEN  ('?Cascade') ('No Special Action')
+WHEN  ('?CbHlpHookEnableItem') ('No Special Action')
+WHEN  ('?CbHlpHookEnableItem2') ('No Special Action')
 WHEN  ('?Copy') ('No Special Action')
 WHEN  ('?CreateDB') ('Call a Procedure')
 WHEN  ('?Cut') ('No Special Action')
@@ -10346,7 +10388,7 @@ WHEN  ('?Toolbar:Top') (0)
 WHEN  ('?Toolbar:Up') (0)
 WHEN  ('?Trees') (0)
 
-%ButtonThreadStack DEPEND %Control DEFAULT TIMES 42
+%ButtonThreadStack DEPEND %Control DEFAULT TIMES 44
 WHEN  ('?Arrange') ('25000')
 WHEN  ('?BrowseClassTree') ('25000')
 WHEN  ('?BrowseClasses') ('050000')
@@ -10358,6 +10400,8 @@ WHEN  ('?BrowseStudentsTree') ('25000')
 WHEN  ('?BrowseTeachers') ('050000')
 WHEN  ('?BrowseUpdateGrades') ('25000')
 WHEN  ('?Cascade') ('25000')
+WHEN  ('?CbHlpHookEnableItem') ('25000')
+WHEN  ('?CbHlpHookEnableItem2') ('25000')
 WHEN  ('?Copy') ('25000')
 WHEN  ('?CreateDB') ('25000')
 WHEN  ('?Cut') ('25000')
@@ -10434,7 +10478,7 @@ WHEN  ('?Toolbar:Top') ('')
 WHEN  ('?Toolbar:Up') ('')
 WHEN  ('?Trees') ('')
 
-%ButtonRequest DEPEND %Control DEFAULT TIMES 42
+%ButtonRequest DEPEND %Control DEFAULT TIMES 44
 WHEN  ('?Arrange') ('None')
 WHEN  ('?BrowseClassTree') ('')
 WHEN  ('?BrowseClasses') ('')
@@ -10446,6 +10490,8 @@ WHEN  ('?BrowseStudentsTree') ('')
 WHEN  ('?BrowseTeachers') ('')
 WHEN  ('?BrowseUpdateGrades') ('')
 WHEN  ('?Cascade') ('None')
+WHEN  ('?CbHlpHookEnableItem') ('None')
+WHEN  ('?CbHlpHookEnableItem2') ('None')
 WHEN  ('?Copy') ('None')
 WHEN  ('?CreateDB') ('None')
 WHEN  ('?Cut') ('None')
@@ -11225,6 +11271,34 @@ SYSTEM{PROP:Icon} = '~_TpSpdU.ICO'
 [END]
 [END]
 [END]
+EMBED %ControlEventHandling
+[INSTANCES]
+WHEN '?CbHlpHookEnableItem'
+[INSTANCES]
+WHEN 'Accepted'
+[DEFINITION]
+[SOURCE]
+PROPERTY:BEGIN
+PRIORITY 5000
+PROPERTY:END
+IF Help2WndPreviewCls &= NULL THEN   !<><><><><><><> CB Window Preview Hook <><><><><><>
+   Help2WndPreviewCls &= NEW(CbWndPrvHelpHookClass) 
+   IF ~Help2WndPreviewCls.IsInited THEN
+      RV# = Help2WndPreviewCls.Init('YourHelp.CHM')  !Help file does NOT need to exist, but need a Name
+      IF RV# THEN 
+         Message('Help2WndPreviewCls failed reason ' & RV# )
+         DISABLE(?) ; EXIT
+      END
+   END
+END    
+Message('Press Ctrl+Shift+F1 on Open Windows to see CB Window Preview Reflection List.' & |
+        '||Note: Any windows open now must be closed to work opening the Window Prv Class.')
+
+!Was declared as Ref so no chance affects live APP until it is NEW() on the hot key
+!Help2WndPreviewCls  &CbWndPrvHelpHookClass  
+[END]
+[END]
+[END]
 [END]
 [ADDITION]
 NAME ABC FrameBrowseControl
@@ -11249,96 +11323,102 @@ INSTANCE 2
 %TimeStatusSection DEFAULT  ('4')
 %TimeControl DEFAULT  ('')
 [WINDOW]
-AppFrame APPLICATION('SV SQLite University'),AT(,,600,370),FONT('MS Sans Serif',8,COLOR:Black), |
-          RESIZE,ALRT(MouseLeft2),CENTER,ICON('_SoftVUn.ico'),IMM,MAX,HLP('~TopSpeedUniversity'), |
-          STATUS(-1,80,120,45),SYSTEM
+AppFrame APPLICATION('SV SQLite University + Carl''s WndPreview Class hooked via Ctrl+Shift+F1'), |
+          AT(,,600,370),FONT('MS Sans Serif',8,COLOR:Black),RESIZE,ALRT(MouseLeft2),CENTER, |
+          ICON('_SoftVUn.ico'),IMM,MAX,HLP('~TopSpeedUniversity'),STATUS(-1,80,120,45),SYSTEM
           MENUBAR,USE(?MENUBAR1),#ORDINAL(1)
-            MENU('&File'),USE(?MENU1),#ORDINAL(2)
-              ITEM('&Print Setup ...'),USE(?PrintSetup),MSG('Setup printer'),STD(STD:PrintSetup), |
+            MENU('*DevCon2019*'),USE(?DevCon2019),#ORDINAL(2)
+              ITEM('Enable F1 Hook to show CB Window Preview '),USE(?CbHlpHookEnableItem), |
                 #ORDINAL(3)
-              ITEM,USE(?SEPARATOR2),SEPARATOR,#ORDINAL(4)
-              ITEM('Create SQLite DB'),USE(?CreateDB),#ORDINAL(5)
-              ITEM,USE(?SEPARATOR1),SEPARATOR,#ORDINAL(6)
-              ITEM('E&xit'),USE(?Exit),MSG('Exit this application'),STD(STD:Close),#ORDINAL(7)
+              ITEM('(Hide the above item for non-developer users'),USE(?CbHlpHookEnableItem2), |
+                #ORDINAL(4)
             END
-            MENU('&Edit'),USE(?MENU2),#ORDINAL(8)
+            MENU('&File'),USE(?MENU1),#ORDINAL(5)
+              ITEM('&Print Setup ...'),USE(?PrintSetup),MSG('Setup printer'),STD(STD:PrintSetup), |
+                #ORDINAL(6)
+              ITEM,USE(?SEPARATOR2),SEPARATOR,#ORDINAL(7)
+              ITEM('Create SQLite DB'),USE(?CreateDB),#ORDINAL(8)
+              ITEM,USE(?SEPARATOR1),SEPARATOR,#ORDINAL(9)
+              ITEM('E&xit'),USE(?Exit),MSG('Exit this application'),STD(STD:Close),#ORDINAL(10)
+            END
+            MENU('&Edit'),USE(?MENU2),#ORDINAL(11)
               ITEM('Cu&t'),USE(?Cut),KEY(CtrlX),MSG('Remove item to Windows Clipboard'),STD(STD:Cut), |
-                #ORDINAL(9)
+                #ORDINAL(12)
               ITEM('&Copy'),USE(?Copy),KEY(CtrlC),MSG('Copy item to Windows Clipboard'),STD(STD:Copy), |
-                #ORDINAL(10)
+                #ORDINAL(13)
               ITEM('&Paste'),USE(?Paste),KEY(CtrlV),MSG('Paste contents of Windows Clipboard'), |
-                STD(STD:Paste),#ORDINAL(11)
+                STD(STD:Paste),#ORDINAL(14)
             END
-            MENU('&Trees'),USE(?Trees),#ORDINAL(12)
-              ITEM('&Class Tree'),USE(?BrowseClassTree),#ORDINAL(13)
-              ITEM('&Students Tree'),USE(?BrowseStudentsTree),#ORDINAL(14)
+            MENU('&Trees'),USE(?Trees),#ORDINAL(15)
+              ITEM('&Class Tree'),USE(?BrowseClassTree),#ORDINAL(16)
+              ITEM('&Students Tree'),USE(?BrowseStudentsTree),#ORDINAL(17)
             END
-            MENU('&Browse'),USE(?MENU3),#ORDINAL(15)
-              ITEM('Students '),USE(?BrowseStudents),MSG('Browse Students'),#ORDINAL(16)
-              ITEM('Teachers '),USE(?BrowseTeachers),MSG('Browse Teachers'),#ORDINAL(17)
-              ITEM('Classes '),USE(?BrowseClasses),MSG('Browse Classes'),#ORDINAL(18)
-              ITEM('Enrollment '),USE(?BrowseEnrollment),MSG('Browse Enrollment'),#ORDINAL(19)
-              ITEM('Courses'),USE(?BrowseCourses),MSG('Browse Courses'),#ORDINAL(20)
-              ITEM('Majors '),USE(?BrowseMajors),MSG('Browse Majors'),#ORDINAL(21)
-              ITEM('Update Grades'),USE(?BrowseUpdateGrades),#ORDINAL(22)
+            MENU('&Browse'),USE(?MENU3),#ORDINAL(18)
+              ITEM('Students '),USE(?BrowseStudents),MSG('Browse Students'),#ORDINAL(19)
+              ITEM('Teachers '),USE(?BrowseTeachers),MSG('Browse Teachers'),#ORDINAL(20)
+              ITEM('Classes '),USE(?BrowseClasses),MSG('Browse Classes'),#ORDINAL(21)
+              ITEM('Enrollment '),USE(?BrowseEnrollment),MSG('Browse Enrollment'),#ORDINAL(22)
+              ITEM('Courses (no HLP())'),USE(?BrowseCourses),MSG('Browse Courses'),#ORDINAL(23)
+              ITEM('Majors '),USE(?BrowseMajors),MSG('Browse Majors'),#ORDINAL(24)
+              ITEM('Update Grades'),USE(?BrowseUpdateGrades),#ORDINAL(25)
             END
-            MENU('&Reports'),USE(?ReportMenu),MSG('Report data'),#ORDINAL(23)
+            MENU('&Reports'),USE(?ReportMenu),MSG('Report data'),#ORDINAL(26)
               ITEM('Student Class Schedules'),USE(?PrintENR:StuSeq),MSG('Print ordered ' & |
-                'by by Student Number'),#ORDINAL(24)
-              ITEM('Teacher Class Schedules'),USE(?ReportsTeacherClassSchedules),#ORDINAL(25)
+                'by by Student Number'),#ORDINAL(27)
+              ITEM('Teacher Class Schedules'),USE(?ReportsTeacherClassSchedules),#ORDINAL(28)
               ITEM('Attendance Sheets'),USE(?PrintENR:SeqStu),MSG('Print ordered by by ' & |
-                'Class Number'),#ORDINAL(26)
+                'Class Number'),#ORDINAL(29)
               ITEM('Course Enrollment'),USE(?PrintCOU:KeyDescription),MSG('Print ordere' & |
-                'd by by Course Description'),#ORDINAL(27)
-              ITEM('Course Enrollment Summary'),USE(?ReportsCourseEnrollmentSummary),#ORDINAL(28)
-              ITEM('Final Grades'),USE(?ReportsFinalGrades),#ORDINAL(29)
-              ITEM('Student IDs'),USE(?ReportsStudentIDs),#ORDINAL(30)
+                'd by by Course Description'),#ORDINAL(30)
+              ITEM('Course Enrollment Summary'),USE(?ReportsCourseEnrollmentSummary),#ORDINAL(31)
+              ITEM('Final Grades'),USE(?ReportsFinalGrades),#ORDINAL(32)
+              ITEM('Student IDs'),USE(?ReportsStudentIDs),#ORDINAL(33)
             END
             MENU('&Window'),USE(?MENU4),MSG('Create and Arrange windows'),STD(STD:WindowList), |
-              #ORDINAL(31)
+              #ORDINAL(34)
               ITEM('T&ile'),USE(?Tile),MSG('Make all open windows visible'),STD(STD:TileWindow), |
-                #ORDINAL(32)
+                #ORDINAL(35)
               ITEM('&Cascade'),USE(?Cascade),MSG('Stack all open windows'),STD(STD:CascadeWindow), |
-                #ORDINAL(33)
+                #ORDINAL(36)
               ITEM('&Arrange Icons'),USE(?Arrange),MSG('Align all window icons'),STD(STD:ArrangeIcons), |
-                #ORDINAL(34)
+                #ORDINAL(37)
             END
-            MENU('&Help'),USE(?MENU5),MSG('Windows Help'),#ORDINAL(35)
+            MENU('&Help'),USE(?MENU5),MSG('Windows Help'),#ORDINAL(38)
               ITEM('&Contents'),USE(?Helpindex),MSG('View the contents of the help file'), |
-                STD(STD:HelpIndex),#ORDINAL(36)
+                STD(STD:HelpIndex),#ORDINAL(39)
               ITEM('&Search for Help On...'),USE(?HelpSearch),MSG('Search for help on a subject'), |
-                STD(STD:HelpSearch),#ORDINAL(37)
+                STD(STD:HelpSearch),#ORDINAL(40)
               ITEM('&How to Use Help'),USE(?HelpOnHelp),MSG('How to use Windows Help'),STD(STD:HelpOnHelp), |
-                #ORDINAL(38)
+                #ORDINAL(41)
             END
           END
-          TOOLBAR,AT(0,0,600,16),USE(?TOOLBAR1),#ORDINAL(39)
+          TOOLBAR,AT(0,0,600,16),USE(?TOOLBAR1),#ORDINAL(42)
             BUTTON,AT(2,2,16,14),USE(?Toolbar:Top, Toolbar:Top),ICON('VCRFIRST.ICO'),DISABLE, |
-              FLAT,TIP('Go to the First Page'),#ORIG(?Toolbar:Top),#SEQ(3),#ORDINAL(40)
+              FLAT,TIP('Go to the First Page'),#ORIG(?Toolbar:Top),#SEQ(3),#ORDINAL(43)
             BUTTON,AT(18,2,16,14),USE(?Toolbar:PageUp, Toolbar:PageUp),ICON('VCRPRIOR.ICO'), |
-              DISABLE,FLAT,TIP('Go to the Prior Page'),#ORIG(?Toolbar:PageUp),#SEQ(3),#ORDINAL(41)
+              DISABLE,FLAT,TIP('Go to the Prior Page'),#ORIG(?Toolbar:PageUp),#SEQ(3),#ORDINAL(44)
             BUTTON,AT(34,2,16,14),USE(?Toolbar:Up, Toolbar:Up),ICON('VCRUP.ICO'),DISABLE,FLAT, |
-              TIP('Go to the Prior Record'),#ORIG(?Toolbar:Up),#SEQ(3),#ORDINAL(42)
+              TIP('Go to the Prior Record'),#ORIG(?Toolbar:Up),#SEQ(3),#ORDINAL(45)
             BUTTON,AT(50,2,16,14),USE(?Toolbar:Locate, Toolbar:Locate),ICON('FIND.ICO'),DISABLE, |
-              FLAT,TIP('Locate record'),#ORIG(?Toolbar:Locate),#SEQ(3),#ORDINAL(43)
+              FLAT,TIP('Locate record'),#ORIG(?Toolbar:Locate),#SEQ(3),#ORDINAL(46)
             BUTTON,AT(66,2,16,14),USE(?Toolbar:Down, Toolbar:Down),ICON('VCRDOWN.ICO'),DISABLE, |
-              FLAT,TIP('Go to the Next Record'),#ORIG(?Toolbar:Down),#SEQ(3),#ORDINAL(44)
+              FLAT,TIP('Go to the Next Record'),#ORIG(?Toolbar:Down),#SEQ(3),#ORDINAL(47)
             BUTTON,AT(82,2,16,14),USE(?Toolbar:PageDown, Toolbar:PageDown),ICON('VCRNEXT.ICO'), |
-              DISABLE,FLAT,TIP('Go to the Next Page'),#ORIG(?Toolbar:PageDown),#SEQ(3),#ORDINAL(45)
+              DISABLE,FLAT,TIP('Go to the Next Page'),#ORIG(?Toolbar:PageDown),#SEQ(3),#ORDINAL(48)
             BUTTON,AT(98,2,16,14),USE(?Toolbar:Bottom, Toolbar:Bottom),ICON('VCRLAST.ICO'), |
-              DISABLE,FLAT,TIP('Go to the Last Page'),#ORIG(?Toolbar:Bottom),#SEQ(3),#ORDINAL(46)
+              DISABLE,FLAT,TIP('Go to the Last Page'),#ORIG(?Toolbar:Bottom),#SEQ(3),#ORDINAL(49)
             BUTTON,AT(118,2,16,14),USE(?Toolbar:Select, Toolbar:Select),ICON('MARK.ICO'),DISABLE, |
-              FLAT,TIP('Select This Record'),#ORIG(?Toolbar:Select),#SEQ(3),#ORDINAL(47)
+              FLAT,TIP('Select This Record'),#ORIG(?Toolbar:Select),#SEQ(3),#ORDINAL(50)
             BUTTON,AT(134,2,16,14),USE(?Toolbar:Insert, Toolbar:Insert),ICON('INSERT.ICO'), |
-              DISABLE,FLAT,TIP('Insert a New Record'),#ORIG(?Toolbar:Insert),#SEQ(3),#ORDINAL(48)
+              DISABLE,FLAT,TIP('Insert a New Record'),#ORIG(?Toolbar:Insert),#SEQ(3),#ORDINAL(51)
             BUTTON,AT(150,2,16,14),USE(?Toolbar:Change, Toolbar:Change),ICON('EDIT.ICO'),DISABLE, |
-              FLAT,TIP('Edit This Record'),#ORIG(?Toolbar:Change),#SEQ(3),#ORDINAL(49)
+              FLAT,TIP('Edit This Record'),#ORIG(?Toolbar:Change),#SEQ(3),#ORDINAL(52)
             BUTTON,AT(166,2,16,14),USE(?Toolbar:Delete, Toolbar:Delete),ICON('DELETE.ICO'), |
-              DISABLE,FLAT,TIP('Delete This Record'),#ORIG(?Toolbar:Delete),#SEQ(3),#ORDINAL(50)
+              DISABLE,FLAT,TIP('Delete This Record'),#ORIG(?Toolbar:Delete),#SEQ(3),#ORDINAL(53)
             BUTTON,AT(186,2,16,14),USE(?Toolbar:History, Toolbar:History),ICON('DITTO.ICO'), |
-              DISABLE,FLAT,TIP('Previous value'),#ORIG(?Toolbar:History),#SEQ(3),#ORDINAL(51)
+              DISABLE,FLAT,TIP('Previous value'),#ORIG(?Toolbar:History),#SEQ(3),#ORDINAL(54)
             BUTTON,AT(202,2,16,14),USE(?Toolbar:Help, Toolbar:Help),ICON('HELP.ICO'),DISABLE, |
-              FLAT,TIP('Get Help'),#ORIG(?Toolbar:Help),#SEQ(3),#ORDINAL(52)
+              FLAT,TIP('Get Help'),#ORIG(?Toolbar:Help),#SEQ(3),#ORDINAL(55)
           END
         END
 
