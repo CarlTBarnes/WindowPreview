@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 05-21-20.1640')
+VersionWndPrv EQUATE('WndPrv 05-21-20.1811')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -4517,6 +4517,7 @@ Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE,ALR
     VMapQ:FieldX = FrmFldQ:FieldX ; ADD(VMapQ)
     Hdg=FrmFldQ:Name
     P=INSTRING('::',Hdg,1)+1 ; IF P<2 THEN P=INSTRING(':',Hdg,1). ; IF P THEN Hdg=SUB(Hdg,P+1,99). !Cutoff Pre:
+    IF UPPER(Hdg)='VIEWPOSITION' OR UPPER(FrmFldQ:Name)='VIEWPOSITION' THEN CYCLE.
     Fmt=Fmt&'40L(1)|M~' & FrmFldQ:FieldX & '. '& CLIP(Hdg) & |
             '~Q'' Field: <9>'& FrmFldQ:FieldX & '<13,10> Col#: <9>' &FrmFldQ:Column & |  !Q=Col Tip
             '<13,10> Name: <9>'& CLIP(FrmFldQ:Name) &' <13,10> Type: <9>'& CLIP(FrmFldQ:DType) &' '''
