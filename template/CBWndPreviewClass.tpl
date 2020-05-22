@@ -19,7 +19,7 @@
     #IF(%FromQ AND 0=INSTRING(CHR(39),%FromQ,1,1))
  CBListPropFromQ(%Control,%FromQ,'%FromQ') !Tpl CBWndPrvListFromQ
     #ELSE
- !NO:  CBListPropFromQ(%Control,%FromQ,'%FromQ') !Tpl CBWndPrvListFromQ    
+ #!NO:  CBListPropFromQ(%Control,%FromQ,'%FromQ') !Tpl CBWndPrvListFromQ    
     #ENDIF
   #ENDFOR   
 #EndAT
