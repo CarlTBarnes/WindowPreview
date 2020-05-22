@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 05-21-20.1811')
+VersionWndPrv EQUATE('WndPrv 05-22-20.1724')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -4516,9 +4516,9 @@ Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE,ALR
     GET(FrmFldQ,X) ; IF ~FrmFldQ:HasValue THEN CYCLE.
     VMapQ:FieldX = FrmFldQ:FieldX ; ADD(VMapQ)
     Hdg=FrmFldQ:Name
+    IF INSTRING('::VIEWPOSITION',UPPER(FrmFldQ:Name),1) OR INSTRING('::POSITION',UPPER(FrmFldQ:Name),1) THEN CYCLE.
     P=INSTRING('::',Hdg,1)+1 ; IF P<2 THEN P=INSTRING(':',Hdg,1). ; IF P THEN Hdg=SUB(Hdg,P+1,99). !Cutoff Pre:
-    IF UPPER(Hdg)='VIEWPOSITION' OR UPPER(FrmFldQ:Name)='VIEWPOSITION' THEN CYCLE.
-    Fmt=Fmt&'40L(1)|M~' & FrmFldQ:FieldX & '. '& CLIP(Hdg) & |
+    Fmt=Fmt&'40L(1)|M~' & FrmFldQ:FieldX & '. <13,10>'& CLIP(Hdg) & |
             '~Q'' Field: <9>'& FrmFldQ:FieldX & '<13,10> Col#: <9>' &FrmFldQ:Column & |  !Q=Col Tip
             '<13,10> Name: <9>'& CLIP(FrmFldQ:Name) &' <13,10> Type: <9>'& CLIP(FrmFldQ:DType) &' '''
   END
@@ -4765,7 +4765,6 @@ DT LONG
      FromA=PWnd$ListFEQ{'FromQ'}
      IF FromA>=0 AND FromA<4097 THEN Message('From() needs ?List{{''FromQ''}=&Q set by .InitList().|'&FromA,'LIST') ; EXIT.
      FromQ&=(FromA) ; IF FromQ&=NULL THEN EXIT.
-     UNHIDE(?TAB:FromQ) ; SELECT(?TAB:FromQ)
      LOOP X=1 TO 999 ; QA &= WHAT(FromQ,X) ; IF QA &= NULL THEN BREAK.
        CLEAR(FrmFldQ) 
        FrFQ:FieldX=X
@@ -4793,7 +4792,7 @@ DT LONG
      END 
      PUT(ListQ)
   END
-  DISPLAY ; EXIT
+  UNHIDE(?TAB:FromQ) ; SELECT(?TAB:FromQ) ; DISPLAY ; EXIT
 !-------------  
 Load1ColumnRtn ROUTINE
   GET(ListQ,CHOICE(?LIST:ListQ)) ; IF ERRORCODE() THEN EXIT.
