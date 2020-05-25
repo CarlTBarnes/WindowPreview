@@ -32,13 +32,13 @@ View a LIST Column Properties.
 
 View List From(Queue) definition. This is only available if the class is used in a live program (not preview). It requires adding the global extension template to store a reference to the From(Q) in a user defined property  {'FromQ'}. This require C10. See this in the School example. In capture below note the fields 12-16 not in a list column.
 
-![Screen Shot](readme_listfromq.png)
+![Screen Shot](images/readme_listfromq.png)
 
 Click the "View From(Q)" button to browse the contents of the entire From(Q). Right click to copy to clipboard. This lets you see the values of non-visible fields (like tree level or style number) to see if they are what you expected or require.
 
-![Screen Shot](readme_listfromq_view.png)
+![Screen Shot](images/readme_listfromq_view.png)
 
 The LIST Re-Format button allows changing most column properties on the live window to see exasctly what they will look like. I use this most to get the width I desire. You can change heading text and alignment to get just the look you want.
 
-![Screen Shot](readme_listreformat.png)
+![Screen Shot](images/readme_listreformat.png)
 
