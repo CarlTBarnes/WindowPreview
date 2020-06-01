@@ -30,7 +30,7 @@ View a LIST Column Properties.
 
 ![Screen Shot](images/readme_listcolumn.png)
 
-View List From(Queue) definition. This is only available if the class is used in a live program (not preview). It requires adding the global extension template to store a reference to the From(Q) in a user defined property  {'FromQ'}. This require C10. See this in the School example. In capture below note the fields 12-16 not in a list column.
+View List From(Queue) definition. This is only available if the class is used in a live program (not preview). It requires adding the global extension template to store a reference to the From(Q) in a user defined property  {'FromQ'}. This requires C10. See this in the School example. In capture below note the fields 12-16 not in a list column.
 
 ![Screen Shot](images/readme_listfromq.png)
 

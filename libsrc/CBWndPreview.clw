@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 05-22-20.1724')
+VersionWndPrv EQUATE('WndPrv 06-01-20.1728')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -526,9 +526,10 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
         BUTTON('ALRTs'),AT(567,14,29,11),USE(?ALRTsBtn),DISABLE,SKIP,HIDE,TIP('See all ALRT() and KEY()'), |
                 FLAT
         BUTTON('See &More...'),AT(447,13,42,12),USE(?SeeMoreButs),SKIP,TIP('Select the See More Colu' & |
-                'mn Data'),LEFT
-        ENTRY(@s30),AT(492,15,39,9),USE(AnyPropH),SKIP,TIP('Type any PROP in Hex "h", Decimal or Exp' & |
-                'ression<13,10>e.g. 7C00h is PROP:Text<13,10>Defined Range 7200-7DFF')
+                'mn Data<13,10>Ctrl+Click on Popup Item to Add To (Prepend)'),LEFT
+        ENTRY(@s30),AT(492,15,39,9),USE(AnyPropH),SKIP,TIP('Type any PROP in Hex "h", Decimal or Expression <13,10>E.g. ' & |
+                '7C00h is PROP:Text - Defined Range 7200-7DFF<13,10><13,10>For {{''UserProp''} enter a leading <39> quote'), |
+                ALRT(EnterKey)
         BUTTON('...'),AT(533,13,13,12),USE(?SeeMorePickBtn),SKIP,TIP('Property Pick List')
         BUTTON('&Halt'),AT(557,13,22,12),USE(?HaltBtn),SKIP
         BUTTON,AT(586,13,12,12),USE(?CopyBtn),SKIP,ICON(ICON:Copy),TIP('Copy Field Q'),FLAT
@@ -686,7 +687,8 @@ AcceptLoopRtn ROUTINE !--------------------
           END
        OF EVENT:HeaderPressed ; DO SortListHeaderPressedRtn
        END          
-    OF ?FindTxt OROF ?FindNext OROF ?FindPrev ; LocateInList(FieldQ, ?ListF,?FindTxt,?FindNext,?FindPrev)            
+    OF ?FindTxt OROF ?FindNext OROF ?FindPrev ; LocateInList(FieldQ, ?ListF,?FindTxt,?FindNext,?FindPrev)
+    OF ?AnyPropH ; IF EVENT()=EVENT:AlertKey AND KEYCODE()=EnterKey THEN UPDATE ; POST(EVENT:Accepted,?SeeMoreButs).
     END
   END
   EXIT
@@ -1033,6 +1035,7 @@ SeeMoreButsRtn ROUTINE
     DATA
 SeeX    LONG,AUTO
 PropX   LONG,AUTO
+PropUsr PSTRING(31)
 CaseX   LONG,AUTO
 Lng     LONG,AUTO
 FQSM    &STRING
@@ -1051,9 +1054,11 @@ PUName     PSTRING(32),DIM(16)
 PUProp            LONG,DIM(16)
 AK STRING('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'',-./;=')
 K1 STRING(1)
+IsAdds2 BYTE !Ctrl+ Prepends (Adds 2)
+FQSMadd2  LIKE(FieldQ:SeeMore)
   CODE
   FQSM &= FieldQ:SeeMore    
-  N += 1 ; PUProp[N]=PROP:Text    ; PUName[N]='Property Entered: ' & AnyPropH
+  N += 1 ; PUProp[N]=-2           ; PUName[N]='Property Entered: ' & AnyPropH
   N += 1 ; PUProp[N]=PROP:CAP     ; PUName[N]='Entry Modifiers CAP UPR INS OVR IMM'
   N += 1 ; PUProp[N]=PROP:Font    ; PUName[N]='Font'
   N += 1 ; PUProp[N]=PROP:HLP     ; PUName[N]='Help HLP()'     
@@ -1072,23 +1077,34 @@ K1 STRING(1)
   N += 1 ; PUProp[N]=-1*PROP:XPos ; PUName[N]='X / Y Delta from Preceding'
 !**MUST change DIM(16)** to Add New 
   PopMenu=PUName[1] ; LOOP P=2 TO N ; PopMenu=PopMenu &'|'& PUName[P] ; END
-  SeeX=POPUPunder(?SeeMoreButs, PopMenu) ; IF ~SeeX THEN EXIT.
+  SeeX=POPUPunder(?SeeMoreButs, PopMenu) ; IF ~SeeX THEN EXIT. 
+  IsAdds2=CHOOSE(KeyStateSCA(2))  !; IF IsAdds2 THEN message('IsAdds2=' & IsAdds2 ).
 SkipPopLabel:  PropX=PUProp[SeeX]
     CaseX=PropX
     CASE CaseX
-    OF PROP:Text ;       PropX=EVALUATE(AnyPropH) 
-       IF ERRORCODE() OR PropX < 7000h OR PropX > 7FFFh THEN
-          Message(AnyPropH &' evaluated to ' & PropX &' which is outside the max range 7000h - 7FFFFh (defined 7200-7DFF)')
-          SELECT(?AnyPropH) ; EXIT
+    OF -2
+       IF AnyPropH[1]=CHR(39) THEN
+          PropUsr=CLIP(LEFT(SUB(AnyPropH,2,99)))
+          L=LEN(PropUsr) ; IF L>1 AND PropUsr[L]=CHR(39) THEN PropUsr=CLIP(PropUsr[1 : L-1]).
+          CaseX=-3
+       ELSE
+          PropX=EVALUATE(AnyPropH)
+          IF ERRORCODE() OR PropX < 7000h OR PropX > 7FFFh THEN
+             CASE Message('EVALUATE(' & CLIP(AnyPropH) &') = ' & PropX &' is not a property 7000h-7FFFFh (defined 7200-7DFF)' , |
+                          'See More',,'Close|''User Prop''')
+             OF 2 ; AnyPropH=CHR(39) & AnyPropH ; POST(EVENT:Accepted,?SeeMoreButs)
+             END ; SELECT(?AnyPropH) ; EXIT
+          END
        END
     END
     SETTARGET(PWnd)
     ClaFont4(0, WFont[]) 
     WHlp=CLIP(0{PROP:Hlp})
     LOOP R=1 TO RECORDS(FieldQ)
-         GET(FieldQ,R) ; FQSM=''
+         GET(FieldQ,R) ; FQSMadd2=FQSM ; FQSM=''
          F=FldQ:FeqNo
          CASE CaseX
+         OF -3 ; FQSM=F{PropUsr}
          OF PROP:Font ; ClaFont4(F, CFont[])  ; FQSM=ClaFont4Net(WFont[],CFont[])
          OF -1*PROP:Text  ; FQSM=ClaPicture(F,FldQ:TypeNo) ; IF FQSM THEN FQSM=CLIP(FQSM) &' {9}'& FldQ:Type &'  '&FldQ:FeqName.
 !TODO *-1 YPOS would be Delta from Control After (succeeds)
@@ -1102,11 +1118,6 @@ SkipPopLabel:  PropX=PUProp[SeeX]
          OF PROP:Key ! ; Lng=F{PROP:Key} ; IF Lng THEN FQSM=ClaKeyCodeExplain(Lng). 
                  LOOP X=1 TO 255 ; L=F{PROP:Alrt,X} ; IF L THEN FQSM=CLIP(FQSM)&' '& ClaKeyCodeExplain(L,1). ; END
                         L=F{PROP:Key} ; IF L THEN FQSM=' Key('&ClaKeyCodeExplain(L,1)&')'&FQSM ELSE FQSM=LEFT(FQSM).
-
-!     OF -1*PROP:Key ; IF ~TypeHasAltKey(FldQ:TypeNo) THEN X=0 ELSE X=STRPOS(FldQ:Text,'&[^&]').
-!                      
-!                          L=F{PROP:Key} ; IF X+L THEN FQSM=CHOOSE(~X,'','ALT + '& UPPER(FldQ:Text[X+1])&' ') & |
-!                  CHOOSE(~L,'','Key('&ClaKeyCodeExplain(L,1)&')') &CHOOSE(~FldQ:TabName,'','   Tab: '& FldQ:TabName) ELSE FQSM=''.!'<160>'.
 
      OF -1*PROP:Key ; IF ~TypeHasAltKey(FldQ:TypeNo) THEN X=0 ELSE X=STRPOS(FldQ:Text,'&[^& ]'). ; L=F{PROP:Key} 
                       IF X+L=0 THEN CYCLE. 
@@ -1124,17 +1135,19 @@ SkipPopLabel:  PropX=PUProp[SeeX]
                              PropTFName(F,PROP:IMM,'IMM ') & PropTFName(F,PROP:REQ,'REQ ')
          ELSE ; FQSM=F{PropX}  !PROP:Tip PROP:MSG PROP:Value etc     
          END
+         If IsAdds2 AND FQSMadd2 THEN FQSM=CHOOSE(~FQSM,FQSMadd2,CLIP(FQSM) &' -- '& CLIP(FQSMadd2)).
          PUT(FieldQ) ; PriorFldQ=FieldQ
          IF ~First1 AND FQSM THEN First1=R.
     END
     SETTARGET()
+    If IsAdds2 AND FQSMadd2=?ListF{PROPLIST:Header,SeeMore:ColNum}.
     FQSM=PUName[SeeX]
     CASE PropX
     OF PROP:Font ; CFont=WFont ; CLEAR(WFont[]) ; FQSM='Font: ' & ClaFont4Net(WFont[],CFont[]) 
     OF PROP:HLP  ; IF WHlp[1]='~' THEN WHlp[1]=' '. ; FQSM='Help - Window HLP( ' & WHlp &')'  !FYI ~in Header BAD
     OF -1*PROP:Key ; FQSM=CLIP(FQSM)&'<13,10>Unused: ' & AK
     END     
-    ?ListF{PROPLIST:Header,SeeMore:ColNum}=CHOOSE(~First1,'(None) ','') & FQSM 
+    ?ListF{PROPLIST:Header,SeeMore:ColNum}=CHOOSE(~First1,'(None) ','') & CLIP(FQSM) & CHOOSE(~IsAdds2,'',' -- '& FQSMadd2)
     GET(FieldQ,CHOICE(?ListF)) ; IF ~FQSM AND First1 THEN ?ListF{Prop:Selected}=First1. !Selected SeeMore='' then change to first
     DISPLAY
     EXIT
