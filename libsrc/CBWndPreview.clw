@@ -1058,7 +1058,7 @@ IsAdds2 BYTE !Ctrl+ Prepends (Adds 2)
 FQSMadd2  LIKE(FieldQ:SeeMore)
   CODE
   FQSM &= FieldQ:SeeMore    
-  N += 1 ; PUProp[N]=-2           ; PUName[N]='Property Entered: ' & AnyPropH
+  N += 1 ; PUProp[N]=-2           ; PUName[N]='Property: ' & AnyPropH
   N += 1 ; PUProp[N]=PROP:CAP     ; PUName[N]='Entry Modifiers CAP UPR INS OVR IMM'
   N += 1 ; PUProp[N]=PROP:Font    ; PUName[N]='Font'
   N += 1 ; PUProp[N]=PROP:HLP     ; PUName[N]='Help HLP()'     
@@ -1140,7 +1140,7 @@ SkipPopLabel:  PropX=PUProp[SeeX]
          IF ~First1 AND FQSM THEN First1=R.
     END
     SETTARGET()
-    If IsAdds2 AND FQSMadd2=?ListF{PROPLIST:Header,SeeMore:ColNum}.
+    If IsAdds2 THEN FQSMadd2=?ListF{PROPLIST:Header,SeeMore:ColNum}.
     FQSM=PUName[SeeX]
     CASE PropX
     OF PROP:Font ; CFont=WFont ; CLEAR(WFont[]) ; FQSM='Font: ' & ClaFont4Net(WFont[],CFont[]) 
