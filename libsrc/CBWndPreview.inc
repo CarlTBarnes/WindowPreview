@@ -92,6 +92,12 @@ InitList        PROCEDURE(LONG ListFEQ, *QUEUE ListFromQueue, <STRING NameOfQ>) 
 AllOffHDRS      PROCEDURE(BOOL UnHide=1, BOOL UnDisable=1, BOOL UnReadOnly=1, BOOL UnSkip=1) !1=Turn Off (Hide,Disable,Readonly,Skip) - UNLESS Control Key is down
 AllFixNumbers   PROCEDURE() !Fix #####.## numbers to 9999.99 - CANNOT do in SECTION('AfterOpen'), must do in Once SECTION('InAccept')
 Start           PROCEDURE() ! START HERE Open the Controls List i.e. Reflection
+
+InitWorker      PROCEDURE(Window W) !Allow MG to not use my .Init()
+Glo_IsPreviewEXE  &BYTE    !&=Glo:IsPreviewEXE
+Glo_Built         &PSTRING !&=Glo:Built (38)
+GloT_Caption      &PSTRING !&=GloT:Caption (200)
+
 !Internal Properties
 !---------- 
 ReflectionBtn           LONG 

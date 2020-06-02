@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 06-01-20.1728')
+VersionWndPrv EQUATE('WndPrv 06-02-20.0839')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -154,13 +154,15 @@ LoadLibrary     PROCEDURE(*CSTRING pszModuleFileName),UNSIGNED,PASCAL,RAW,NAME('
 !Region Global Data                           Global Data
 HtmlHelp_fp LONG,NAME('HtmlHelpA')
 PWnd &WINDOW,THREAD,PRIVATE     !MOst data should be THREAD incase this is Run in a Real EXE
+GloThreaded  GROUP,PRE(),THREAD,PRIVATE
+GloT:Caption       PSTRING(200) !Caption of Preview window
+GloT:ResizeControl LONG
+GloT:ReFormatList  LONG
+GloT:Hide          BYTE(1)      !Hide before Open(w)
+            END
 Globals     GROUP,PRE(),PRIVATE
 Glo:IsPreviewEXE  BYTE         !Is WinPreview or Test EXE?
 Glo:Built         PSTRING(38)
-Glo:Caption       PSTRING(200) !Caption of Preview window
-Glo:ResizeControl LONG
-Glo:ReFormatList  LONG
-Glo:Hide          BYTE(1)      !Hide before Open(w)
 AtWndReflect      LONG,DIM(4)  !Just W,H
 AtCtrlProps       LONG,DIM(4)  !For
 AtListPROPs       LONG,DIM(4)  !For ListPROPs
@@ -187,7 +189,7 @@ GridClr         LONG(8080h)
 ConfigKey   EQUATE('Software\CarlBarnes\WinPreview')
 !EndRegion Global Data
 !Region System Menu Class SysMenuClass
-SysMenuClsQ     QUEUE,PRE(SysMnQ)
+SysMenuClsQ     QUEUE,PRE(SysMnQ),THREAD
 WinRef              &WINDOW !SysMnQ:WinRef
 hWindow             LONG    !SysMnQ:hWindow
 OrigWndProc         LONG    !SysMnQ:OrigWndProc
@@ -270,7 +272,8 @@ PrevBtn LONG
 CBWndPreviewClass.Construct        PROCEDURE()
 !----------------------------------------
     CODE
-    SELF.FeqNmQ &= NEW(FeqNameQType) ; SELF.GridQ &= NEW(GridQType)       
+    SELF.FeqNmQ &= NEW(FeqNameQType) ; SELF.GridQ &= NEW(GridQType)
+    SELF.Glo_IsPreviewEXE &= Glo:IsPreviewEXE ; SELF.Glo_Built &= Glo:Built ; SELF.GloT_Caption &= GloT:Caption
     RETURN
 !---------------------------------------
 CBWndPreviewClass.Destruct PROCEDURE()
@@ -292,19 +295,19 @@ W &WINDOW
     RETURN
 CBWndPreviewClass.Init PROCEDURE(window W, BYTE BtnType=2, LONG SecretKey=1879) !1879=Alt+Ctrl+Shift+W)
 Btn LONG
-XQ  QUEUE(FILE:Queue),PRE(XQ).
-EXE STRING(260),AUTO
-Now LONG,AUTO
+!XQ  QUEUE(FILE:Queue),PRE(XQ).
+!EXE STRING(260),AUTO
+!Now LONG,AUTO
     CODE
     IF SELF.ReflectionBtn THEN RETURN.
-    SELF.SelectedLast=SELECTED()
-    SELF.WndRef &= W ; PWnd &= W
-    SELF.WndTypeNo=W{PROP:Type}
-    SELF.WndTypeName=CHOOSE(SELF.WndTypeNo-23,'APPLICATION','WINDOW','REPORT','WIN#' & SELF.WndTypeNo )
-    SELF.WndLabel=CHOOSE(SELF.WndTypeNo-23,'AppFrame','Window','Report','WindowUnk')       
-    Now=CLOCK() ; EXE=COMMAND('0') ; DIRECTORY(XQ,EXE,0) ; GET(XQ,1)
-    SELF.MenuItemShows = CHOOSE(W{PROP:Type}=CREATE:application)
-    Glo:Caption = W{PROP:Text}
+!    SELF.SelectedLast=SELECTED()
+!    SELF.WndRef &= W ; PWnd &= W
+!    SELF.WndTypeNo=W{PROP:Type}
+!    SELF.WndTypeName=CHOOSE(SELF.WndTypeNo-23,'APPLICATION','WINDOW','REPORT','WIN#' & SELF.WndTypeNo )
+!    SELF.WndLabel=CHOOSE(SELF.WndTypeNo-23,'AppFrame','Window','Report','WindowUnk')       
+!    Now=CLOCK() ; EXE=COMMAND('0') ; DIRECTORY(XQ,EXE,0) ; GET(XQ,1)
+!    SELF.MenuItemShows = CHOOSE(W{PROP:Type}=CREATE:application)
+!    GloT:Caption=W{PROP:Text}
     !TODO AppFrame Special handling ???? The buttons is on the Toolbar. If no TB will it work. Make a Menu?
     Btn = CREATE(0,CREATE:button)       !Make a Flat Button invisible until hover 
     SELF.ReflectionBtn = Btn 
@@ -315,21 +318,47 @@ Now LONG,AUTO
        SETPOSITION(Btn,0,0,9,9)         !Place at 0,0 -- 8 x 8
     END
     Btn{PROP:Flat}=1                    !Flat so invsible until hover
-    !Btn{PROP:Tip}='Carl''s Window Preview Features...UnHide, Enable, UnReadOnly, UnSkip, see PROP:s' & |
-    Btn{PROP:Tip}='Carl''s Window Inspect & Perfect ... or Reflect & Correct - ' & VersionWndPrv & |
-                  '<13,10,13,10>' & CLIP(EXE) & |
-                  '<13,10,13,10>' & CHOOSE(Now-XQ:Time<999,'','Run: ' & FORMAT(Now,@t1)&'   --   ') & |
-                    'Built: ' & FORMAT(XQ:Time,@t4)&' on '&FORMAT(XQ:Date,@d01-) & |
-                  '   --   Process ID: ' & GetCurrentProcessId() &'<13,10>'
-    Glo:Built='(Built: ' & FORMAT(XQ:Time,@t4) &' '& SUB(FORMAT(XQ:Date,@d01),1,5) &CHOOSE(Now-XQ:Time<999,'',' - Run: ' & FORMAT(Now,@t1)) &')'
+!    Btn{PROP:Tip}='Carl''s Window Inspect & Perfect ... or Reflect & Correct - ' & VersionWndPrv & |
+!                  '<13,10,13,10>' & CLIP(EXE) & |
+!                  '<13,10,13,10>' & CHOOSE(Now-XQ:Time<999,'','Run: ' & FORMAT(Now,@t1)&'   --   ') & |
+!                    'Built: ' & FORMAT(XQ:Time,@t4)&' on '&FORMAT(XQ:Date,@d01-) & |
+!                  '   --   Process ID: ' & GetCurrentProcessId() &'<13,10>'
+!    Glo:Built='(Built: ' & FORMAT(XQ:Time,@t4) &' '& SUB(FORMAT(XQ:Date,@d01),1,5) &CHOOSE(Now-XQ:Time<999,'',' - Run: ' & FORMAT(Now,@t1)) &')'
     Btn{PROP:Skip}=1                    !Skip so no focus 
     Btn{PROP:Key}=SecretKey             !Press Alt+Ctrl+Shift+W for Preview Features
+    SELF.InitWorker(W)
     IF BtnType THEN UNHIDE(Btn).
     REGISTEREVENT(EVENT:Accepted,ADDRESS(SELF.TakeAccepted),ADDRESS(SELF)) 
     REGISTEREVENT(EVENT:Selected,ADDRESS(SELF.TakeSelected),ADDRESS(SELF)) 
-    XQ:Name=lower(XQ:Name) ; GLO:IsPreviewEXE=CHOOSE(XQ:Name[1:10]='winpreview' OR INSTRING('test',XQ:Name,1)) 
-!    Message(XQ:Name &'|'&  GLO:IsPreviewEXE &'|'&EXE)
+!    XQ:Name=lower(XQ:Name) ; GLO:IsPreviewEXE=CHOOSE(XQ:Name[1:10]='winpreview' OR INSTRING('test',XQ:Name,1)) 
     RETURN
+!--------------
+CBWndPreviewClass.InitWorker PROCEDURE(Window W) !For MG to bypass .Init
+Btn LONG
+XQ  QUEUE(FILE:Queue),PRE(XQ).
+EXE STRING(260),AUTO
+Now LONG,AUTO
+    CODE
+    Btn=SELF.ReflectionBtn  !Set to -1 for no button
+    SELF.SelectedLast=SELECTED()    
+    SELF.WndRef &= W ; PWnd &= W
+    SELF.WndTypeNo=W{PROP:Type}
+    SELF.WndTypeName=CHOOSE(SELF.WndTypeNo-23,'APPLICATION','WINDOW','REPORT','WIN#' & SELF.WndTypeNo )
+    SELF.WndLabel=CHOOSE(SELF.WndTypeNo-23,'AppFrame','Window','Report','WindowUnk')       
+    Now=CLOCK() ; EXE=COMMAND('0') ; DIRECTORY(XQ,EXE,0) ; GET(XQ,1)
+    SELF.MenuItemShows = CHOOSE(W{PROP:Type}=CREATE:application)
+    GloT:Caption=W{PROP:Text}
+    IF Btn AND Btn<>-1 THEN 
+       Btn{PROP:Tip}='Carl''s Window Inspect & Perfect ... or Reflect & Correct - ' & VersionWndPrv & |
+                  '<13,10,13,10>' & CLIP(EXE) & |
+                  '<13,10,13,10>' & CHOOSE(Now-XQ:Time<999,'','Run: ' & FORMAT(Now,@t1)&'   --   ') & |
+                    'Built: ' & FORMAT(XQ:Time,@t4)&' on '&FORMAT(XQ:Date,@d01-) & |
+                  '   --   Process ID: ' & GetCurrentProcessId() &'<13,10>' 
+    END                   
+    Glo:Built='(Built: ' & FORMAT(XQ:Time,@t4) &' '& SUB(FORMAT(XQ:Date,@d01),1,5) &CHOOSE(Now-XQ:Time<999,'',' - Run: ' & FORMAT(Now,@t1)) &')'
+    XQ:Name=lower(XQ:Name) ; GLO:IsPreviewEXE=CHOOSE(XQ:Name[1:10]='winpreview' OR INSTRING('test',XQ:Name,1)) 
+    RETURN
+
 CBWndPreviewClass.InitList PROCEDURE(LONG FEQ,*QUEUE FrmQ,<STRING NameQ>)
 Ref GROUP,AUTO
 Q    &QUEUE
@@ -533,7 +562,7 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
         BUTTON('...'),AT(533,13,13,12),USE(?SeeMorePickBtn),SKIP,TIP('Property Pick List')
         BUTTON('&Halt'),AT(557,13,22,12),USE(?HaltBtn),SKIP
         BUTTON,AT(586,13,12,12),USE(?CopyBtn),SKIP,ICON(ICON:Copy),TIP('Copy Field Q'),FLAT
-        CHECK('Hide'),AT(175,2,26),USE(Glo:Hide),SKIP,TRN,FONT(,8),TIP('Hide this Window when open o' & |
+        CHECK('Hide'),AT(175,2,26),USE(GloT:Hide),SKIP,TRN,FONT(,8),TIP('Hide this Window when open o' & |
                 'ther window')
         CHECK('Select'),AT(99,2,30),USE(ReOpenSELECT),SKIP,TRN,FONT(,8),TIP('SELECT Control on Previ' & |
                 'ew window before open Control Properties<13,10>Requires Close and ReOpen Window.')
@@ -625,7 +654,7 @@ AcceptLoopRtn ROUTINE !--------------------
             ReOpenFEQNo=FldQ:FeqNo 
             BREAK !Break out of ACCEPT to close this window, select Prv Window control, then come back here
          END
-         ReOpenFEQNo=0 ; ReOpenHOW=0 ; IF Glo:Hide THEN HIDE(0).
+         ReOpenFEQNo=0 ; ReOpenHOW=0 ; IF GloT:Hide THEN HIDE(0).
          CASE EVENT()
          OF Event:ControlPROPs  ; SELF.ControlPROPs(FldQ:FeqNo, FldQ:TypeNo, FldQ:Type, FldQ:QMark & FldQ:FeqName) ; DO SyncFldQ:HDRSRtn
          OF EVENT:ListPROPs     ; SELF.ListPROPs(FldQ:FeqNo, FldQ:TypeNo, FldQ:Type, FldQ:QMark & FldQ:FeqName) ; UNHIDE(0); DO SyncFldQ:HDRSRtn ; CYCLE
@@ -1000,7 +1029,7 @@ CapAppend   STRING(60)      !Glo:Caption PSTRING(200)
 EdCapRESIZE LONG     
 EdCapWnd WINDOW('Edit Caption'),AT(,,290,95),GRAY,SYSTEM,FONT('Segoe UI',9)
         PROMPT('Original Caption:'),AT(5,5),USE(?EdCap:Cap:Pmt)
-        ENTRY(@s127),AT(61,5,219),USE(Glo:Caption,, ?EdCap:Cap),SKIP,COLOR(COLOR:BTNFACE),READONLY
+        ENTRY(@s127),AT(61,5,219),USE(GloT:Caption,, ?EdCap:Cap),SKIP,COLOR(COLOR:BTNFACE),READONLY
         PROMPT('Window Font:'),AT(5,20),USE(?EdCap:Font:Pmt)
         ENTRY(@s60),AT(61,20,219),USE(WinFont),SKIP,COLOR(COLOR:BTNFACE),READONLY
         PROMPT('&Text to Append:'),AT(5,36),USE(?EdCap:Apd:Pmt)
@@ -1013,7 +1042,7 @@ EdCapWnd WINDOW('Edit Caption'),AT(,,290,95),GRAY,SYSTEM,FONT('Segoe UI',9)
     END
     CODE 
     WinFont=PWnd{PROP:Font} &' '& PWnd{PROP:FontSize}
-    CapAppend=SUB(PWnd{PROP:Text},LEN(Glo:Caption)+5,32)
+    CapAppend=SUB(PWnd{PROP:Text},LEN(GloT:Caption)+5,32)
     EdCapRESIZE=PWnd{PROP:Resize}
     !CapAppend=SUB(SELF.WndRef{PROP:Text},LEN(Glo:Caption)+5,32)
     OPEN(EdCapWnd)
@@ -1023,7 +1052,7 @@ EdCapWnd WINDOW('Edit Caption'),AT(,,290,95),GRAY,SYSTEM,FONT('Segoe UI',9)
         OF ?EdCapRESIZE ; PWnd{PROP:Resize}=EdCapRESIZE
         OF ?EdCap:Save  ; DO Trick_SaveExeRtn
         OF ?EdCap:OkBtn
-            PWnd{PROP:Text}=Glo:Caption & CHOOSE(~CapAppend,'',' -- '& CapAppend)
+            PWnd{PROP:Text}=GloT:Caption & CHOOSE(~CapAppend,'',' -- '& CapAppend)
             !SELF.WndRef{PROP:Text}=Glo:Caption & CHOOSE(~CapAppend,'',' -- '& CapAppend)
             BREAK
         END 
@@ -1455,7 +1484,7 @@ Window WINDOW('ControlPROPs'),AT(,,250,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZ
                 'lp - F2')
         BUTTON('3'),AT(186,2,12,12),USE(?TrashBtn),SKIP,FONT('WingDings 2',14),TIP('Delete Clutter' & |
                 '<13,10>Ctrl+Click to leave only Clutter')
-        CHECK('Hide'),AT(205,4,25,8),USE(Glo:Hide),SKIP,TIP('Hide this Window when open others')
+        CHECK('Hide'),AT(205,4,25,8),USE(GloT:Hide),SKIP,TIP('Hide this Window when open others')
         BUTTON('Test'),AT(229,2,17,12),USE(?TestsBtn),SKIP,TIP('Carl Tests'),FLAT
         ENTRY(@s64),AT(31,19,182,10),USE(FindTxt),SKIP,FONT('Consolas')
         BUTTON('&Find'),AT(2,18,25,11),USE(?FindNext),SKIP
@@ -2379,8 +2408,8 @@ BevCls BevClass
 EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     CODE
 !Region BEFORE Open Window
-    IF Glo:ResizeControl THEN Message('You have Resize Open for FEQ ' & Glo:ResizeControl ) ; RETURN.
-    Glo:ResizeControl=FEQ
+    IF GloT:ResizeControl THEN Message('You have Resize Open for FEQ ' & GloT:ResizeControl ) ; RETURN.
+    GloT:ResizeControl=FEQ
     IsENTRY=INLIST(FeqTypeNo,CREATE:Entry,CREATE:Combo,CREATE:Spin,CREATE:SString)
     IsLINE=INLIST(FeqTypeNo,CREATE:Line,CREATE:box,CREATE:ellipse)
     IsLIST=INLIST(FeqTypeNo,CREATE:List,CREATE:Combo,CREATE:DropList,CREATE:DropCombo)
@@ -2467,7 +2496,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     END !Accept 
     SELF.AtSetOrSave(2, AtReszCont[])
     CLOSE(Window)
-    Glo:ResizeControl=0             
+    GloT:ResizeControl=0             
     SETTARGET(PWnd)
 !05/06/20 fixed this to work in April, it undoes change to Hide/Disable... let it be, can do in the Fields List
 !    IF Try2:Disable[2]<>Try2:Disable[1] THEN FEQ{PROP:Disable}=Try2:Disable[1].
@@ -3100,8 +3129,8 @@ SysMenuCls SysMenuClass
 EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     CODE 
 !Region BEFORE Open Window
-    IF Glo:ResizeControl THEN Message('You have Resize Open for FEQ ' & Glo:ResizeControl ) ; RETURN.
-    Glo:ResizeControl=FEQ
+    IF GloT:ResizeControl THEN Message('You have Resize Open for FEQ ' & GloT:ResizeControl ) ; RETURN.
+    GloT:ResizeControl=FEQ
     DO S1QLoadRtn
     DO FrameQLoadRtn
     DO GetPositionOnceRtn ; BeforeWaz=Poz ; Haz=Poz
@@ -3148,7 +3177,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     END !Accept 
     SELF.AtSetOrSave(2, AtReszWind[])
     CLOSE(Window)
-    Glo:ResizeControl=0
+    GloT:ResizeControl=0
     IF Try2:Hide[2]<>Try2:Hide[1] THEN FEQ{PROP:Hide}=Try2:Hide[1].    
     RETURN
 !----------------- 
@@ -4437,7 +4466,7 @@ Title   STRING(32)
   REMOVE(BatFN)     
   FI_Filter = '/FI "IMAGENAME eq WinPreview*"'
   IF SMCmd_wParam=SMCmd_HaltCapt THEN
-     Title=Glo:Caption
+     Title=GloT:Caption
      IF Title[1]='"' THEN Title=LEFT(Title[2:32]).
      X=INSTRING('"',Title) ; IF X THEN Title=SUB(Title,1,X-1).
      FI_Filter=CLIP(FI_Filter) & ' /FI "WINDOWTITLE eq ' & CLIP(Title) &'*"' 
@@ -5383,8 +5412,8 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
   ListFEQ=FEQ
   ColNo=1 ; ColNoMax = PWnd$FEQ{PROPLIST:Exists,0} ; IF ColNoMax=0 THEN MESSAGE('This LIST has no columns.', MsgCaption) ; RETURN.
   IF ~PWnd$FEQ{PROP:Format} THEN MESSAGE('This LIST has no Format().', MsgCaption) ; RETURN.
-  IF Glo:ReFormatList THEN Message('You have Column Resize Open for LIST FEQ: ' & Glo:ReFormatList, MsgCaption) ; RETURN.
-  Glo:ReFormatList=FEQ
+  IF GloT:ReFormatList THEN Message('You have Column Resize Open for LIST FEQ: ' & GloT:ReFormatList, MsgCaption) ; RETURN.
+  GloT:ReFormatList=FEQ
   DO S1QLoadRtn ; DO L1QLoadRtn ; DO AlignQLoadRtn
   DO Load_LQ_ColumnsRtn
   DO GetPositionOnceRtn ; BeforeWaz=Poz ; Haz=Poz
@@ -5445,7 +5474,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     IF ACCEPTED() THEN DO AcceptOrSpinSizesRtn.        
   END !Accept 
   SELF.AtSetOrSave(2, AtReFmtList[])  ; CLOSE(Window)
-  Glo:ReFormatList=0
+  GloT:ReFormatList=0
   PWnd$FEQ{PROPLIST:HasSortColumn}=SaveHasSortColumn ; PWnd$FEQ{PROPLIST:SortColumn}=SaveSortColumn
   PWnd$FEQ{PROPList:SortBackColor}=SaveSortBackColor ; PWnd$FEQ{PROPList:SortTextColor}=SaveSortTextColor   
   PWnd$FEQ{PropList:DefHdrBackColor}=SaveDefHdrBackColor ; PWnd$FEQ{PropList:DefHdrTextColor}=SaveDefHdrTextColor   
