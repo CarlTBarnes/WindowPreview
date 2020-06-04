@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 06-02-20.0839')
+VersionWndPrv EQUATE('WndPrv 06-04-20.1700')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -365,7 +365,7 @@ Q    &QUEUE
 L    LONG,OVER(Q)
   END
   CODE
-  Ref.Q &=FrmQ ; FEQ{'FromQ'}=Ref.L
+  Ref.Q &=FrmQ ; FEQ{'FromQ'}=Ref.L  !can=INSTANCE(FrmQ,THREAD())
   FEQ{'FromWho'}=CHOOSE(~OMITTED(NameQ),NameQ,'Queue' & Ref.L)
   RETURN
 !-----------------------------------
@@ -1156,13 +1156,12 @@ SkipPopLabel:  PropX=PUProp[SeeX]
                       FQSM=CHOOSE(~X,'','ALT + '& K1 &' ') & CHOOSE(~L,'','Key('&ClaKeyCodeExplain(L,1)&')') &|
                            CHOOSE(~FldQ:TabName,'','   Tab: '& FldQ:TabName)
 
-         OF PROP:Icon ; FQSM=F{PROP:Icon} ; IF FQSM THEN ClaIconEquate(FQSM).
          OF PROP:Hlp  ; FQSM=F{PropX} ; IF UPPER(FQSM)=UPPER(WHlp) THEN FQSM=''.
                         IF FQSM AND UPPER(FQSM)=UPPER((F{PROP:Parent}){PropX}) THEN FQSM=''.
          OF PROP:CAP  ; FQSM=PropTFName(F,PROP:CAP,'CAP ') & PropTFName(F,PROP:UPR,'UPR ') &|
                              PropTFName(F,PROP:INS,'INS ') & PropTFName(F,PROP:OVR,'OVR ') & PropTFName(F,PROP:MASK,'MASK') &|
                              PropTFName(F,PROP:IMM,'IMM ') & PropTFName(F,PROP:REQ,'REQ ')
-         ELSE ; FQSM=F{PropX}  !PROP:Tip PROP:MSG PROP:Value etc     
+         ELSE ; FQSM=F{PropX} ; SELF.PropDescribe(PropX,FQSM,1) !PROP:Icon PROP:Tip PROP:MSG PROP:Value etc     
          END
          If IsAdds2 AND FQSMadd2 THEN FQSM=CHOOSE(~FQSM,FQSMadd2,CLIP(FQSM) &' -- '& CLIP(FQSMadd2)).
          PUT(FieldQ) ; PriorFldQ=FieldQ
@@ -1456,6 +1455,9 @@ L LONG,AUTO
     END 
     L=GetWindowLong(hWnd, -16) ;  SELF.PropQAdd(PQ, -32, 'Win Style GWL_STYLE',  Hex8(L) &'  '& Binary8(L) &'  '& L)  
     L=GetWindowLong(hWnd, -20) ;  SELF.PropQAdd(PQ, -32, 'Win Style GWL_EXSTYLE',Hex8(L) &'  '& Binary8(L) &'  '& L)
+    !L=GetWindowLong(hWnd,  -6) ;  SELF.PropQAdd(PQ, -32, 'Win Style GWL_HINSTANCE',Hex8(L) &'  '& Binary8(L) &'  '& L) !Retrieves a handle to the application instance.
+    !L=GetWindowLong(hWnd, -12) ;  SELF.PropQAdd(PQ, -32, 'Win Style GWL_ID',Hex8(L) &'  '& Binary8(L) &'  '& L)        !Retrieves the identifier of the window.
+    !L=GetWindowLong(hWnd, -21) ;  SELF.PropQAdd(PQ, -32, 'Win Style GWL_USERDATA',Hex8(L) &'  '& Binary8(L) &'  '& L)  !Retrieves the user data associated with the window.
     RETURN   
 !----------------
 CBWndPreviewClass.WindowPROPs   PROCEDURE()
@@ -1539,7 +1541,7 @@ SortCls CBSortClass
 TrashBtnRtn ROUTINE
     DATA
 Bad_Prop STRING('7C5Bh 7C96h 7CB4h 7CFAh 7C5Bh 7C5Dh 7CA8h 7CFAh 7A3Ah 7C12h 7C10h 7C11h 7C13h 7C57h 7C58h 7A1Bh 7CFBh 7CFCh 7A10h 7A52h 7CA7h Win32 ' & | !CPI Enabled Handle Visible WNDProc 
-                '7C29h 7C23h 7C20h 7C26h 7C24h 7C21h 7C27h 7C25h 7C22h 7C28h ') !List
+                '7C29h 7C23h 7C20h 7C26h 7C24h 7C21h 7C27h 7C25h 7C22h 7C28h 7A56h 7A57h ') !List
 Bad_Zero STRING('7CE9h 7CE5h 7CE4h 7CE6h ') ! Angle Bevel
     CODE
     LOOP X=RECORDS(PQ) TO 1 BY -1 ; GET(PQ,X)
@@ -1662,35 +1664,7 @@ TB  STRING('<9>') !Tab shows in list
             !Keep all '0'  CYCLE !Maybe some Props let '0' show ??? It lets me know the prop exists
        END   
     END !IF 0
-    ValLng = Val
-    
-    CASE PE  
-    OF   PROP:FontColor          !7C12h
-    OROF PROP:Fill               !7C61h
-    OROF PROP:OldTreeColor       !7CB8h
-    OROF PROP:Color              !7CFAh
-    OROF PROP:FillColor          !7CFAh
-    OROF PROP:SelectedColor      !7CFBh
-    OROF PROP:SelectedFillColor  !7CFCh
-    OROF PROP:GradientFromColor  !PROP:Fill
-    OROF PROP:GradientToColor    !7905h 
-    OROF PROPLIST:Grid           !7C29h
-    OROF PROPLIST:DefHdrTextColor  !7C2Ah
-    OROF PROPLIST:DefHdrBackColor  !7C2Bh
-    OROF PROPLIST:HdrSortTextColor !7C2Ch
-    OROF PROPLIST:HdrSortBackColor !7C2Dh
-    OROF PROPLIST:SortTextColor    !7C2Eh
-    OROF PROPLIST:SortBackColor    !7C2Fh        
-         IF Val='-1' THEN Val='-1 Color:None' ELSE ClaColorEquate(Val).
-    OF PROP:Icon   ; ClaIconEquate(Val)
-    OF PROP:Cursor ; ClaCursorEquate(Val)
-    OF PROP:Follows OROF PROP:Precedes_C10 orof PROP:Parent OROF PROP:ChoiceFEQ OROF PROP:ToolBar OROF PROP:MenuBar
-       IF ValLng THEN
-          Val=CLIP(Val) &' '& ClaControlTypeName(ValLng{PROP:Type}) &'  '& SELF.GetFEQName(ValLng)
-       END
-    OF PROP:Std ; Val=ValLng &'  '& ClaSTDprop(ValLng)
-    END  !Case
-
+    SELF.PropDescribe(PE,Val,0)
     SELF.PropQAdd(PQ,PE,P7Q:Name,Val)
   END !Loop
   EXIT 
@@ -1719,6 +1693,48 @@ ScanRtn     ROUTINE !Scan for undocumented props 7900h-7DFFh
   SETTARGET()
   DISPLAY ; Message(RECORDS(PQ)-X & ' Added as {{####h} Scan')
   EXIT
+!=====================================
+CBWndPreviewClass.PropDescribe PROCEDURE(LONG PE,*STRING Val, BYTE Big2Hex=0)!,BOOL,PROC
+ValLng LONG,AUTO
+L   LONG,AUTO
+    CODE
+    CASE PE
+    OF PROP:Icon   ; ClaIconEquate(Val)   ; RETURN 1
+    OF PROP:Cursor ; ClaCursorEquate(Val) ; RETURN 1
+    END    
+    L = LenFastClip(Val)
+    IF L>16 OR ~NUMERIC(Val[1:16]) THEN RETURN 0.
+    L=0+Val[1:16] ; ValLng=L    
+    CASE PE  
+    OF   PROP:FontColor          !7C12h
+    OROF PROP:Fill               !7C61h
+    OROF PROP:OldTreeColor       !7CB8h
+    OROF PROP:Color              !7CFAh
+    OROF PROP:FillColor          !7CFAh
+    OROF PROP:SelectedColor      !7CFBh
+    OROF PROP:SelectedFillColor  !7CFCh
+    OROF PROP:GradientFromColor  !PROP:Fill
+    OROF PROP:GradientToColor    !7905h 
+    OROF PROPLIST:Grid           !7C29h
+    OROF PROPLIST:DefHdrTextColor  !7C2Ah
+    OROF PROPLIST:DefHdrBackColor  !7C2Bh
+    OROF PROPLIST:HdrSortTextColor !7C2Ch
+    OROF PROPLIST:HdrSortBackColor !7C2Dh
+    OROF PROPLIST:SortTextColor    !7C2Eh
+    OROF PROPLIST:SortBackColor    !7C2Fh        
+         IF ValLng=-1 THEN Val='-1 Color:None' ELSE ClaColorEquate(Val).
+    OF PROP:Follows OROF PROP:Precedes_C10 orof PROP:Parent OROF PROP:ChoiceFEQ OROF PROP:ToolBar OROF PROP:MenuBar 
+                    OROF PROP:NextTabStop OROF PROP:PrevTabStop
+       IF ValLng THEN
+          Val=CLIP(Val) &' '& ClaControlTypeName(ValLng{PROP:Type}) &'  '& SELF.GetFEQName(ValLng)
+       END
+    OF PROP:Std ; Val=ValLng &'  '& ClaSTDprop(ValLng)
+    OF PROP:Xpos OROF PROP:Ypos OROF PROP:Width OROF PROP:Height ; RETURN 0 !No Hex
+    ELSE
+       IF ~Big2Hex OR (L>=-256 AND L<=256) THEN RETURN 0.
+       Val=CLIP(Val) &' = '& Hex8(L, -4)        
+    END  !Case
+    RETURN True
 !=====================================
 CBWndPreviewClass.PropPickList PROCEDURE(*STRING OutHexProp,<Parse7QType InP7Q>)!,BOOL
 RetBool BOOL        
@@ -3923,7 +3939,7 @@ CP1 STRING('7C00Text 7C01Type 7C08Left 7C09LeftOffSet 7C0CRight 7C0DRightOffSet'
  ' 7CFEDropWidth 7CFFAlwaysDrop 7A00Up 7A01Down 7A02UpsideDown 7A03HeaderHeight 7A04Checked'&|
  ' 7A06Single 7A07Parent 7A08Repeat 7A0FDelay 7A10USE 7A12ListFEQ 7A13ButtonFEQ 7A14Flat'&|
  ' 7A19InToolBar 7A1BRejectCode 7A3AFontCharSet 7A40NoWidth 7A41NoHeight 7A43XOrigin'&|
- ' 7A44YOrigin 7A47Dock 7A48Docked 7A49BrokenTabs 7A52UseAddress 7A58PropVScroll 7A5ALayout'&| !Makes sense for FOCUS() 7A56NextTabStop 7A57PrevTabStop
+ ' 7A44YOrigin 7A47Dock 7A48Docked 7A49BrokenTabs 7A52UseAddress 7A56NextTabStop 7A57PrevTabStop 7A58PropVScroll 7A5ALayout'&| !Makes sense for FOCUS() 7A56NextTabStop 7A57PrevTabStop
  ' 7A5EThemeActive 7A73TextLeftMargin 7A74TextRightMargin 7A75State3Value 7A78NoFont'&|
  ' 7A7EPrecedes 7904NoTheme 7905GradientToColor 7906GradientType 7C86Timer 7903TabSheetStyle'&|
  ' 7CB4WNDProc 7CB5ClientWNDProc 7A18ChildIndex 7C29LIST:Grid 7C2AList:DefHdrTextColor'&| !Indexed 7D0AChild
