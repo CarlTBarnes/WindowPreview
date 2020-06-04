@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 06-04-20.1700')
+VersionWndPrv EQUATE('WndPrv 06-04-20.1800')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -27,6 +27,14 @@ Name        STRING(32)     !P7Q:Name
 GridQType QUEUE,TYPE
 LnFEQ       LONG
           END
+QueDeclareType QUEUE,TYPE  !05/25/20
+FieldX   USHORT
+Name     STRING(64)
+DType    STRING(16)
+DTypeNo  BYTE
+HasValue BYTE !An ANY can take
+HowMany  USHORT
+      END
 FrmFldQtype QUEUE,TYPE
 Column   STRING(3)
 FieldX   USHORT
@@ -71,7 +79,7 @@ ClaControlTypeName  PROCEDURE(LONG CtrlPropType),STRING,PRIVATE     !Pass FEQ{PR
 ClaCursorEquate     PROCEDURE(*STRING InOutCursorProp),PRIVATE
 ClaKeyCodeExplain   PROCEDURE(LONG KeyCodeEquate, BYTE Terse=0),STRING,PRIVATE    !Explain KeyCode() Alt+CtrL+Shift
 ClaAlign            PROCEDURE(LONG CtrlFEQ, LONG CtrlType),STRING,PRIVATE   !Pass FEQ,{PROP:Type} to get Left,R,C,D
-ClaDataType         PROCEDURE(*? DataAny, *STRING OutTypeName),LONG,PROC,PRIVATE
+ClaDataType         PROCEDURE(*? DataAny, *STRING OutTypeName, *BYTE OutHasValueForANY),LONG,PROC,PRIVATE
 ClaFont4            PROCEDURE(LONG CtrlFEQ, *PSTRING[] Font4),PRIVATE
 ClaFont4Net         PROCEDURE(*PSTRING[] WFont, *PSTRING[] CFont),STRING,PRIVATE
 ClaFont             PROCEDURE(LONG CtrlFEQ),STRING,PRIVATE
@@ -113,7 +121,9 @@ PropHuntLoadP7Q     PROCEDURE(Parse7QType OutP7Q, LONG FeqTypeNo),PRIVATE
 PropText1           PROCEDURE(LONG FEQ, LONG FType, *STRING AltText, BOOL QuoteIt=0),STRING,PRIVATE
 PropTFName          PROCEDURE(LONG CtrlFEQ, LONG PROPNumber, STRING TrueName,<STRING FalseName>),STRING,PRIVATE
 PropViewWindow      PROCEDURE(STRING CapTxt, PropQType PQ, STRING ValueOnly),PRIVATE
-QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName, FrmFldQtype FrmFldQ),PRIVATE
+QueueDeclareGet     PROCEDURE(QUEUE inQueue, QueDeclareType DeclareQ),PRIVATE
+QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName),PRIVATE
+QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName, QueDeclareType FrmFldQ),PRIVATE
 ReplaceInto         PROCEDURE(*string Into, string FindTxt,string ReplaceTxt, BYTE ClipInto=0),LONG,PROC,PRIVATE
 ReplaceText         PROCEDURE(string InText, string Find,string Repl, BYTE ClipInto=0),STRING
 SeeMore             PROCEDURE(LONG PropMore, LONG CtrlFEQ, LONG CtrlTypeNo),STRING,PRIVATE
@@ -668,8 +678,9 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?Cfg:ResizeOnMouse2 ; SELF.ConfigPut(Cfg:ResizeOnMouse2)
     OF ?ConPropBtn ; POST(Event:ControlPROPs) 
     OF ?ConResizeBtn ; POST(EVENT:ResizeControl) 
-    OF ?ConsolasFQ ; IF ConsolasFQ THEN SETFONT(?ListF,'Consolas',9) ELSE SETFONT(?ListF,'Segoe UI',9). ; DISPLAY 
-    OF ?CopyBtn ; F=5 ; R=14 ; P=POPUPunder(?,'Visible List|Debug Queue|TabQ') ; IF P=2 THEN F=1 ; R=99. 
+    OF ?ConsolasFQ ; IF ConsolasFQ THEN SETFONT(?ListF,'Consolas',9) ELSE SETFONT(?ListF,'Segoe UI',9). ; DISPLAY
+    OF ?CopyBtn ; F=5 ; R=14 ; P=POPUPunder(?,'Visible List|Debug Queue|TabQ|-|FieldQ VLB View') ; IF P=2 THEN F=1 ; R=99.
+                  IF P=4 THEN QueueViewListVLB(FieldQ,'FieldQ') ; CYCLE.
                   IF P<3 THEN SetClip2Queue(FieldQ,1,,'FldQ:',F,R) ELSE SetClip2Queue(TabQ).
     OF ?HaltBtn ; HALT
     OF ?HelpBtn ; GET(FieldQ,CHOICE(?ListF)) ; HelpCW(UPPER(ClaControlTypeName(FldQ:TypeNo)))
@@ -3639,7 +3650,7 @@ SheetRtn ROUTINE  !Align shows Above/Below/Right/Left Up/Down wnshj for various 
     END
     RETURN SheetA & Offset
 !--------------------
-ClaDataType PROCEDURE(*? UAny, *STRING TypeName)!,LONG
+ClaDataType PROCEDURE(*? UAny, *STRING TypeName, *BYTE HasValue)!,LONG
 UFO &UFOType
 UAddr LONG,AUTO 
 T LONG,AUTO
@@ -3650,20 +3661,24 @@ L USHORT
   CODE
   UAddr=ADDRESS(UAny) ; UFO&=(UAddr) ; IF UAddr=0 OR UFO &= NULL THEN TypeName='Null?' ; RETURN 0.
   T=UFO._Type(UAddr) ; S=UFO._Size(UAddr) ; M=UFO._Max(UAddr)
+  HasValue=CHOOSE(T>=1 AND T<=20 AND T<>15) !ANY Value  BYTE - PSTRING w/o UFO=15
   CASE T
-  OF 31 ; N='ANY_&REF'
-  OF 42 ; N='BSTRING'
-  OF 43 ; N='ASTRING'
-  OF 45 ; N='VARIANT'
-  ELSE
+  OF 29 ; N='PICTURE' ; HasValue=1 !ends up decimal
+  OF 31 TO 39 ; N='ANY_&REF' !REFERENCE FILEREF KEYREF QUEUEREF CLASSREF WINDOWREF VIEWREF BLOBREF NAMEREF
+  OF 40 ; N='LIKE'           !LibSrc XMLType.inc CLType 
+  OF 41 ; N='TYPE'
+  OF 42 ; N='BSTRING' 
+  OF 43 ; N='ASTRING' ; HasValue=1
+  OF 45 ; N='VARIANT' 
+  ELSE                     !  1       2       3       4      5      6       7       8       9      10          11
     N=CHOOSE(T+1,'EndGroup','BYTE','SHORT','USHORT','DATE','TIME','LONG','ULONG','SREAL','REAL','DECIMALd','PDECIMALd',|
-               'Data12','BFLOAT4','BFLOAT8','Data15','Data16','Data17','STRINGs','CSTRINGs','PSTRINGs','MEMOs',|
+               'Data12','BFLOAT4','BFLOAT8','UFO','Data16','Data17','STRINGs','CSTRINGs','PSTRINGs','MEMOs',|
                'GROUPs','CLASS','Data23','Data24','QUEUE','BLOB','Data#'&T)  !Data#28
   END
   L=LEN(N)             
   IF N[L]='s' THEN N=N[1:L-1] &'(' & S &')'.
   IF N[L]='d' THEN N=N[1:L-1] &'(' & S * 2 &',)'.   
-  TypeName=N & CHOOSE(M=0,'',' Dim[' & M & ']')
+  TypeName=N & CHOOSE(M=0,'',' Dim[' & M & ']')  ; IF M>1 THEN HasValue=0.
   RETURN T
 !-----------------
 ClaFont4 PROCEDURE(LONG F, *PSTRING[] Fnt)
@@ -3951,7 +3966,7 @@ CP_Slider_NA STRING(' 7CA6Progress 7C19Double 7C1BNoFrame ')
 CP_Slider    STRING(' 7CA6SliderPos 7C19Both 7C1BNoTicks ')
 CP_Sheet_NA  STRING(' 7C06Center 7C07CenterOffSet 7C0ADecimal 7C0BDecimalOffSet ') !Dup Sheet
 CP_Sheet     STRING(' 7C06Below 7C07BelowSize 7C0AAbove 7C0BAboveSize ')
-CP_LIST      STRING(' 7C20List:MouseDownRow 7C21List:MouseMoveRow 7C22List:MouseUpRow 7C23List:MouseDownField'&|
+CP_LIST      STRING(' 7A23FromQRef 7C20List:MouseDownRow 7C21List:MouseMoveRow 7C22List:MouseUpRow 7C23List:MouseDownField'&|
                     ' 7C24List:MouseMoveField 7C25List:MouseUpField 7C26List:MouseDownZone 7C27List:MouseMoveZone 7C28List:MouseUpZone ')
 CP_REPORT    STRING(' 7A46Together 7C8CWithNext 7C8DWithPrior ')
 CP_WINDOW    STRING(' 7A71ToolBar 7A72MenuBar ')
@@ -4549,14 +4564,19 @@ CStr CSTRING(SIZE(DbTxt)+11)
   CODE
   CStr='WndPrv: ' & CLIP(DbTxt)&'<13,10>' ; OutputDebugString(CStr) ; RETURN
 !----------------
-QueueViewListVLB PROCEDURE(QUEUE VlbQ, STRING QName, FrmFldQtype FrmFldQ)
+QueueViewListVLB PROCEDURE(QUEUE VlbQ, STRING QName)
+DeclQ QueDeclareType
+  CODE
+  QueueDeclareGet(VlbQ,DeclQ)
+  QueueViewListVLB(VlbQ, QName,DeclQ)
+QueueViewListVLB PROCEDURE(QUEUE VlbQ, STRING QName, QueDeclareType DeclQ)
 VlbCls CLASS !From Mark Goldberg, but I hacked it to death
 FEQ    LONG
 ClmCnt USHORT
 Chgs   LONG
 Init   PROCEDURE(SIGNED xFEQ, USHORT xClmCnt)
 VLBprc PROCEDURE(LONG xRow, USHORT xCol),STRING
-Contrt PROCEDURE(USHORT ColWd=16)
+Contrt PROCEDURE(USHORT ColWd=24)
 Expand PROCEDURE()
       END
 VMapQ QUEUE,PRE(VMapQ) !Map for HasValue, no &Ref columns
@@ -4570,15 +4590,14 @@ Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE,ALR
         LIST,AT(1,1),FULL,USE(?List:VLB),HVSCROLL,VCR,FORMAT('40L(1)|M~Col1~Q''NAME''')
   END
   CODE
-  LOOP X=1 TO RECORDS(FrmFldQ)
-    GET(FrmFldQ,X) ; IF ~FrmFldQ:HasValue THEN CYCLE.
-    VMapQ:FieldX = FrmFldQ:FieldX ; ADD(VMapQ)
-    Hdg=FrmFldQ:Name
-    IF INSTRING('::VIEWPOSITION',UPPER(FrmFldQ:Name),1) OR INSTRING('::POSITION',UPPER(FrmFldQ:Name),1) THEN CYCLE.
+  LOOP X=1 TO RECORDS(DeclQ)
+    GET(DeclQ,X) ; IF ~DeclQ:HasValue THEN CYCLE.
+    VMapQ:FieldX = DeclQ:FieldX ; ADD(VMapQ)
+    Hdg=DeclQ:Name
+    IF INSTRING('::VIEWPOSITION',UPPER(DeclQ:Name),1) OR INSTRING('::POSITION',UPPER(DeclQ:Name),1) THEN CYCLE.
     P=INSTRING('::',Hdg,1)+1 ; IF P<2 THEN P=INSTRING(':',Hdg,1). ; IF P THEN Hdg=SUB(Hdg,P+1,99). !Cutoff Pre:
-    Fmt=Fmt&'40L(1)|M~' & FrmFldQ:FieldX & '. <13,10>'& CLIP(Hdg) & |
-            '~Q'' Field: <9>'& FrmFldQ:FieldX & '<13,10> Col#: <9>' &FrmFldQ:Column & |  !Q=Col Tip
-            '<13,10> Name: <9>'& CLIP(FrmFldQ:Name) &' <13,10> Type: <9>'& CLIP(FrmFldQ:DType) &' '''
+    Fmt=Fmt&'40L(1)|M~' & DeclQ:FieldX & '. <13,10>'& CLIP(Hdg) &'~Q'' Field: <9>'& DeclQ:FieldX & |
+            '<13,10> Name: <9>'& CLIP(DeclQ:Name) &' <13,10> Type: <9>'& CLIP(DeclQ:DType) &' '''
   END
   OPEN(Window)
   ?List:VLB{PROP:Format}=Fmt ; CLEAR(Fmt)
@@ -4587,10 +4606,12 @@ Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE,ALR
   ACCEPT
     IF EVENT()=EVENT:AlertKey AND KEYCODE()=MouseRight THEN
        SETKEYCODE(0)
-       EXECUTE POPUP('Contract Column Widths|Expand Column Widths|-|Copy Queue to Clipboard')
+       X=?List:VLB{PROPLIST:MouseDownField}
+       EXECUTE POPUP('Contract Column Widths|Expand Column Widths|-|Copy Queue to Clipboard|-|Hide Column ' & X)
         VlbCls.Contrt()
         VlbCls.Expand()
         SetClip2Queue(VlbQ)
+        ?List:VLB{PROPLIST:width,X}=0
        END
     END
   END
@@ -4609,10 +4630,26 @@ Chg LONG,AUTO
   OF -3 ; Chg=SELF.Chgs ; SELF.Chgs=CHANGES(VlbQ) ; RETURN CHOOSE(Chg<>SELF.Chgs)
   END
   GET(VlbQ,xRow) ; GET(VMapQ,xCol) ; RETURN WHAT(VlbQ,VMapQ:FieldX)
-VlbCls.Contrt PROCEDURE(USHORT ColWd=16)
-  CODE ; LOOP X=1 TO SELF.ClmCnt ; SELF.FEQ{PROPLIST:Width,X}=ColWd ; END ; DISPLAY
+VlbCls.Contrt PROCEDURE(USHORT ColWd)
+  CODE ; LOOP X=1 TO SELF.ClmCnt ; IF SELF.FEQ{PROPLIST:Width,X}>0 THEN SELF.FEQ{PROPLIST:Width,X}=ColWd. ; END ; DISPLAY
 VlbCls.Expand PROCEDURE()
   CODE ; SELF.Contrt(SELF.FEQ{PROP:Width}/SELF.ClmCnt)
+  !----------------------
+QueueDeclareGet PROCEDURE(QUEUE GetQ, QueDeclareType DeclQ)
+QA ANY
+DT LONG,AUTO
+X LONG,AUTO
+    CODE
+    LOOP X=1 TO 999 ; QA &= WHAT(GetQ,X) ; IF QA &= NULL THEN BREAK.
+      CLEAR(DeclQ)
+      DeclQ.FieldX=X
+      DeclQ.Name=WHO(GetQ,X)
+      DT=ClaDataType(QA ,DeclQ.DType, DeclQ.HasValue) 
+      DeclQ.DTypeNo=DT  ! DataType:xxx
+      DeclQ.HowMany=HOWMANY(GetQ,X)  !Is array?
+      IF DeclQ.HowMany>1 THEN DeclQ.HasValue=0.
+      ADD(DeclQ)
+    END 
 !----------------------
 CBWndPreviewClass.ListPROPs  PROCEDURE(LONG ListFEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
 !TODO Tab for FROM if it is Text, as 1 string and split into lines 
@@ -4654,6 +4691,7 @@ FormText CSTRING(10000)
 FromQ &QUEUE
 FromWho PSTRING(32)
 FrmFldQ QUEUE(FrmFldQtype),PRE(FrFQ).
+FrmDecQ QUEUE(QueDeclareType),PRE(FrDeQ).
 Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
         BUTTON('<50>'),AT(2,2,12,13),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under this Window'),FLAT
         BUTTON('Cl&ose'),AT(19,2,22,14),USE(?CloseBtn),SKIP,STD(STD:Close),FONT(,8)
@@ -4685,7 +4723,7 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                 BUTTON('Pre&v'),AT(214,23,34,12),USE(?ColPrevBtn),SKIP,ICON(ICON:VCRback),TIP('Move to Prev Column'),LEFT
                 BUTTON('&Next'),AT(251,23,34,12),USE(?ColNextBtn),SKIP,ICON(ICON:VCRplay),TIP('Move to Next Column'),RIGHT
                 LIST,AT(0,51),FULL,USE(?LIST:PQ),VSCROLL,FONT('Consolas',10),FROM(PQ),FORMAT('27L(3)|FM~Equate~L(1)@s5@8' & |
-                        '5L(2)|FM~PROPLIST: Property~@s32@?19C|FM~Mod~@s2@?#6#20L(2)F~Value~@s255@#3#'),ALRT(DeleteKey)
+                        '5L(2)|FM~PROPLIST: Property~@s32@?19C|FM~Mod~@s2@?#6#20L(2)F~Value~@s255@#3#'),ALRT(DeleteKey),ALRT(CtrlC)
             END
             TAB(' &Styles '),USE(?TAB:Style)
                 STRING('Style Search Range:'),AT(3,37),USE(?StyRng:Pmt)
@@ -4695,7 +4733,7 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                         USE(?StyInfo:Pmt)
                 LIST,AT(0,51),FULL,USE(?LIST:SQ),VSCROLL,FONT('Consolas',10),FROM(SQ),FORMAT('25R(2)|FM~Style~C(0)@N_5b@' & |
                         '#6#28L(3)|FM~Equate~L(1)@s5@#1#85L(2)|FM~PROPSTYLE: Property~@s32@?20L(2)F~Value~@s255@#3#'), |
-                        ALRT(DeleteKey)
+                        ALRT(DeleteKey),ALRT(CtrlC)
             END
             TAB(' &FORMAT() '),USE(?TAB:Formt)
                 TEXT,AT(0,36),FULL,USE(FormText),SKIP,HVSCROLL,FONT('Consolas',10)
@@ -4704,7 +4742,13 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                 BUTTON('&View From(Q)'),AT(290,23,,12),USE(?FromQViewBtn),SKIP,TIP('View From(Q) in List')
                 LIST,AT(0,36),FULL,USE(?LIST:FrmFldQ),VSCROLL,FONT('Consolas',10),FROM(FrmFldQ),FORMAT('28C|FM~List<13>' & |
                         '<10>Column~@s3@28C|FM~Queue<13,10>Field~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
-                        '@20L(2)F~Value~@s64@')
+                        '@20L(2)F~Value~@s64@'),ALRT(CtrlC),ALRT(DeleteKey)
+            END
+            TAB('Declare Q'),USE(?TAB:DeclQ),HIDE,TIP('Debug...Delete')
+                BUTTON('&View Decl(Q)'),AT(290,23,,12),USE(?DeclQViewBtn),SKIP,TIP('View From(Q) in List')
+                LIST,AT(0,36),FULL,USE(?LIST:FrmDecQ),VSCROLL,FONT('Consolas',10),FROM(FrmDecQ),FORMAT('28C|FM~Queue<13>' & |
+                        '<10>Field~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16@34L(2)|FM~TypeNo~@n3@47L(2)|F' & |
+                        'M~HasValue~@n3@61L(2)|FM~HowMany~@n4@')
             END
         END
     END
@@ -4727,6 +4771,7 @@ LoadListQ    PROCEDURE()
 Modifiers    PROCEDURE(CONST *STRING ListFormat,*STRING OutModifiers)
 PQLoadColumn PROCEDURE(LONG ColNumber, BOOL IsGroup=0)
 SQLoadStyles PROCEDURE()
+FromIsText   PROCEDURE(STRING PropFrom),BOOL
 WndPrvCls    &CBWndPreviewClass
         END
 PX  LONG,AUTO        
@@ -4768,7 +4813,7 @@ SortPQCls CBSortClass
         DO Show1ColumnRtn
     OF ?SeeMoreBtn ; DO SeeMoreRtn
     OF ?FromQBtn ; DO FromQRtn
-    OF ?FromQViewBtn ; QueueViewListVLB(FromQ, FromWho, FrmFldQ)
+    OF ?FromQViewBtn ; QueueViewListVLB(FromQ, FromWho, FrmDecQ)    
     OF ?StyleMin OROF ?StyleMax ; CList.SQLoadStyles() 
     OF ?TestsBtn ; DO TestsRtn
     END    
@@ -4788,19 +4833,37 @@ SortPQCls CBSortClass
     OF ?LIST:PQ 
         GET(PQ,CHOICE(?LIST:PQ))
         CASE EVENT()
-        OF EVENT:AlertKey ; IF KEYCODE()=DeleteKey THEN DELETE(PQ).
+        OF EVENT:AlertKey ; 
+           CASE KEYCODE()
+           OF DeleteKey ; DELETE(PQ)
+           OF CtrlC ; SETCLIPBOARD('PROPLIST:' & PQ:Name)
+           END
         OF EVENT:HeaderPressed ; SortPQCls.HeaderPressed()
         OF EVENT:NewSelection
-           IF KeyCode()=MouseLeft2 THEN  
-              PropViewWindow('View ' & CLIP(FeqTypeName) & ' FEQ '& FEQ &' '& PQ:Name, PQ, |
+           CASE KeyCode()
+           OF MouseLeft2 ; PropViewWindow('View ' & CLIP(FeqTypeName) & ' FEQ '& FEQ &' '& PQ:Name, PQ, |
                               CHOOSE(PQ:EqtLong <1, PQ:Value, PWnd$Feq{PQ:EqtLong}) )
-          END    
+           OF MouseRight ; X=POPUP('Copy Property<9>Ctrl+C|Copy Value') ; IF X THEN SETCLIPBOARD(CHOOSE(X,'PROPLIST:' & PQ:Name,PQ:Value)). 
+           END    
        END !Case Event
+    OF ?LIST:SQ
+       GET(SQ,CHOICE(?LIST:SQ)) 
+       IF EVENT()=EVENT:AlertKey AND KEYCODE()=DeleteKey THEN DELETE(SQ).
+       IF EVENT()=EVENT:AlertKey AND KEYCODE()=CtrlC THEN SETCLIPBOARD('PROPSTYLE:' & SQ:Name).
+       IF EVENT()=EVENT:NewSelection AND KEYCODE()=MouseRight THEN
+          X=POPUP('Copy Style Property|Copy Value') ; IF X THEN SETCLIPBOARD(CHOOSE(X,'PROPSTYLE:' & SQ:Name,SQ:Value)).
+       END
+    OF ?LIST:FrmFldQ
+       GET(FrmFldQ,CHOICE(?LIST:FrmFldQ))
+       IF (EVENT()=EVENT:NewSelection AND KEYCODE()=MouseRight AND POPUP('Copy Field Name')=1) |
+       OR (EVENT()=EVENT:AlertKey AND KEYCODE()=CtrlC) THEN SETCLIPBOARD(FrmFldQ:Name). 
+       IF EVENT()=EVENT:AlertKey AND KEYCODE()=DeleteKey THEN DELETE(FrmFldQ).
     END  !CASE FIELD()
   END !Accept
   SELF.AtSetOrSave(2, AtListPROPs[])
   CLOSE(Window)
   RETURN
+!Region Routines ListPROPS
 SeeMoreRtn ROUTINE
   IF ~Self.PropPickList(Val,All7Q) THEN EXIT.
   CLEAR(All7Q) ; All7Q:EqtHex=Val ; GET(All7Q,All7Q:EqtHex) ; PE=All7Q:EqtLong
@@ -4813,32 +4876,44 @@ MoreHeadRtn ROUTINE
   IF MoreColWd THEN L{PROPLIST:Width,PY}=MoreColWd. ; MoreColWd=0
 FromQRtn ROUTINE
   DATA
-FromA   LONG
+FromA LONG
 QA ANY
 DT LONG
+FromP LONG
+PROP:FromPtr  EQUATE(7A0EH) !ABLLIST.INT &= IMappedListContents ? 0800xxxxH usually, 7C98h also an II ptr?
+PROP:FromQRef EQUATE(7A23H) !Showed up in 13505 = &QUEUE unless no FROM(Q) then ?= Interface for WB see 0800xxxxh
   CODE
+  IF CList.FromIsText(PWnd$ListFEQ{PROP:From}) THEN EXIT. ; IF PWnd$ListFEQ{PROP:VLBval}>0 THEN Message('VLB') ; EXIT.
   Val=PWnd$ListFEQ{'FromWho'} ; IF ~Val THEN Val='From(Q)'. ; FromWho=CLIP(Val) 
   DO MoreHeadRtn ; ?LIST:FrmFldQ{PROPLIST:Header,3}=FromWho
   IF FromQ&=NULL THEN 
      FromA=PWnd$ListFEQ{'FromQ'}
+     IF FromA=0 THEN
+        FromA=PWnd$ListFEQ{PROP:FromQRef} 
+        IF FromA THEN 
+           FromP=PWnd$ListFEQ{PROP:FromPtr} ; ?FromQBtn{PROP:Tip}='7A23h=' & Hex8(FromA) &'<13,10>7A0Eh=' & Hex8(FromP)
+           IF ABS(FromA-FromP)<7FFFh THEN FromA=0. !HACK - Interface pointer, not From(Q), can't use this.
+        END
+     ELSE ; ?FromQBtn{PROP:Tip}='From Q &Ref =' & Hex8(FromA)
+     END
      IF FromA>=0 AND FromA<4097 THEN Message('From() needs ?List{{''FromQ''}=&Q set by .InitList().|'&FromA,'LIST') ; EXIT.
      FromQ&=(FromA) ; IF FromQ&=NULL THEN EXIT.
-     LOOP X=1 TO 999 ; QA &= WHAT(FromQ,X) ; IF QA &= NULL THEN BREAK.
+     QueueDeclareGet(FromQ,FrmDecQ) !Use TUFO to get Q declare
+     UNHIDE(?TAB:DeclQ)   !Get rid of tab
+     LOOP X=1 TO RECORDS(FrmDecQ)
+       GET(FrmDecQ,X)
        CLEAR(FrmFldQ) 
-       FrFQ:FieldX=X
-       FrFQ:Name=WHO(FromQ,X)
-       DT=ClaDataType(QA ,FrFQ:DType) ; FrFQ:DTypeNo=DT  ! DataType:xxx 
-       IF HOWMANY(FromQ,X) > 1 THEN FrFQ:Value='Array[]' 
-       ELSIF DT=31 THEN FrFQ:Value='ANY or &Ref'       
-       ELSIF DT<>43 AND DT>22 THEN FrFQ:Value='? ' & DT !>22 Group no value  43=AString
+       FrFQ:FieldX=FrDeQ:FieldX   ; FrFQ:Name=FrDeQ:Name
+       FrFQ:DTypeNo=FrDeQ:DTypeNo ; FrFQ:DType=FrDeQ:DType ; FrFQ:HasValue=FrDeQ:HasValue     
+       IF FrDeQ:HowMany > 1 THEN FrFQ:Value='Array[]' 
+       ELSIF FrFQ:DTypeNo=31 THEN FrFQ:Value='ANY or &Ref'       
+       ELSIF ~FrFQ:HasValue THEN FrFQ:Value='?'
        ELSE
-          FrFQ:Value=QA ; FrFQ:HasValue=1
+          QA &= WHAT(FromQ,X) ; FrFQ:Value=QA
        END   
        ADD(FrmFldQ)
      END
-     !IF ~RECORDS(FrmFldQ) THEN EXIT.
-  END !IF ~FromQ
-  
+  END !IF FromQ Null
   LOOP X=1 TO RECORDS(ListQ)
      GET(ListQ,X) 
      LQ:More=''
@@ -4881,7 +4956,6 @@ DevTipsRtn ROUTINE
     PWnd$FEQ{PROPLIST:DefaultTip,X}=PWnd$FEQ{'WndPrvSave_DefaultTip#'&X} 
   END ; PWnd$FEQ{PROP:Msg}='' ; CList.LoadListQ()
 !-----------------
-!Region WindowOpenRtn ROUTINE   with Tool Tips on Format
 WindowOpenRtn ROUTINE
   X=0  ;             PE=PROPLIST:DefaultTip
   X+=1 ; ?LIST:ListQ{PE,X}='Column Index into  {{PROPLIST: , Index}.' & |
@@ -4898,8 +4972,9 @@ WindowOpenRtn ROUTINE
   X+=1 ! More
   X+=1 ; ?LIST:ListQ{PE,X}='PROPLIST:Format<13,10>' & ListHelpMods() !10 LQ:Format    PROPLIST:Format
   ?LIST:PQ{PE,3} = ListHelpMods()
-!EndRegion WindowOpenRtn ROUTINE
+!EndRegion Routines ListPROPS    
 !---------------------
+!Region Routines for Copy
 CopyFmtRtn ROUTINE
   DATA
 Fm ANY
@@ -4985,9 +5060,10 @@ CopyLBStylesRtn ROUTINE
     CBAny='Style<9>Equate<9>PROPSTYLE:<9>Value<13,10>'
     LOOP X=1 TO RECORDS(SQ) ; GET(SQ,X)
        CBany=CBAny&SQ:StyleNo &'<9>'& SQ:EqtHex &'<9>'& Clip(SQ:Name) &'<9>'& Clip(SQ:Value) &'<13,10>'
-    END ;  SetClip2Tab2Space(CBAny,2,1) 
+    END ;  SetClip2Tab2Space(CBAny,2,1)
+!EndRegion Routines for Copy
 !---------------------
-!Region CList.LoadListQ
+!Region CList Class
 CList.LoadListQ    PROCEDURE()
 ColX   USHORT,AUTO
 InX    LONG,AUTO
@@ -5057,10 +5133,8 @@ FmtGrpNo SHORT
   SETTARGET() ; IF FmtGrpNo THEN DO EndFmtGrpRtn.
   RETURN 
 EndFmtGrpRtn ROUTINE
-  FmtGrpNo=0 ; FormText=CLIP(FormText) &']'& QUOTE(CLIP(FmtOfGrp))&'<13,10>'    
-!EndRegion CList.LoadListQ    
+  FmtGrpNo=0 ; FormText=CLIP(FormText) &']'& QUOTE(CLIP(FmtOfGrp))&'<13,10>'      
 !-----------------------------------
-!Region CList.Modifiers
 CList.Modifiers    PROCEDURE(CONST *STRING Fmt,*STRING Modz)
 !TODO should I just check the PROPs?`  Do it both ways and see.
 !Rather than check each property I thought I would parse the string
@@ -5096,9 +5170,7 @@ ThingEnd    STRING(1),AUTO
     END
     
     RETURN
-!EndRegion Modifiers
 !----------------------------------- 
-!Region CList.PQLoadColumn
 CList.PQLoadColumn    PROCEDURE(LONG ColX, BOOL IsGroup=0) 
 CP GROUP
 CP1 STRING('7E00Underline=_ 7E01Resize=M 7E02RightBorder=| 7E03Header=~~ 7E04Width 7E05Picture=@ 7E06Fixed=F 7E07Scroll=S'&|
@@ -5172,7 +5244,6 @@ IsTree BYTE
     SELF.WndPrvCls.PropQAdd(PQ,PE,P7Q:Name,Val) 
   END !Loop
   RETURN
-!EndRegion CList.PQLoadCol
 !-----------------------------------
 CList.SQLoadStyles PROCEDURE() !PROPSTYLE:Last=7D3FH
 CP STRING('7D10FontName 7D11FontSize 7D13FontStyle 7D14textColor 7D15backColor 7D16textSelected 7D17backSelected 7D18Picture 7D19CharSet 7D1AbarFrame ') ! 7D12FontColor same as Text
@@ -5223,7 +5294,12 @@ LstCnt LONG
   DISPLAY
   SETCURSOR()
   RETURN
-!EndRegion CList.SQLoadStyles 
+!---------------
+CList.FromIsText PROCEDURE(STRING PropFrom)
+    CODE
+    IF ~PropFrom THEN RETURN FALSE. ; ReplaceInto(PropFrom,'|#','<9>#')
+    Message('LIST is FROM(''text''):|-{40}|'&PropFrom,'From()') ; RETURN True   
+!EndRegion CList Class
 !==========================================
 CBWndPreviewClass.ListReFORMAT  PROCEDURE(LONG FEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName) 
 ListFEQ LIKE(FEQ)
