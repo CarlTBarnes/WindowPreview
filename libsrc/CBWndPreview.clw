@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 06-04-20.1800')
+VersionWndPrv EQUATE('WndPrv 06-04-20.1842')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1144,7 +1144,7 @@ SkipPopLabel:  PropX=PUProp[SeeX]
          GET(FieldQ,R) ; FQSMadd2=FQSM ; FQSM=''
          F=FldQ:FeqNo
          CASE CaseX
-         OF -3 ; FQSM=F{PropUsr}
+         OF -3 ; FQSM=F{PropUsr} ; L=FQSM+0 ; IF NUMERIC(FQSM) AND (L<-256 OR L>256) THEN FQSM=CLIP(FQSM)&' = '& Hex8(L,-4). 
          OF PROP:Font ; ClaFont4(F, CFont[])  ; FQSM=ClaFont4Net(WFont[],CFont[])
          OF -1*PROP:Text  ; FQSM=ClaPicture(F,FldQ:TypeNo) ; IF FQSM THEN FQSM=CLIP(FQSM) &' {9}'& FldQ:Type &'  '&FldQ:FeqName.
 !TODO *-1 YPOS would be Delta from Control After (succeeds)
