@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 06-04-20.1842')
+VersionWndPrv EQUATE('WndPrv 06-23-20.1919')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -199,7 +199,7 @@ GridClr         LONG(8080h)
 ConfigKey   EQUATE('Software\CarlBarnes\WinPreview')
 !EndRegion Global Data
 !Region System Menu Class SysMenuClass
-SysMenuClsQ     QUEUE,PRE(SysMnQ),THREAD
+SysMenuClsQ     QUEUE,PRE(SysMnQ),THREAD,PRIVATE
 WinRef              &WINDOW !SysMnQ:WinRef
 hWindow             LONG    !SysMnQ:hWindow
 OrigWndProc         LONG    !SysMnQ:OrigWndProc
@@ -209,7 +209,7 @@ CloseMe             BYTE    !SysMnQ:CloseMe
 ZOrder              BYTE    !SysMnQ:ZOrder
 HidePWnd            BYTE    !SysMnQ:HidePWnd
                 END
-SysMenuClass CLASS,TYPE  
+SysMenuClass CLASS,TYPE,PRIVATE  
 bInited         BYTE
 WindowRef       &WINDOW
 hWindow         LONG
@@ -229,7 +229,7 @@ SMCmd_RunAgain    EQUATE    !RUN this Preview.exe again
                 END           
 !EndRegion SysMenuClass
 !Region Classes
-CwHelpCls CLASS,TYPE
+CwHelpCls CLASS,TYPE,PRIVATE
 OpenHelp    PROCEDURE(string sHlp)  !Open a "~Context.htm" or "Keyword"
 bInit       BYTE
 HHLoaded    BYTE
@@ -238,7 +238,7 @@ IsInited    PROCEDURE(),BYTE
 HHOcxLoad   PROCEDURE(),BOOL
 HHCaller    PROCEDURE(long HH_Command, long dwData=0)
           END
-CBSortClass CLASS,TYPE
+CBSortClass CLASS,TYPE,PRIVATE
 QRef        &QUEUE
 FEQ         LONG
 ColumnNow   SHORT            
@@ -251,7 +251,7 @@ Init        PROCEDURE(QUEUE ListQueue, LONG ListFEQ, SHORT SortColumnNow=0)
 SetSortCol  PROCEDURE(SHORT SortColNow)
 HeaderPressed PROCEDURE(SHORT ForceSortByColumn=0) !Call in OF EVENT:HeaderPressed for LIST
     END
-BevClass    CLASS,TYPE
+BevClass    CLASS,TYPE,PRIVATE
 Style  &LONG
 StyFEQ LONG
 BOFeq  LONG
@@ -263,7 +263,7 @@ AllBtn       PROCEDURE()
 BtnConfig    PROCEDURE(BYTE Edge1To8, BYTE StyleNRLG),PROTECTED
 Edge2Style   PROCEDURE(),PROTECTED
                     END
-CBLocateCls CLASS,TYPE
+CBLocateCls CLASS,TYPE,PRIVATE
 Init          PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG FindTextFEQ, LONG BtnNextFEQ, LONG BtnPrevFEQ, BYTE Hack=0)
 Kill          PROCEDURE()
 DisableIfNone PROCEDURE()
@@ -4651,6 +4651,28 @@ X LONG,AUTO
       ADD(DeclQ)
     END 
 !----------------------
+CBWndPreviewClass.QueueReflection PROCEDURE(*QUEUE FromQ, STRING FromWho) !View Queue without Window for Roberto Artigas
+DeclareQ QUEUE(QueDeclareType),PRE(DecQ).
+Window WINDOW('Q'),AT(,,316,280),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
+        BUTTON('&Copy Declare'),AT(2,2,,12),USE(?CopyBtn),SKIP,TIP('Copy Queue Declaration')
+        BUTTON('&View Queue Records'),AT(65,2,,12),USE(?ViewBtn),SKIP,TIP('View Queue Records')
+        LIST,AT(1,17),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ), |
+                FORMAT('28C|FM~Fld<13,10>No.~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
+                '@24R(6)|FM~Type<13,10>No.~C(0)@n3@30L(6)|FM~Has<13,10>Value~C(0)@n3@33L(2)F~How<13>' & |
+                '<10>Many~@n4@')
+    END
+    CODE
+    OPEN(Window) ; DISPLAY ; QueueDeclareGet(FromQ,DeclareQ)
+    0{PROP:Text}=FromWho & ' - ' & Records(DeclareQ) & ' Fields - ' & Records(FromQ) & ' Records ' & |
+                               ' - &Queue=' & Hex8(INSTANCE(FromQ,Thread())) & ' - Address=' & Hex8(Address(FromQ))  
+    ACCEPT 
+        CASE ACCEPTED() 
+        OF ?CopyBtn ; SetClip2Queue(DeclareQ)
+        OF ?ViewBtn ; QueueViewListVLB(FromQ, FromWho, DeclareQ)   
+        END 
+    END
+    RETURN
+!----------------------
 CBWndPreviewClass.ListPROPs  PROCEDURE(LONG ListFEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
 !TODO Tab for FROM if it is Text, as 1 string and split into lines 
 !add  BUTTON('FORMAT'),AT(254,2,52,14),USE(?FORMATBtn),SKIP,ICON(ICON:Copy)
@@ -4748,7 +4770,7 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                 BUTTON('&View Decl(Q)'),AT(290,23,,12),USE(?DeclQViewBtn),SKIP,TIP('View From(Q) in List')
                 LIST,AT(0,36),FULL,USE(?LIST:FrmDecQ),VSCROLL,FONT('Consolas',10),FROM(FrmDecQ),FORMAT('28C|FM~Queue<13>' & |
                         '<10>Field~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16@34L(2)|FM~TypeNo~@n3@47L(2)|F' & |
-                        'M~HasValue~@n3@61L(2)|FM~HowMany~@n4@')
+                        'M~HasValue~@n3@61L(2)F~HowMany~@n4@')
             END
         END
     END

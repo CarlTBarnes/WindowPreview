@@ -91,7 +91,8 @@ Init            PROCEDURE(Window W, BYTE SecretBtnType=2, LONG SecretKey=1879) !
 InitList        PROCEDURE(LONG ListFEQ, *QUEUE ListFromQueue, <STRING NameOfQ>) !Set List{'FromQ'}
 AllOffHDRS      PROCEDURE(BOOL UnHide=1, BOOL UnDisable=1, BOOL UnReadOnly=1, BOOL UnSkip=1) !1=Turn Off (Hide,Disable,Readonly,Skip) - UNLESS Control Key is down
 AllFixNumbers   PROCEDURE() !Fix #####.## numbers to 9999.99 - CANNOT do in SECTION('AfterOpen'), must do in Once SECTION('InAccept')
-Start           PROCEDURE() ! START HERE Open the Controls List i.e. Reflection
+Start           PROCEDURE() ! START HERE Open the Controls List i.e. just calls .Reflection()
+QueueReflection PROCEDURE(*QUEUE ListFromQueue, STRING NameOfQueue) !View Queue without Window for Roberto Artigas
 
 InitWorker      PROCEDURE(Window W) !Allow MG to not use my .Init()
 Glo_IsPreviewEXE  &BYTE    !&=Glo:IsPreviewEXE
