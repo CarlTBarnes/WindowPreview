@@ -13,7 +13,8 @@ FilesDirQ    QUEUE(FILE:Queue),PRE(FDirQ)
 ExtraByte       BYTE
              END ! FDirQ:Name  FDirQ:ShortName(8.3?)  FDirQ:Date  FDirQ:Time  FDirQ:Size  FDirQ:Attrib
   CODE
-  DIRECTORY(FilesDirQ,'C:\Windows\*.*',ff_:NORMAL+ff_:DIRECTORY)  
+  DIRECTORY(FilesDirQ,'C:\Windows\*.*',ff_:NORMAL+ff_:DIRECTORY) 
+  !DIRECTORY(FilesDirQ,'C:\Windows\*.*',ff_:NORMAL) ; QueueNoWnd() ; return !quick test
   CASE Message('What to do?||1. View Queue in new QueueReflection without a Window' & |
                '||2. Window with LIST From(Q) using WndPreview can view Queue',|
                 'Queue No Window Example',ICON:Clarion,'1. Reflection Q|2. Window w/LIST') 

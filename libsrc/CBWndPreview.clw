@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 06-23-20.1919')
+VersionWndPrv EQUATE('WndPrv 06-25-20.1130')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -4569,6 +4569,7 @@ DeclQ QueDeclareType
   CODE
   QueueDeclareGet(VlbQ,DeclQ)
   QueueViewListVLB(VlbQ, QName,DeclQ)
+!---------------  
 QueueViewListVLB PROCEDURE(QUEUE VlbQ, STRING QName, QueDeclareType DeclQ)
 VlbCls CLASS !From Mark Goldberg, but I hacked it to death
 FEQ    LONG
@@ -4582,13 +4583,25 @@ Expand PROCEDURE()
 VMapQ QUEUE,PRE(VMapQ) !Map for HasValue, no &Ref columns
 FieldX USHORT
       END
+R LONG
 X USHORT
 P USHORT
 Hdg STRING(80)
 Fmt ANY
-Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE,ALRT(MouseRight)
-        LIST,AT(1,1),FULL,USE(?List:VLB),HVSCROLL,VCR,FORMAT('40L(1)|M~Col1~Q''NAME''')
-  END
+AddCnt  BYTE(10)
+PColumn USHORT
+Picture STRING(32)
+Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
+        BUTTON('&Menu'),AT(2,2,25,12),USE(?MenuBtn),SKIP
+        BUTTON('&Add'),AT(49,2,25,12),USE(?AddBtn),SKIP,TIP('Add Duplicates of Selected Row')
+        ENTRY(@n2),AT(78,3,14,10),USE(AddCnt),SKIP,TIP('Count to Add')
+        STRING('times'),AT(95,3),USE(?AddTms)
+        BUTTON('&Delete'),AT(118,2,,12),USE(?DelBtn),KEY(DeleteKey),SKIP,TIP('Delete Selected Row')
+        PROMPT('&Picture Column:'),AT(173,3,55),USE(?Pic:Pmt),DISABLE,RIGHT
+        COMBO(@s32),AT(233,3,59,10),USE(Picture),DISABLE,VSCROLL,TIP('Change Picture for Column'), |
+                DROP(16),FROM('@D1|@D2|@D3|@D17|@N11.2|@S255|@T1|@T3|@T4|@T8')
+        LIST,AT(1,17),FULL,USE(?List:VLB),HVSCROLL,COLUMN,VCR,FORMAT('40L(2)|M~Col1~Q''NAME'''),FLAT
+    END
   CODE
   LOOP X=1 TO RECORDS(DeclQ)
     GET(DeclQ,X) ; IF ~DeclQ:HasValue THEN CYCLE.
@@ -4596,23 +4609,42 @@ Window WINDOW('VLB'),AT(,,450,200),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE,ALR
     Hdg=DeclQ:Name
     IF INSTRING('::VIEWPOSITION',UPPER(DeclQ:Name),1) OR INSTRING('::POSITION',UPPER(DeclQ:Name),1) THEN CYCLE.
     P=INSTRING('::',Hdg,1)+1 ; IF P<2 THEN P=INSTRING(':',Hdg,1). ; IF P THEN Hdg=SUB(Hdg,P+1,99). !Cutoff Pre:
-    Fmt=Fmt&'40L(1)|M~' & DeclQ:FieldX & '. <13,10>'& CLIP(Hdg) &'~Q'' Field: <9>'& DeclQ:FieldX & |
+    Fmt=Fmt&'40L(2)|M~' & DeclQ:FieldX & '. <13,10>'& CLIP(Hdg) &'~Q'' Field: <9>'& DeclQ:FieldX & |
             '<13,10> Name: <9>'& CLIP(DeclQ:Name) &' <13,10> Type: <9>'& CLIP(DeclQ:DType) &' '''
   END
   OPEN(Window)
-  ?List:VLB{PROP:Format}=Fmt ; CLEAR(Fmt)
+  ?List:VLB{PROP:Format}=Fmt ; CLEAR(Fmt) ; LineHt(?List:VLB) ; LineHt(?Picture)
   0{PROP:Text}='Queue View: ' & QName &' - '& records(VlbQ) & ' Records - '& records(VMapQ) &' Columns  -  Right-Click for Options'
   VlbCls.Init(?List:VLB, Records(VMapQ))
   ACCEPT
-    IF EVENT()=EVENT:AlertKey AND KEYCODE()=MouseRight THEN
+    IF FIELD() THEN R=CHOICE(?List:VLB) ; GET(VlbQ,R).
+    IF EVENT()=EVENT:NewSelection AND FIELD()=?List:VLB AND KEYCODE()=MouseRight THEN
        SETKEYCODE(0)
-       X=?List:VLB{PROPLIST:MouseDownField}
-       EXECUTE POPUP('Contract Column Widths|Expand Column Widths|-|Copy Queue to Clipboard|-|Hide Column ' & X)
+       X=?List:VLB{PROPLIST:MouseDownField} ; GET(VMapQ,X)
+       CASE POPUP('Copy Cell to Clipboard|View Cell Text|-|Copy Row|View Row Text|-|Hide Column ' & X &'|Change @ Picture')
+       OF 1 ; SETCLIPBOARD(WHAT(VlbQ,VMapQ:FieldX))
+       OF 2 ; Fmt&=WHAT(VlbQ,VMapQ:FieldX) ; TextViewWindow(QName & ' Cell '& R &','& X ,Fmt,Fmt) ; CLEAR(Fmt)
+       OF 3 ; SetClipboard(VlbQ) 
+       OF 4 ; TextViewWindow(QName &' Row '&R,VlbQ,VlbQ)
+       OF 5 ; ?List:VLB{PROPLIST:width,X}=0 ; IF X=PColumn THEN DISABLE(?Pic:Pmt,?Picture) .
+       OF 6 ; Picture=?List:VLB{PROPLIST:Picture,X} ; ?Pic:Pmt{PROP:Text}='&Picture Col ' & X & ':'
+              ENABLE(?Pic:Pmt,?Picture) ; SELECT(?Picture) ; PColumn=X
+       END
+    END
+    CASE ACCEPTED()
+    OF ?DelBtn ; DELETE(VlbQ) 
+    OF ?AddBtn ; LOOP AddCnt TIMES ; ADD(VlbQ) ; END 
+    OF ?MenuBtn
+        EXECUTE POPUPunder(?MenuBtn,'Copy Queue to Clipboard|-|Contract Column Widths|Expand Column Widths' & |
+                        '|-|Copy VLB Format String')
+        SetClip2Queue(VlbQ) 
         VlbCls.Contrt()
         VlbCls.Expand()
-        SetClip2Queue(VlbQ)
-        ?List:VLB{PROPLIST:width,X}=0
-       END
+        SETCLIPBOARD(?List:VLB{PROP:Format})
+        END
+    OF ?Picture ; ?List:VLB{PROPLIST:Picture,PColumn}=Picture 
+                  ?List:VLB{CHOOSE(~INSTRING(lower(picture[1:2]),'@d@t@n@e'),PROPLIST:Left,PROPLIST:Right) ,PColumn}=1
+                  DISPLAY 
     END
   END
   RETURN
