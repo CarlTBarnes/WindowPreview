@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 06-26-20.1245')
+VersionWndPrv EQUATE('WndPrv 12-17-20.1439')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -40,7 +40,7 @@ Column   STRING(3)
 FieldX   USHORT
 Name     STRING(64)
 DType    STRING(16)
-Value    STRING(64)
+Value    STRING(256)
 HasValue BYTE
 DTypeNo  BYTE
    END         
@@ -619,7 +619,7 @@ ReOpenLOOP:Label:
   FldQ:FeqName = 0{PROP:Text}     
   OPEN(Window) ; SysMenuCls.Init(Window) ; SELF.AtSetOrSave(1, AtWndReflect[], AtNoSetXY) ; AtNoSetXY=0 
   ?MenuItems{PROP:Use}=SELF.MenuItemShows
-  0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv
+  0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv &'  '& PWnd{'Proc_Name'}
   IF Format_ListF THEN ?ListF{PROP:Format}=Format_ListF.
   LineHt(?ListF)
   ?ListF{PROPSTYLE:FontName,1}='Wingdings 2'
@@ -1045,7 +1045,8 @@ Trick_EditCaptionRtn ROUTINE
     DATA 
 WinFont     STRING(60)
 CapAppend   STRING(60)      !Glo:Caption PSTRING(200)
-EdCapRESIZE LONG     
+EdCapRESIZE LONG
+ProcName    STRING(64)      !I set Window{'Proc_Name'}=%Procedure in templates
 EdCapWnd WINDOW('Edit Caption'),AT(,,290,95),GRAY,SYSTEM,FONT('Segoe UI',9)
         PROMPT('Original Caption:'),AT(5,5),USE(?EdCap:Cap:Pmt)
         ENTRY(@s127),AT(61,5,219),USE(GloT:Caption,, ?EdCap:Cap),SKIP,COLOR(COLOR:BTNFACE),READONLY
@@ -1058,11 +1059,13 @@ EdCapWnd WINDOW('Edit Caption'),AT(,,290,95),GRAY,SYSTEM,FONT('Segoe UI',9)
         BUTTON('Save EXE'),AT(183,53,45),USE(?EdCap:Save),TIP('Save Preview EXE so don''t lose on close')
         BUTTON('&Stamp'),AT(250,53,30,11),USE(?EdCap:Stamp),SKIP
         CHECK('RESIZE on Window'),AT(5,76),USE(EdCapRESIZE),SKIP,TIP('Make Window Resizable')
+        ENTRY(@s64),AT(114,76,167),USE(ProcName),SKIP,TRN,READONLY        
     END
     CODE 
     WinFont=PWnd{PROP:Font} &' '& PWnd{PROP:FontSize}
     CapAppend=SUB(PWnd{PROP:Text},LEN(GloT:Caption)+5,32)
     EdCapRESIZE=PWnd{PROP:Resize}
+    ProcName=PWnd{'Proc_Name'}
     !CapAppend=SUB(SELF.WndRef{PROP:Text},LEN(Glo:Caption)+5,32)
     OPEN(EdCapWnd)
     ACCEPT
@@ -1938,7 +1941,7 @@ P7Q Parse7QType
   END     
   LOOP X=1 TO 15
      Val = SYSTEM{PROP:WindowsVersion,X}       !TODO show HEX
-     IF ~Val THEN CYCLE.
+     IF X>10 AND ~Val THEN CYCLE.
      L=LEN(CLIP(Val)) ; IF L<12 THEN L=12.
      Val=SUB(Val,1,L) &'   '& |         
                       CHOOSE(X,'RTL Description','Win Version Name','Major','Minor','Build',|
@@ -3440,10 +3443,10 @@ X LONG,AUTO
   END ; CWHlp.OpenHelp(LEFT(HelpTxt))
 !------------------------------
 Hex8 PROCEDURE(LONG _Lng, SHORT Digits=0, BYTE AddH=1,BYTE SpaceAt5=0)!,STRING
-LngAdj  LONG,AUTO,STATIC 
+LngAdj  LONG,AUTO 
 L       BYTE,DIM(4),OVER(LngAdj)
 Hex     STRING('0123456789ABCDEF'),STATIC
-HX      STRING(9),AUTO,STATIC 
+HX      STRING(9),AUTO 
 HxDig   SHORT,AUTO
   CODE
     LngAdj = BAND(BSHIFT(_Lng, -4),0F0F0F0Fh) + 01010101h
@@ -4804,7 +4807,7 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                 BUTTON('&View From(Q)'),AT(290,23,,12),USE(?FromQViewBtn),SKIP,TIP('View From(Q) in List')
                 LIST,AT(0,36),FULL,USE(?LIST:FrmFldQ),VSCROLL,FONT('Consolas',10),FROM(FrmFldQ),FORMAT('28C|FM~List<13>' & |
                         '<10>Column~@s3@28C|FM~Queue<13,10>Field~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
-                        '@20L(2)F~Value~@s64@'),ALRT(CtrlC),ALRT(DeleteKey)
+                        '@20L(2)F~Value~@s255@'),ALRT(CtrlC),ALRT(DeleteKey)
             END
             TAB('Declare Q'),USE(?TAB:DeclQ),HIDE,TIP('Debug...Delete')
                 BUTTON('&View Decl(Q)'),AT(290,23,,12),USE(?DeclQViewBtn),SKIP,TIP('View From(Q) in List')
