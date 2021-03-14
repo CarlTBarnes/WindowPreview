@@ -2,7 +2,7 @@
 !--------------------------
 ! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 12-17-20.1439')
+VersionWndPrv EQUATE('WndPrv 03-14-21.1640')  !PI Day!
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -32,8 +32,10 @@ FieldX   USHORT
 Name     STRING(64)
 DType    STRING(16)
 DTypeNo  BYTE
+Size     LONG
+HowMany  USHORT               
 HasValue BYTE !An ANY can take
-HowMany  USHORT
+DValue   STRING(255)
       END
 FrmFldQtype QUEUE,TYPE
 Column   STRING(3)
@@ -79,7 +81,7 @@ ClaControlTypeName  PROCEDURE(LONG CtrlPropType),STRING,PRIVATE     !Pass FEQ{PR
 ClaCursorEquate     PROCEDURE(*STRING InOutCursorProp),PRIVATE
 ClaKeyCodeExplain   PROCEDURE(LONG KeyCodeEquate, BYTE Terse=0),STRING,PRIVATE    !Explain KeyCode() Alt+CtrL+Shift
 ClaAlign            PROCEDURE(LONG CtrlFEQ, LONG CtrlType),STRING,PRIVATE   !Pass FEQ,{PROP:Type} to get Left,R,C,D
-ClaDataType         PROCEDURE(*? DataAny, *STRING OutTypeName, *BYTE OutHasValueForANY),LONG,PROC,PRIVATE
+ClaDataType         PROCEDURE(*? DataAny, *STRING OutTypeName, *BYTE OutHasValueForANY, *LONG OutSize),LONG,PROC,PRIVATE
 ClaFont4            PROCEDURE(LONG CtrlFEQ, *PSTRING[] Font4),PRIVATE
 ClaFont4Net         PROCEDURE(*PSTRING[] WFont, *PSTRING[] CFont),STRING,PRIVATE
 ClaFont             PROCEDURE(LONG CtrlFEQ),STRING,PRIVATE
@@ -105,6 +107,7 @@ GroupMoveChildren   PROCEDURE(LONG FromGroup, LONG ToControl, LONG XAdjust=0, LO
 KeyStateSCA         PROCEDURE(BYTE Shft1_Ctrl2_Alt4),BYTE,PRIVATE
 LineHt              PROCEDURE(LONG ListFEQ, SHORT LineHeightAdd=1),PRIVATE !List Prop:LineHeight +=1
 ListDrop            PROCEDURE(LONG ListFEQ, BYTE Down0_Up1=0),PRIVATE
+ListFormatDejaVu    PROCEDURE(LONG ListFEQ, STRING WindowID, BYTE Closing=0)
 ListHelpCW          PROCEDURE(LONG SetBtnTip=0),PRIVATE
 ListHelpMods        PROCEDURE(),STRING,PRIVATE
 LocateInLIST        PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn),PRIVATE
@@ -124,6 +127,8 @@ PropViewWindow      PROCEDURE(STRING CapTxt, PropQType PQ, STRING ValueOnly),PRI
 QueueDeclareGet     PROCEDURE(QUEUE inQueue, QueDeclareType DeclareQ),PRIVATE
 QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName),PRIVATE
 QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName, QueDeclareType FrmFldQ),PRIVATE
+ReflectDeclareGet   PROCEDURE(*GROUP inGroupClassOrQueue, QueDeclareType DeclareQ, STRING LevelPrefix),LONG,PROC,PRIVATE !03/11/21
+ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsQue123,*GROUP GrpClsQueRef, STRING NameOfGCQ,<*QUEUE FromQ>),PRIVATE  !03/11/21
 ReplaceInto         PROCEDURE(*string Into, string FindTxt,string ReplaceTxt, BYTE ClipInto=0),LONG,PROC,PRIVATE
 ReplaceText         PROCEDURE(string InText, string Find,string Repl, BYTE ClipInto=0),STRING
 SeeMore             PROCEDURE(LONG PropMore, LONG CtrlFEQ, LONG CtrlTypeNo),STRING,PRIVATE
@@ -3661,7 +3666,7 @@ SheetRtn ROUTINE  !Align shows Above/Below/Right/Left Up/Down wnshj for various 
     END
     RETURN SheetA & Offset
 !--------------------
-ClaDataType PROCEDURE(*? UAny, *STRING TypeName, *BYTE HasValue)!,LONG
+ClaDataType PROCEDURE(*? UAny, *STRING TypeName, *BYTE HasValue, *LONG USize)!,LONG
 UFO &UFOType
 UAddr LONG,AUTO 
 T LONG,AUTO
@@ -3672,10 +3677,11 @@ L USHORT
   CODE
   UAddr=ADDRESS(UAny) ; UFO&=(UAddr) ; IF UAddr=0 OR UFO &= NULL THEN TypeName='Null?' ; RETURN 0.
   T=UFO._Type(UAddr) ; S=UFO._Size(UAddr) ; M=UFO._Max(UAddr)
-  HasValue=CHOOSE(T>=1 AND T<=20 AND T<>15) !ANY Value  BYTE - PSTRING w/o UFO=15
+  HasValue=CHOOSE(T>=1 AND T<=20 AND T<>15) !ANY Value  BYTE - PSTRING w/o UFO=15 
+  USize=S
   CASE T
   OF 29 ; N='PICTURE' ; HasValue=1 !ends up decimal
-  OF 31 TO 39 ; N='ANY_&REF' !REFERENCE FILEREF KEYREF QUEUEREF CLASSREF WINDOWREF VIEWREF BLOBREF NAMEREF
+  OF 31 TO 39 ; N='Reference' !'ANY_&REF' !REFERENCE FILEREF KEYREF QUEUEREF CLASSREF WINDOWREF VIEWREF BLOBREF NAMEREF
   OF 40 ; N='LIKE'           !LibSrc XMLType.inc CLType 
   OF 41 ; N='TYPE'
   OF 42 ; N='BSTRING' 
@@ -4687,34 +4693,211 @@ X LONG,AUTO
       CLEAR(DeclQ)
       DeclQ.FieldX=X
       DeclQ.Name=WHO(GetQ,X)
-      DT=ClaDataType(QA ,DeclQ.DType, DeclQ.HasValue) 
+      DT=ClaDataType(QA ,DeclQ.DType, DeclQ.HasValue, DeclQ.Size) 
       DeclQ.DTypeNo=DT  ! DataType:xxx
       DeclQ.HowMany=HOWMANY(GetQ,X)  !Is array?
-      IF DeclQ.HowMany>1 THEN DeclQ.HasValue=0.
+      IF DeclQ.HowMany>1 THEN DeclQ.HasValue=0. !Future DIM() also IsGroup
       ADD(DeclQ)
+    END
+ !----------------------   
+ReflectDeclareGet PROCEDURE(*GROUP pGrpRef, QueDeclareType DeclQ, STRING pLevelPrefix)
+AnyWHAT     ANY 
+DT LONG,AUTO
+X LONG,AUTO
+DimIdx LONG,AUTO
+WhoName PSTRING(128) 
+GroupPfx PSTRING(128) 
+GroupRef &GROUP 
+WhatAsStr STRING(4),AUTO 
+WhatAsStrLng LONG,OVER(WhatAsStr)
+DTypeNm STRING(16)
+GroupCnt LONG
+RetCount LONG
+   CODE
+   LOOP X=1 TO 999 
+      AnyWHAT &= WHAT(pGrpRef,X) ; IF AnyWHAT &= NULL THEN BREAK.
+      CLEAR(DeclQ) 
+      DeclQ.FieldX=X
+      WhoName=pLevelPrefix & WHO(pGrpRef,X)
+      DeclQ.Name=WhoName
+      DT=ClaDataType(AnyWHAT ,DTypeNm, DeclQ.HasValue, DeclQ.Size) 
+      DeclQ.DTypeNo=DT  ! DataType:xxx
+      DeclQ.DType  =DTypeNm
+      DeclQ.HowMany=HOWMANY(pGrpRef,X)  !Is array?
+      IF DeclQ.HowMany>1 THEN 
+         DeclQ.HasValue=0
+            DeclQ.Name = WhoName &' []'
+            DeclQ.DValue = 'ARRAY DIM( ' & DeclQ.HowMany &' )' 
+            IF ISGROUP(pGrpRef,X) THEN
+               DeclQ.DValue = 'GROUP....  ' & DeclQ.DValue
+               DO Add1Rtn 
+               RetCount += 1
+!TODO reflect GROUP,DIM()
+               CYCLE
+            END
+            DO Add1Rtn        !Add Array that's NOT Group
+            RetCount += 1
+            DeclQ.HasValue=1
+            LOOP DimIdx=1 TO DeclQ.HowMany 
+                AnyWHAT &= WHAT(pGrpRef,X, DimIdx)
+                DeclQ.DValue=AnyWHAT
+                IF ~DeclQ.DValue OR DeclQ.DValue='0' THEN CYCLE.
+                DeclQ.Name = WhoName &' [ ' & DimIdx &' ]'
+                DO Add1Rtn 
+            END 
+            CYCLE 
+            
+      ELSIF ISGROUP(pGrpRef,X) THEN
+            DeclQ.HasValue=0
+            DeclQ.DValue = 'GROUP.{9}' 
+            GroupPfx = WhoName &'.'
+            DeclQ.Name = WhoName & '.{9}'
+            DO Add1Rtn 
+            RetCount += 1
+            GroupRef &= GETGROUP(pGrpRef,X)
+            GroupCnt=ReflectDeclareGet(GroupRef,DeclQ,GroupPfx)
+            RetCount += GroupCnt
+            X += GroupCnt ; GroupCnt=0  !The Group fields will show again so skip over
+      ELSE
+            IF DeclQ.HasValue THEN 
+               DeclQ.DValue = AnyWHAT
+            ELSIF DeclQ.DTypeNo=31 THEN
+               WhatAsStr=AnyWHAT
+               DeclQ.DValue=WhatAsStrLng 
+            END
+            DO Add1Rtn
+            RetCount += 1
+      END
+   END !loop x 
+   RETURN RetCount
+Add1Rtn ROUTINE 
+  DeclQ.FieldX=RECORDS(DeclQ)+1 
+!!!  IF GroupCnt THEN DeclQ.Name=GroupCnt &'.skip.' &DeclQ.Name ; GroupCnt -= 1 ; END !Debug Group Recursion
+  ADD(DeclQ)
+!----------------------
+ListFormatDejaVu PROCEDURE(LONG ListFEQ, STRING WindowID, BYTE AuRevoir=0)
+UPropFmt PSTRING(64)      !use ClaFeqName(ListFEQ), number is good 
+FmtNow ANY 
+SaveFmt ANY 
+    CODE    
+    UPropFmt='CbWndPrv:' & ListFEQ & PROP:Format & WindowID
+    FmtNow=ListFEQ{PROP:Format}
+    IF ~AuRevoir THEN
+       SaveFmt=SYSTEM{UPropFmt} !See if have old format
+       IF SaveFmt THEN 
+          ListFEQ{PROP:Format}=SaveFmt
+          FmtNow=SaveFmt
+       END
+       0{UPropFmt}=FmtNow  !Save Opening Format in Window
+    ELSE        
+       IF FmtNow<>0{UPropFmt} THEN SYSTEM{UPropFmt}=FmtNow.  !If Format changed save in SYSTEM
     END 
 !----------------------
-CBWndPreviewClass.QueueReflection PROCEDURE(*QUEUE FromQ, STRING FromWho) !View Queue without Window for Roberto Artigas
+CBWndPreviewClass.GroupReflection PROCEDURE(*GROUP GroupRef, STRING NameOfGroup)
+    CODE ; ReflectGroupOrQueue(SELF,1,GroupRef,NameOfGroup)
+CBWndPreviewClass.ClassReflection PROCEDURE(*GROUP ClassRef, STRING NameOfClass) !View Class in Window
+    CODE ; ReflectGroupOrQueue(SELF,2,ClassRef, NameOfClass)
+CBWndPreviewClass.QueueReflection PROCEDURE(*QUEUE QueueRef, STRING NameOfQueue) !View Queue in Window
+    CODE ; ReflectGroupOrQueue(SELF,3,QueueRef, NameOfQueue,QueueRef)
+!----------------------  
+ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsQue,*GROUP ThingRef, STRING ThingName,<*QUEUE FromQ>) 
 DeclareQ QUEUE(QueDeclareType),PRE(DecQ).
-Window WINDOW('Q'),AT(,,316,280),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
-        BUTTON('&Copy Declare'),AT(2,2,,12),USE(?CopyBtn),SKIP,TIP('Copy Queue Declaration')
-        BUTTON('&View Queue Records'),AT(65,2,,12),USE(?ViewBtn),SKIP,TIP('View Queue Records')
-        LIST,AT(1,17),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ), |
-                FORMAT('28C|FM~Fld<13,10>No.~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
-                '@24R(6)|FM~Type<13,10>No.~C(0)@n3@30L(6)|FM~Has<13,10>Value~C(0)@n3@33L(2)F~How<13>' & |
-                '<10>Many~@n4@')
+SortCls CBSortClass
+FindCls CBLocateCls
+FindTxt STRING(64),STATIC
+RefWnd WINDOW('Class Reflect'),AT(,,380,220),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
+        ENTRY(@s64),AT(32,3,155,11),USE(FindTxt),SKIP,FONT('Consolas')
+        BUTTON('&Find'),AT(2,2,25,12),USE(?FindNext),SKIP
+        BUTTON('Pre&v'),AT(191,2,26,12),USE(?FindPrev),SKIP
+        BUTTON('&Copy'),AT(238,2,,12),USE(?CopyBtn),SKIP,TIP('Copy Declaration')
+        BUTTON('&View Queue'),AT(286,2,,12),USE(?ViewQBtn),SKIP,TIP('View Queue Records')
+        LIST,AT(1,18),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ),FORMAT('18C|FM~Fld<13,10>No.~@' & |
+                'n3@115L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16@20R(6)|FM~Type<13,10>No.~C(0)@n3@30R(2)|FM~Size~' & |
+                'C(0)@n10@20R(6)|FM~How<13,10>Many~L(2)@n4@25L(6)|FM~Has<13,10>Value~C(0)@n3@135L(2)F~Data Value~@s255@1' & |
+                '35L(2)F~Any Long~@n11@'),ALRT(DeleteKey)
     END
+NAVR   PSTRING(2),AUTO
+DValLong LONG,AUTO
+QueRef &QUEUE 
+GrpRef &GROUP
+RefStr &STRING
+RefCStr &CSTRING
+RefPStr &PSTRING
+AtRGQ  LONG,DIM(4),STATIC 
     CODE
-    OPEN(Window) ; DISPLAY ; QueueDeclareGet(FromQ,DeclareQ)
-    0{PROP:Text}=FromWho & ' - ' & Records(DeclareQ) & ' Fields - ' & Records(FromQ) & ' Records ' & |
-                               ' - &Queue=' & Hex8(INSTANCE(FromQ,Thread())) & ' - Address=' & Hex8(Address(FromQ))  
+    OPEN(RefWnd) ; DISPLAY 
+    IF OMITTED(FromQ) THEN HIDE(?ViewQBtn).
+    ReflectDeclareGet(ThingRef,DeclareQ,'')
+    0{PROP:Text}=CLIP(ThingName) & CHOOSE(GrpClsQue,' GROUP',' CLASS',' QUEUE','') & ' Reflection' |
+                                 & ' - ' & Records(DeclareQ) & ' Fields' | 
+                                 & CHOOSE(~OMITTED(FromQ),' - '& Records(FromQ) & ' Records','') |
+                                 & ' - Address=' & Hex8(Address(ThingRef))  
+    FindCls.Init(DeclareQ, ?LIST:DeclareQ, ?FindTxt, ?FindNext, ?FindPrev)
+    SortCls.Init(DeclareQ,?LIST:DeclareQ)
+    PrvCls.AtSetOrSave(1, AtRGQ[]) 
+    ListFormatDejaVu(?LIST:DeclareQ,'Reflect')    
     ACCEPT 
         CASE ACCEPTED() 
-        OF ?CopyBtn ; SetClip2Queue(DeclareQ)
-        OF ?ViewBtn ; QueueViewListVLB(FromQ, FromWho, DeclareQ)   
+        OF ?CopyBtn  ; SetClip2Queue(DeclareQ)
+        OF ?ViewQBtn ; QueueViewListVLB(FromQ, ThingName, DeclareQ)
+        END
+        CASE FIELD()
+        OF ?LIST:DeclareQ
+           GET(DeclareQ,CHOICE(?LIST:DeclareQ)) ; DValLong=DecQ:DValue
+           CASE EVENT()
+           OF EVENT:AlertKey ; IF KEYCODE()=DeleteKey THEN DELETE(DeclareQ).
+           OF EVENT:HeaderPressed ; SortCls.HeaderPressed()
+           OF EVENT:NewSelection
+              IF KEYCODE()=MouseRight THEN 
+                 SETKEYCODE(0)
+                 NAVR=CHOOSE(DecQ:DTypeNo=31 AND DValLong<>0,'','~')   
+                 CASE POPUP('Copy Field Name|Copy Data Value' & | 
+                     '|-|' & NAVR& 'Reference Reflection' & |
+                           '{{~[31763(700)]Will GPF if Wrong Reference Type|-|' & | !4796
+                             'Queue Reflection|' & |
+                             'Class Reflection|' & | 
+                             'Group Reflection|' & |
+                             '-|Simple Data{{STRING|CSTRING|PSTRING}|' & |
+                            '}') 
+                   OF 1 ; SETCLIPBOARD(DecQ:Name)         
+                   OF 2 ; SETCLIPBOARD(DecQ:DValue)         
+                   OF 4 ; QueRef &=(DValLong) ; PrvCls.QueueReflection(QueRef,CLIP(DecQ:Name))
+                   OF 5 ; GrpRef &=(DValLong) ; PrvCls.ClassReflection(GrpRef,CLIP(DecQ:Name))
+                   OF 6 ; GrpRef &=(DValLong) ; PrvCls.GroupReflection(GrpRef,CLIP(DecQ:Name))
+                   OF 7 ; RefStr  &= (DValLong) ; TextViewWindow('STRING',RefPStr,RefStr)
+                   OF 8 ; RefCStr &= (DValLong) ; TextViewWindow('CSTRING',RefPStr,RefCStr)
+                   OF 9 ; RefPStr &= (DValLong) ; TextViewWindow('PSTRING',RefPStr,RefPStr)
+                 END
+              END
+           END
         END 
-    END
+    END 
+    ListFormatDejaVu(?LIST:DeclareQ,'Reflect',1) 
+    PrvCls.AtSetOrSave(2, AtRGQ[])
+    CLOSE(RefWnd)
     RETURN
+!----------------------
+!CBWndPreviewClass.QueueReflection PROCEDURE(*QUEUE FromQ, STRING FromWho) !View Queue without Window for Roberto Artigas
+!DeclareQ QUEUE(QueDeclareType),PRE(DecQ).
+!Window WINDOW('Q'),AT(,,316,280),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
+!        BUTTON('&Copy Declare'),AT(2,2,,12),USE(?CopyBtn),SKIP,TIP('Copy Queue Declaration')
+!        BUTTON('&View Queue Records'),AT(65,2,,12),USE(?ViewBtn),SKIP,TIP('View Queue Records')
+!        LIST,AT(1,17),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ), |
+!                FORMAT('28C|FM~Fld<13,10>No.~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
+!                '@24R(6)|FM~Type<13,10>No.~C(0)@n3@30L(6)|FM~Has<13,10>Value~C(0)@n3@33L(2)F~How<13>' & |
+!                '<10>Many~@n4@')
+!    END
+!    CODE
+!    OPEN(Window) ; DISPLAY ; QueueDeclareGet(FromQ,DeclareQ)
+!    0{PROP:Text}=FromWho & ' - ' & Records(DeclareQ) & ' Fields - ' & Records(FromQ) & ' Records ' & |
+!                               ' - &Queue=' & Hex8(INSTANCE(FromQ,Thread())) & ' - Address=' & Hex8(Address(FromQ))
+!    ACCEPT
+!        CASE ACCEPTED()
+!        OF ?CopyBtn ; SetClip2Queue(DeclareQ)
+!        OF ?ViewBtn ; QueueViewListVLB(FromQ, FromWho, DeclareQ)
+!        END
+!    END
+!    RETURN
 !----------------------
 CBWndPreviewClass.ListPROPs  PROCEDURE(LONG ListFEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
 !TODO Tab for FROM if it is Text, as 1 string and split into lines 
@@ -4776,8 +4959,9 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
         CHECK('All Prop'),AT(407,21,36),USE(AllPropList),SKIP,TIP('Show all LISTPROP for Column')
         SHEET,AT(2,20),FULL,USE(?Sheet1),NOSHEET,BELOW
             TAB(' &List Columns '),USE(?TAB:Cols)
-                BUTTON('See More'),AT(293,23,37,12),USE(?SeeMoreBtn),SKIP,TIP('See a PROPLIST for all Columns')
-                BUTTON('From(Q)'),AT(334,23,33,12),USE(?FromQBtn),SKIP,TIP('From(Q) Fields')
+                BUTTON('See More'),AT(293,23,37,12),USE(?SeeMoreBtn),SKIP,TIP('Pick any PROPLIST to add to below and vie' & |
+                        'w for all Columns')
+                BUTTON('From(Q)'),AT(334,23,33,12),USE(?FromQBtn),SKIP,TIP('Show From(Q) Fields Tab to see Queue feeding List')
                 LIST,AT(0,36),FULL,USE(?LIST:ListQ),VSCROLL,FONT('Consolas',10),FROM(ListQ),FORMAT('38L(2)|FMT(B)~Column' & |
                         '~C(0)@s5@18C|FM~Fld~L(1)@n4b@18C|FM~Grp~L(1)@n4b@80L(2)|FM~Header~C(0)@s32@?39L(2)|FM~Picture~L' & |
                         '(1)@s16@25L(2)|FM~Width~L(1)@s8@23L(2)|FM~Align~L(0)@s5@20L(2)|FM~Hdr~@s5@26L(2)|FM~Mods~L(1)@s' & |
@@ -4785,10 +4969,11 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
             END
             TAB(' &Column LISTPROP '),USE(?TAB:PROPs1)
                 TEXT,AT(0,36,,12),FULL,USE(Format1Col),SKIP,VSCROLL,FONT('Consolas',10)
-                BUTTON('Pre&v'),AT(214,23,34,12),USE(?ColPrevBtn),SKIP,ICON(ICON:VCRback),TIP('Move to Prev Column'),LEFT
-                BUTTON('&Next'),AT(251,23,34,12),USE(?ColNextBtn),SKIP,ICON(ICON:VCRplay),TIP('Move to Next Column'),RIGHT
+                BUTTON('Pre&v'),AT(293,23,34,12),USE(?ColPrevBtn),SKIP,ICON(ICON:VCRback),TIP('Move to Prev Column'),LEFT
+                BUTTON('&Next'),AT(330,23,34,12),USE(?ColNextBtn),SKIP,ICON(ICON:VCRplay),TIP('Move to Next Column'),RIGHT
                 LIST,AT(0,51),FULL,USE(?LIST:PQ),VSCROLL,FONT('Consolas',10),FROM(PQ),FORMAT('27L(3)|FM~Equate~L(1)@s5@8' & |
-                        '5L(2)|FM~PROPLIST: Property~@s32@?19C|FM~Mod~@s2@?#6#20L(2)F~Value~@s255@#3#'),ALRT(DeleteKey),ALRT(CtrlC)
+                        '5L(2)|FM~PROPLIST: Property~@s32@?19C|FM~Mod~@s2@?#6#20L(2)F~Value~@s255@#3#'),ALRT(DeleteKey), |
+                         ALRT(CtrlC)
             END
             TAB(' &Styles '),USE(?TAB:Style)
                 STRING('Style Search Range:'),AT(3,37),USE(?StyRng:Pmt)
@@ -4798,22 +4983,23 @@ Window WINDOW('Prop'),AT(,,450,300),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
                         USE(?StyInfo:Pmt)
                 LIST,AT(0,51),FULL,USE(?LIST:SQ),VSCROLL,FONT('Consolas',10),FROM(SQ),FORMAT('25R(2)|FM~Style~C(0)@N_5b@' & |
                         '#6#28L(3)|FM~Equate~L(1)@s5@#1#85L(2)|FM~PROPSTYLE: Property~@s32@?20L(2)F~Value~@s255@#3#'), |
-                        ALRT(DeleteKey),ALRT(CtrlC)
+                        ALRT(DeleteKey), ALRT(CtrlC)
             END
             TAB(' &FORMAT() '),USE(?TAB:Formt)
                 TEXT,AT(0,36),FULL,USE(FormText),SKIP,HVSCROLL,FONT('Consolas',10)
             END
             TAB(' F&ROM Q '),USE(?TAB:FromQ),HIDE
-                BUTTON('&View From(Q)'),AT(290,23,,12),USE(?FromQViewBtn),SKIP,TIP('View From(Q) in List')
+                BUTTON('&View From(Q)'),AT(290,23,,12),USE(?FromQViewBtn),SKIP,TIP('View From(Q) records in List')
                 LIST,AT(0,36),FULL,USE(?LIST:FrmFldQ),VSCROLL,FONT('Consolas',10),FROM(FrmFldQ),FORMAT('28C|FM~List<13>' & |
                         '<10>Column~@s3@28C|FM~Queue<13,10>Field~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
-                        '@20L(2)F~Value~@s255@'),ALRT(CtrlC),ALRT(DeleteKey)
+                        '@20L(2)F~Value~@s255@'),ALRT(CtrlC), ALRT(DeleteKey)
             END
-            TAB('Declare Q'),USE(?TAB:DeclQ),HIDE,TIP('Debug...Delete')
+            TAB('Declare Q'),USE(?TAB:DeclQ),HIDE,TIP('Debug...View TUFO Declare Q')
                 BUTTON('&View Decl(Q)'),AT(290,23,,12),USE(?DeclQViewBtn),SKIP,TIP('View From(Q) in List')
                 LIST,AT(0,36),FULL,USE(?LIST:FrmDecQ),VSCROLL,FONT('Consolas',10),FROM(FrmDecQ),FORMAT('28C|FM~Queue<13>' & |
-                        '<10>Field~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16@34L(2)|FM~TypeNo~@n3@47L(2)|F' & |
-                        'M~HasValue~@n3@61L(2)F~HowMany~@n4@')
+                        '<10>Field~@n3@125L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16@24R(8)|FM~Type<13,10>No.~C(0)' & |
+                        '@n3@38R(2)|FM~Size~C(0)@n10@25R(8)|FM~How<13,10>Many~C(0)@n4@24R(8)|FM~Has<13,10>Value~C(0)@n3@' & |
+                        '47L(2)|FM~Data Value~@s255@')
             END
         END
     END

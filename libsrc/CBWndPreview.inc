@@ -93,6 +93,8 @@ AllOffHDRS      PROCEDURE(BOOL UnHide=1, BOOL UnDisable=1, BOOL UnReadOnly=1, BO
 AllFixNumbers   PROCEDURE() !Fix #####.## numbers to 9999.99 - CANNOT do in SECTION('AfterOpen'), must do in Once SECTION('InAccept')
 Start           PROCEDURE() ! START HERE Open the Controls List i.e. just calls .Reflection()
 QueueReflection PROCEDURE(*QUEUE ListFromQueue, STRING NameOfQueue) !View Queue without Window for Roberto Artigas
+ClassReflection PROCEDURE(*GROUP ClassRef, STRING NameOfClass) !03/14/21
+GroupReflection PROCEDURE(*GROUP GroupRef, STRING NameOfGroup) !03/14/21
 
 InitWorker      PROCEDURE(Window W) !Allow MG to not use my .Init()
 Glo_IsPreviewEXE  &BYTE    !&=Glo:IsPreviewEXE
