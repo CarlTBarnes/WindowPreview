@@ -145,8 +145,14 @@ DB                  PROCEDURE(STRING DbTxt),PRIVATE
         MODULE('RTL')
 ClaFieldNameRTL  PROCEDURE(LONG pFEQ),CSTRING,RAW,NAME('Cla$FIELDNAME'),DLL(dll_mode)
 LenFastClip      PROCEDURE(CONST *STRING Text2Measure),LONG,NAME('Cla$FASTCLIP'),DLL(dll_mode)
-ClaEventNameRTL  PROCEDURE(LONG EventPlusA000h),*CSTRING,RAW,NAME('WslDebug$MsgName'),DLL(dll_mode)
+!C11 ClaEventNameRTL  PROCEDURE(LONG EventPlusA000h),*CSTRING,RAW,NAME('WslDebug$MsgName'),DLL(dll_mode)
+ClaEventNameRTL5 PROCEDURE(*CSTRING OutName, LONG EventPlusA000h)RAW,NAME('WslDebug$NameMessage'),DLL(dll_mode)
+    OMIT('**END**', _C110_)
+C5LogSetName     PROCEDURE(CONST *CSTRING),NAME('_WslDebug$SetLogFile'),DLL(dll_mode)
+    !end of COMPILE('**END**', _C110_)
+    COMPILE('**END**', _C110_)
 C5LogSetName     PROCEDURE(CONST *CSTRING),NAME('WslDebug$SetLogFile'),DLL(dll_mode)
+    !end of COMPILE('**END**', _C110_)
 C5LogPrint       PROCEDURE(STRING),NAME('WslDebug$Print'),DLL(dll_mode)
         END
         MODULE('Win32') !Win API at line 320
@@ -6382,7 +6388,7 @@ M CSTRING(48)
 E LONG,AUTO 
   CODE     
   E=EVENT() ; IF ~E THEN RETURN ''.         
-  M=ClaEventNameRTL(E+0A000h) ; IF ~M THEN M=ClaEventNameRTL(E).
+  ClaEventNameRTL5(M,E+0A000h) ; IF ~M THEN ClaEventNameRTL5(M,E).
   E=LEN(M) ; RETURN M & ALL(' ',20-E)
 CBWndPreviewClass.EvtLogField PROCEDURE(<LONG F>)
 c cstring(64)
