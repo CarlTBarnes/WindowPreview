@@ -1,8 +1,8 @@
                     MEMBER()
 !--------------------------
-! CBWndPreviewClass by Carl Barnes December 2018 - Free for use by all - Please acknowledge me as source for this code
+! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License - Free to use - Please acknowledge me as source for this code
 !--------------------------
-VersionWndPrv EQUATE('WndPrv 03-14-21.1640')  !PI Day!
+VersionWndPrv EQUATE('WndPrv 03-17-21.1550')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -147,10 +147,11 @@ ClaFieldNameRTL  PROCEDURE(LONG pFEQ),CSTRING,RAW,NAME('Cla$FIELDNAME'),DLL(dll_
 LenFastClip      PROCEDURE(CONST *STRING Text2Measure),LONG,NAME('Cla$FASTCLIP'),DLL(dll_mode)
 !C11 ClaEventNameRTL  PROCEDURE(LONG EventPlusA000h),*CSTRING,RAW,NAME('WslDebug$MsgName'),DLL(dll_mode)
 ClaEventNameRTL5 PROCEDURE(*CSTRING OutName, LONG EventPlusA000h)RAW,NAME('WslDebug$NameMessage'),DLL(dll_mode)
-    OMIT('**END**', _C110_)
+    OMIT('**END**', _C100_)  !C9.1 for sure, some C10
 C5LogSetName     PROCEDURE(CONST *CSTRING),NAME('_WslDebug$SetLogFile'),DLL(dll_mode)
     !end of COMPILE('**END**', _C110_)
-    COMPILE('**END**', _C110_)
+!10.12799 has below, BUT before that 10.12567 was above with _Underscore. So if you use older 10 you'll have to modify this. Proper fix would be to LoadLibrary
+    COMPILE('**END**', _C100_)  !C11 for sure, some C10
 C5LogSetName     PROCEDURE(CONST *CSTRING),NAME('WslDebug$SetLogFile'),DLL(dll_mode)
     !end of COMPILE('**END**', _C110_)
 C5LogPrint       PROCEDURE(STRING),NAME('WslDebug$Print'),DLL(dll_mode)
