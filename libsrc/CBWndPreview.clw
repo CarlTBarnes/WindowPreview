@@ -1,8 +1,9 @@
-                    MEMBER()
-!--------------------------
-! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License - Free to use - Please acknowledge me as source for this code
-!--------------------------
-VersionWndPrv EQUATE('WndPrv 03-17-21.1550')
+ MEMBER()
+!------------------------------------------------------------
+! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
+! Download: https://github.com/CarlTBarnes/WindowPreview
+!------------------------------------------------------------
+VersionWndPrv EQUATE('WndPrv 03-18-21.1530')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime

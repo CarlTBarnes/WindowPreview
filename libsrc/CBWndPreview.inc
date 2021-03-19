@@ -1,5 +1,7 @@
-!#######################################################################################!
-! CBWndPreviewClass by Carl Barnes 12/2018 - Presented at CIDC 2019 - Free for use by all
+!------------------------------------------------------------
+! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
+! Download: https://github.com/CarlTBarnes/WindowPreview
+!------------------------------------------------------------
 ! Disclaimer: This has no intended purpose, if it appears to ... that was coincidental.
 ! In a Preview generated from the Window Designer an invisbile button at the top allows
 ! changing Hide,Disable,ReadOnly,Skip. Properties cana be viewed. Controls Resized. More.
