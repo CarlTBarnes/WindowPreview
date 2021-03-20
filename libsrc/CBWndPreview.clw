@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 03-18-21.1530')
+VersionWndPrv EQUATE('WndPrv 03-20-21.1200')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -2272,7 +2272,7 @@ IsLIST  SHORT
 IsSHEET SHORT
 IsSTRING BYTE !1=Str 2=SStr
 IsTEXT  SHORT
-EntryV  STRING(255)
+EntryV  STRING(255)  !prop:text
 AlignQ QUEUE,PRE(AlnQ)
 Desc     STRING(8)
 ACode    PSTRING(8)
@@ -2280,6 +2280,7 @@ Prop     LONG
 PrOffset LONG
 Value    BYTE
        END
+EntryVisQuoted BYTE !03/20/21 allow <13,10>
 BoxItFEQ LONG
 Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9),RESIZE
         TOOLBAR,AT(0,0,485,30),USE(?TOOLBAR1)
@@ -2517,7 +2518,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
                        IF IsENTRY OR IsTEXT THEN 
                           CHANGE(FEQ,EntryV) 
                        ELSE 
-                          PWnd$FEQ{PROP:Text}=EntryV
+                          PWnd$FEQ{PROP:Text}=CHOOSE(~EntryVisQuoted,EntryV,UNQUOTE(EntryV))
                        END ; DISPLAY ; SETTARGET() ; CYCLE
         OF ?BtnBO1 TO ?BtnLI8 ; BevCls.BtnClick(?) 
         OF ?BevAllEdgeBtn     ; BevCls.AllBtn()
@@ -2696,7 +2697,12 @@ S1QWindowOpenRtn ROUTINE
    
     IF NOT(IsENTRY OR IsTEXT) THEN !Combo ISEntry=1
        EntryV=PWnd$FEQ{PROP:Text}
-       IF EntryV OR ~INLIST(FeqTypeNo,CREATE:region,CREATE:line,CREATE:list,CREATE:box,CREATE:ellipse,CREATE:progress,CREATE:Slider_MIA,CREATE:sheet,CREATE:panel)
+       IF INLIST(FeqTypeNo,CREATE:button,CREATE:prompt,CREATE:check,CREATE:state3,CREATE:radio)  !API CHECK RADIO allow 13,10
+          EntryVisQuoted=1
+          EntryV=QUOTE(CLIP(EntryV))
+          ?EntryV:Pmt{PROP:Text}='"Text"'
+          ?EntryV{PROP:Tip}='Quoted (''Literal'')<13,10>Double ''<<{{ and use hex <<13,10>'
+       ELSIF EntryV OR ~INLIST(FeqTypeNo,CREATE:region,CREATE:line,CREATE:list,CREATE:box,CREATE:ellipse,CREATE:progress,CREATE:Slider_MIA,CREATE:sheet,CREATE:panel)
           ?EntryV{PROP:Tip}='Change PROP:Text'
           ?EntryV:Pmt{PROP:Text}='Text:'
        ELSE
