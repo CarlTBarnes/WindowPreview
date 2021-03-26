@@ -1,9 +1,9 @@
 ## Implementing Window preview Class Help Hook 
 
-It shows how easy it is to add the CBWndPreview class to an entire project (EXE and all DLLs) by just implementing CbWndPrvHelpHookClass in the Frame. 
- You setup a menu item that is only available to developers to turn it on. I have this automatically run for me.
+The School example shows how easy it is to add the CBWndPreview class to an entire project (EXE and all DLLs) by just implementing CbWndPrvHelpHookClass in the Frame. 
+ You set up a menu item that is only available to developers to turn it on. I have this automatically run for me.
 
-### Make thse changes
+### Make these changes
 
 In the EXE APP Global embeds "Before Global Includes" add these lines:
 ```Clarion
@@ -13,13 +13,13 @@ In the EXE APP Global embeds "Before Global Includes" add these lines:
 Help2WndPreviewCls  &CbWndPrvHelpHookClass  !Declare as Ref so no chance affects live APP
 ```
 
-In the Frame Add this ITEM to the File Menu or any Menu. This would be hidden from users and show only for Developers hence the HIDE.
+In the Frame Add this ITEM to the File Menu. This would be hidden from users and show only for Developers hence the HIDE.
 
 ```Clarion
   ITEM('Enable F1 Hook to show CB Window Preview on Any Window '),USE(?CbHlpHookEnableItem)  !,HIDE 
 ```
 
-In Event:Accepted for ?CbHlpHookEnableItem Item Add. You must change 'YourHelp.CHM' to the name of your CHM file if you have one.
+In Event:Accepted for ?CbHlpHookEnableItem Item add the below code to New and Init the class. You must change 'YourHelp.CHM' to the name of your CHM file if you have one. 
 
 ```Clarion
     IF Help2WndPreviewCls &= NULL THEN   !<><><><><><><> CB Window Preview Hook <><><><><><>
@@ -43,4 +43,5 @@ In Event:Accepted for ?CbHlpHookEnableItem Item Add. You must change 'YourHelp.C
     !Was declared as Ref so no chance affects live APP until it is NEW() on the hot key
     !Help2WndPreviewCls  &CbWndPrvHelpHookClass  
 ```
-    
+
+This could go into a Routine. I setup to spot the program is running on my Dev Machine and run this routine every time the program starts. E.g. `IF EXISTS('C:\Clarion11') THEN DO HelpHookWndPreviewRtn.`
