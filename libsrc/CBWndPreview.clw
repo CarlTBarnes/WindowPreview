@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 03-20-21.1200')
+VersionWndPrv EQUATE('WndPrv 03-26-21.0730')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -3976,7 +3976,7 @@ CP1 STRING('7C00Text 7C01Type 7C08Left 7C09LeftOffSet 7C0CRight 7C0DRightOffSet'
  ' 7C71Meta 7C72Modal 7C73MSG 7C74NoBar 7C75NoMerge 7C76PageAfter 7C77PageAfterNum 7C78PageBefore'&|
  ' 7C79PageBeforeNum 7C7APassword 7C7BReadOnly 7C7CREQ 7C7DReset 7C7ERound 7C7FScroll'&|
  ' 7C80Separate 7C81Skip 7C82STD 7C83Step 7C84System 7C85Format 7C87Check 7C88TRN 7C89UPR'&|
- ' 7C8BVScroll 7C8EItems 7C91Auto 7C92ToolBox 7C93Palette 7C95Thread 7C96Handle 7C99Follows'&|
+ ' 7C8BVScroll 7C8EItems 7C90SelEnd 7C91Auto 7C92ToolBox 7C93Palette 7C95Thread 7C96Handle 7C99Follows'&|
  ' 7C9EVScrollPos 7CA0Tip 7CA3Vertical 7CA4Smooth 7CA6Progress 7CA7Visible 7CA8Enabled 7CA9Wizard'&| !dup SliderPos7CA6 
  ' 7CAAChoiceFEQ 7CABClientHandle 7CACLineCount 7CADMinWidth 7CAEMinHeight 7CAFMaxWidth'&|
  ' 7CB0MaxHeight 7CB7Spread 7CBAScreenText 7CBBHScrollPos 7CBFValue 7CC0Value,2 7CC2TabRows'&| !dup Value7CBF Array[2] TrueValue7CBF FalseValue7CC0
@@ -4004,14 +4004,17 @@ CP_WINDOW    STRING(' 7A71ToolBar 7A72MenuBar ')
 CP_OLEOCX    STRING(' 7CEAAutoSize 7CEBClip 7CECStretch 7CEDZoom 7CEECompatibility 7CEFDesign 7CF0Document 7CF1Link 7CF2Align 7CF3Cancel 7CF4TextAlign 7CF5Object 7CF6License 7CF8Language 7CF9Interface' & |
                     ' 7CC6Create 7CC7SaveAs 7CC8Open 7CC9Blob 7CCADoVerb 7CCBSizeMode 7CCCSelectInterface 7CCDAddRef 7CCERelease 7CCFDeactivate 7CD0Update 7CD1Paste 7CD2ReportException 7CD3PasteLink 7CD4Copy' & |
                     ' 7CD5CanPaste 7CD6CanPasteLink 7CD7WindowUI 7CD8DesignMode 7CD9Ctrl 7CDAGrabHandles 7CDBOLE 7CDCIsRadio 7CDDLastEventName 7CDECLSID 7CDFProgID ') !Docs say some are write-only YMMV
-CP_EndSpace  STRING(' ')
-   END
+CP_Selected  STRING(' 7C8FSelected              ')  !SelStart for ENTRY TEXT
+CP_EndSpace  STRING(' ')         ! 7C8FSelStart  <-Add for All
+   END 
+Add_SelStart              STRING(' 7C8FSelStart')   
 CP  STRING(SIZE(CPGroup)),OVER(CPGroup)
     CODE
     CASE FeqTypeNo
     OF CREATE:Sheet      ; CLEAR(CP_Sheet_NA) ; CLEAR(CP_Slider)
     OF CREATE:Slider_MIA ; CLEAR(CP_Sheet)    ; CLEAR(CP_Slider_NA)
-    OF -1 !ALL for Pick
+    OF CREATE:Entry OROF CREATE:Text OROF CREATE:SingleLine OROF CREATE:Combo ; CP_Selected=Add_SelStart
+    OF -1 ; CP_Selected=Add_SelStart & CP_Selected     !ALL for Pick
     ELSE                 ; CLEAR(CP_Sheet)    ; CLEAR(CP_Slider)
     END
     EquateXStringParse(OutP7Q,4,CP) 
