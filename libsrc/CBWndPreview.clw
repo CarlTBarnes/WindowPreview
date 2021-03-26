@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 03-26-21.0730')
+VersionWndPrv EQUATE('WndPrv 03-26-21.1447')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -2423,7 +2423,7 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
             CHECK('NoSheet'),AT(251,81),USE(Poz:ShNoSheet),SKIP,TIP('No visible 3D Panel.<13,10>Tab ' & |
                     'Ear location and orientation reverses.')
             CHECK('Wizard'),AT(251,91),USE(Poz:ShWizard),SKIP,TIP('No Tab Ears')
-            CHECK('No Theme'),AT(251,101),USE(Poz:ShNoTheme),SKIP,TIP('No Windows Colors')
+            CHECK('No Theme'),AT(251,101),USE(Poz:ShNoTheme),SKIP,TIP('No Visual Styles for SHEET<13,10>Also for LIST, must set before Accept loop')
             LIST,AT(251,112,42,10),USE(Poz:ShStyle),SKIP,TIP('PROP:TabSheetStyle visual style of the' & |
                     ' Tab Ears'),DROP(5),FROM('Defaut|#0|B & W|#1|Colored|#2|Squared|#3|Boxed|#4')
             BUTTON,AT(295,79,14,13),USE(?TabPickBtn),SKIP,ICON(ICON:Pick),TIP('Pick Tab to Show')
@@ -3895,6 +3895,7 @@ MakeOverList PROCEDURE(LONG F, BYTE CfgChg=0) !Color Lists to tell from APP
 FC LONG(603000h) !804000h !Color:Navy !TODO Let User Config and save
 BC LONG(0f1fcfbH)
   CODE
+  F{PROP:NoTheme}=1
   IF CfgChg AND ~CFG:MakeOvrList THEN FC=-1 ; BC=-1 ; ELSIF ~CFG:MakeOvrList THEN RETURN .
   F{PROP:Color}=BC ; F{PROP:FontColor}=FC 
   F{PropList:DefHdrBackColor}=BC ; F{PropList:DefHdrTextColor}=FC 
