@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 03-26-21.1447')
+VersionWndPrv EQUATE('WndPrv 03-28-21.1920')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -466,6 +466,27 @@ F LONG,AUTO
      END 
   END     
   RETURN RetLvl
+!-----------------------------------
+CBWndPreviewClass.SideDoorCall PROCEDURE(LONG CallDoorNo, LONG FEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
+SysMenuCls SysMenuClass
+Save_GHide LIKE(GloT:Hide)
+  CODE  !03/28/21 For ListFormatParser to call ListPROPs directly takes setup of SysMenu. Code from .Reflection() setup
+  SYSTEM{7A58h}=1 ; SYSTEM{7A7Dh}=MSGMODE:CANCOPY !PROP:PropVScroll PROP:MsgModeDefault
+  PWnd &= SELF.WndRef
+  IF ~ConfigGrp_DidGet THEN SELF.ConfigGetAll(). 
+  Save_GHide=GloT:Hide ; GloT:Hide=1
+  FREE(SysMenuClsQ) ; CLEAR(SysMenuClsQ) ; SysMnQ:WinRef &= PWnd ; SysMnQ:hWindow=PWnd{PROP:Handle} ; SysMnQ:ZOrder=1 ; ADD(SysMenuClsQ)
+  CASE CallDoorNo
+  OF 1 ; Self.ControlPROPs (FEQ, FeqTypeNo, FeqTypeName, FeqName)
+  OF 2 ; Self.ResizeControl(FEQ, FeqTypeNo, FeqTypeName, FeqName)
+  OF 3 ; Self.ListPROPs    (FEQ, FeqTypeNo, FeqTypeName, FeqName) !ListFormatParser
+  OF 4 ; Self.ListReFORMAT (FEQ, FeqTypeNo, FeqTypeName, FeqName) 
+  OF 5 ; Self.WindowPROPs()
+  OF 6 ; Self.ResizeWindow()
+  OF 7 ; Self.SystemPROPs()    
+  END
+  GloT:Hide=Save_GHide
+  RETURN 
 !-----------------------------------------------------------
 ! Parent control can Hide or Disable Children. See PROP:Enabled Prop:Visible. Show different Icon?
 !   Maybe Checkbox to [ ] Show only Hide/Disable/ReadOnly that also shows parent PROP:Enabled Prop:Visible
