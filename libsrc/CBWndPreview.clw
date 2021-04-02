@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 04-02-21.1243')
+VersionWndPrv EQUATE('WndPrv 04-02-21.1700')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -131,7 +131,7 @@ QueueDeclareGet     PROCEDURE(QUEUE inQueue, QueDeclareType DeclareQ),PRIVATE
 QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName),PRIVATE
 QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName, QueDeclareType FrmFldQ),PRIVATE
 ReflectDeclareGet   PROCEDURE(*GROUP inGroupClassOrQueue, QueDeclareType DeclareQ, STRING LevelPrefix),LONG,PROC,PRIVATE !03/11/21
-ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsQue123,*GROUP GrpClsQueRef, STRING NameOfGCQ,<*QUEUE FromQ>,BYTE ViewQRecords=0),PRIVATE  !03/11/21
+ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsFilQue1234,*GROUP GrpClsQueRef, STRING NameOfGCQ,<*QUEUE FromQ>,BYTE ViewQRecords=0),PRIVATE  !03/11/21
 ReplaceInto         PROCEDURE(*string Into, string FindTxt,string ReplaceTxt, BYTE ClipInto=0),LONG,PROC,PRIVATE
 ReplaceText         PROCEDURE(string InText, string Find,string Repl, BYTE ClipInto=0),STRING
 SeeMore             PROCEDURE(LONG PropMore, LONG CtrlFEQ, LONG CtrlTypeNo),STRING,PRIVATE
@@ -5028,14 +5028,18 @@ SaveFmt ANY
        IF FmtNow<>0{UPropFmt} THEN SYSTEM{UPropFmt}=FmtNow.  !If Format changed save in SYSTEM
     END 
 !----------------------
-CBWndPreviewClass.GroupReflection PROCEDURE(*GROUP GroupRef, STRING NameOfGroup)
-    CODE ; ReflectGroupOrQueue(SELF,1,GroupRef,NameOfGroup)
-CBWndPreviewClass.ClassReflection PROCEDURE(*GROUP ClassRef, STRING NameOfClass) !View Class in Window
-    CODE ; ReflectGroupOrQueue(SELF,2,ClassRef, NameOfClass)
+CBWndPreviewClass.GroupReflection PROCEDURE(*GROUP G, STRING N)
+    CODE ; ReflectGroupOrQueue(SELF,1,G,N)
+CBWndPreviewClass.ClassReflection PROCEDURE(*GROUP C, STRING N)
+    CODE ; ReflectGroupOrQueue(SELF,2,C,N)
+CBWndPreviewClass.FileReflection  PROCEDURE(*FILE F, <STRING N>)
+R &GROUP
+    CODE ; R &= F{PROP:Record} 
+           ReflectGroupOrQueue(SELF,3,R,CHOOSE(~OMITTED(N),N,'File: '&F{PROP:Name}))
 CBWndPreviewClass.QueueReflection PROCEDURE(*QUEUE QueueRef, STRING NameOfQueue, BYTE ViewRecords=0) !View Queue in Window
-    CODE ; ReflectGroupOrQueue(SELF,3,QueueRef, NameOfQueue,QueueRef,ViewRecords)
+    CODE ; ReflectGroupOrQueue(SELF,4,QueueRef, NameOfQueue,QueueRef,ViewRecords)
 !----------------------  
-ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsQue,*GROUP ThingRef, STRING ThingName,<*QUEUE FromQ>, BYTE ViewQRecs=0) 
+ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsFilQue,*GROUP ThingRef, STRING ThingName,<*QUEUE FromQ>, BYTE ViewQRecs=0) 
 DeclareQ QUEUE(QueDeclareType),PRE(DecQ).
 SortCls CBSortClass
 FindCls CBLocateCls
@@ -5063,7 +5067,7 @@ AtRGQ  LONG,DIM(4),STATIC
     OPEN(RefWnd) ; DISPLAY 
     IF OMITTED(FromQ) THEN HIDE(?ViewQBtn).
     ReflectDeclareGet(ThingRef,DeclareQ,'')
-    0{PROP:Text}=CLIP(ThingName) & CHOOSE(GrpClsQue,' GROUP',' CLASS',' QUEUE','') & ' Reflection' |
+    0{PROP:Text}=CLIP(ThingName) & CHOOSE(GrpClsFilQue,' GROUP',' CLASS',' FILE',' QUEUE','') & ' Reflection' |
                                  & ' - ' & Records(DeclareQ) & ' Fields' | 
                                  & CHOOSE(~OMITTED(FromQ),' - '& Records(FromQ) & ' Records','') |
                                  & ' - Address=' & Hex8(Address(ThingRef))  
