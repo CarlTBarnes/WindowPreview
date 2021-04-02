@@ -94,7 +94,7 @@ InitList        PROCEDURE(LONG ListFEQ, *QUEUE ListFromQueue, <STRING NameOfQ>) 
 AllOffHDRS      PROCEDURE(BOOL UnHide=1, BOOL UnDisable=1, BOOL UnReadOnly=1, BOOL UnSkip=1) !1=Turn Off (Hide,Disable,Readonly,Skip) - UNLESS Control Key is down
 AllFixNumbers   PROCEDURE() !Fix #####.## numbers to 9999.99 - CANNOT do in SECTION('AfterOpen'), must do in Once SECTION('InAccept')
 Start           PROCEDURE() ! START HERE Open the Controls List i.e. just calls .Reflection()
-QueueReflection PROCEDURE(*QUEUE ListFromQueue, STRING NameOfQueue) !View Queue without Window for Roberto Artigas
+QueueReflection PROCEDURE(*QUEUE ListFromQueue, STRING NameOfQueue, BYTE ViewQRecords=0) !View Queue without Window for Roberto Artigas
 ClassReflection PROCEDURE(*GROUP ClassRef, STRING NameOfClass) !03/14/21
 GroupReflection PROCEDURE(*GROUP GroupRef, STRING NameOfGroup) !03/14/21
 
