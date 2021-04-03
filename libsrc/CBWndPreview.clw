@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 04-02-21.2033')
+VersionWndPrv EQUATE('WndPrv 04-03-21.1147')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -489,6 +489,29 @@ Save_GHide LIKE(GloT:Hide)
   END
   GloT:Hide=Save_GHide
   RETURN 
+!----------------------------------------------------------- 
+CBWndPreviewClass.BoxIt PROCEDURE(LONG FEQ=0)
+P LONG,DIM(4),AUTO
+F LONG,AUTO
+  CODE
+  IF ~FEQ AND ~SELF.BoxItFEQ THEN RETURN.
+  SETTARGET(PWnd)
+  IF SELF.BoxItFEQ THEN DESTROY(SELF.BoxItFEQ) ; SELF.BoxItFEQ=0.
+  IF FEQ THEN 
+    IF ~FEQ{PROP:Visible} THEN DO VisibleRtn.
+    GETPOSITION(FEQ,P[1],P[2],P[3],P[4])
+    F=CREATE(0,Create:Box) ; SELF.BoxItFEQ=F 
+    SETPOSITION(F,P[1]-2,P[2]-2,P[3]+4,P[4]+4) 
+    F{PROP:Fill}=COLOR:Yellow ; F{PROP:Color}=COLOR:Red ; UNHIDE(F)
+  END
+  SETTARGET() ; RETURN
+VisibleRtn ROUTINE!Recurse Parents and Unhide, select Tab on Sheet
+    F=FEQ ; UNHIDE(F)
+    LOOP  ; F=F{PROP:Parent} ; IF F=0 THEN BREAK.
+      UNHIDE(F)
+      IF F{PROP:Type}<>CREATE:Tab OR F{PROP:Visible} THEN CYCLE.
+      (F{PROP:Parent}){PROP:Selected}=F{PROP:ChildIndex} !Sheet Select TAB
+    END    
 !-----------------------------------------------------------
 ! Parent control can Hide or Disable Children. See PROP:Enabled Prop:Visible. Show different Icon?
 !   Maybe Checkbox to [ ] Show only Hide/Disable/ReadOnly that also shows parent PROP:Enabled Prop:Visible
@@ -566,6 +589,7 @@ DevTipEIP LONG
 AllColsHide USHORT,THREAD
 FindTxt STRING(64) 
 ConsolasFQ BYTE,THREAD      
+BoxItShows BYTE,THREAD     
 !    BUTTON('G'),AT(14,2,10,10),USE(?SysMenuTip),SKIP,FONT('Wingdings',12),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.'),flat
 !    BUTTON('<235>'),AT(2,2,10,10),USE(?UnderBtn),SKIP,FONT('Wingdings'),TIP('Move Preview under this Window')
 !    BUTTON('<74>'),AT(14,2,10,10),USE(?SysMenuTip),flat,SKIP,FONT('Wingdings 2',13),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.')
@@ -579,7 +603,9 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
                 'p on selected Control - F2'),FLAT
         BUTTON('<37h>'),AT(63,2,13,10),USE(?AltKeyAnalBtn),SKIP,FONT('Wingdings',12),TIP('ALT+Key An' & |
                 'alysis<13,10>Show controls that can or have Alt+Key or KEY().<13,10>After can use R' & |
-                't Mouse Delete TAB Controls'),FLAT
+                't Mouse Delete TAB Controls'),FLAT 
+        CHECK('<0a8h>'),AT(79,3,9,8),USE(BoxItShows),SKIP,TRN,FLAT,FONT('Wingdings 2',,COLOR:Maroon),ICON(ICON:None), |
+                TIP('Box selected Control in Red to find it on Window')
         BUTTON('8'),AT(225,14,13,10),USE(?RightTip),SKIP,FONT('Wingdings',12),TIP('TIP: Right-Click ' & |
                 'on List for Popup of Options'),FLAT
         BUTTON('T'),AT(225,2,13,10),USE(?SettingsBtn),SKIP,FONT('Wingdings',12),TIP('Settings...'),FLAT
@@ -667,7 +693,7 @@ ReOpenLOOP:Label:
   IF ConsolasFQ THEN POST(EVENT:Accepted,?ConsolasFQ).
   
   DO AcceptLoopRtn ! ACCEPT .. CASE EVENT()  CASE ACCEPTED() END 
-
+  SELF.BoxIt()
   SELF.AtSetOrSave(2, AtWndReflect[])
   GET(FieldQ,CHOICE(?ListF)) ; FieldQ_LastFEQNo=FldQ:FeqNo
   Format_ListF=?ListF{PROP:Format} 
@@ -737,7 +763,8 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?TricksBtn ; DO TricksBtnRtn 
     OF ?UnderBtn   ; SysMenuCls_SYSCOMMAND(0{PROP:Handle},SMCmd_MoveUnder)
     OF ?WndPropBtn ; SELF.WindowPROPs()
-    OF ?WndResizeBtn ; SELF.ResizeWindow()       
+    OF ?WndResizeBtn ; SELF.ResizeWindow() 
+    OF ?BoxItShows ; IF ~BoxItShows THEN SELF.BoxIt(0) ELSE POST(EVENT:NewSelection,?ListF).
    END
     CASE FIELD()
     OF ?ListF
@@ -753,6 +780,7 @@ AcceptLoopRtn ROUTINE !--------------------
           END
        OF EVENT:DoMouseRight ; IF MouseRightSent THEN DO MouseRightMenuRtn ; MouseRightSent=0.
        OF EVENT:NewSelection                !Check Uncheck boxes
+          IF BoxItShows THEN SELF.BoxIt(FldQ:FeqNo).
           CASE KEYCODE()              
           OF MouseRight ;  MouseRightSent+=1 ; IF MouseRightSent=1 THEN POST(EVENT:DoMouseRight,?ListF).
           OF MouseLeft2 OROF CtrlMouseLeft2 OROF ShiftMouseLeft2 OROF AltMouseLeft2 
@@ -2677,7 +2705,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     CODE
 !Region BEFORE Open Window
     IF GloT:ResizeControl THEN Message('You have Resize Open for FEQ ' & GloT:ResizeControl ) ; RETURN.
-    GloT:ResizeControl=FEQ
+    GloT:ResizeControl=FEQ ; SELF.BoxIt()
     IsENTRY=INLIST(FeqTypeNo,CREATE:Entry,CREATE:Combo,CREATE:Spin,CREATE:SString)
     IsLINE=INLIST(FeqTypeNo,CREATE:Line,CREATE:box,CREATE:ellipse)
     IsLIST=INLIST(FeqTypeNo,CREATE:List,CREATE:Combo,CREATE:DropList,CREATE:DropCombo)
@@ -5264,7 +5292,7 @@ ColumnProps  EQUATE() !               !TODO. WIll need to keep the Number of the
             END
 SortPQCls CBSortClass
   CODE
-  GETPOSITION(0,PX,PY) ; FEQ=ListFEQ
+  SELF.BoxIt() ; GETPOSITION(0,PX,PY) ; FEQ=ListFEQ
   CList.WndPrvCls &= SELF ; CList.LoadListQ()
   OPEN(Window) ; SysMenuCls.Init(Window) ; ?Sheet1{PROP:TabSheetStyle}=1    
   L=?LIST:ListQ ; L{PROP:SELECTED}=1 ; LineHt(L) ; L{PROPLIST:Width,MoreColNo}=0

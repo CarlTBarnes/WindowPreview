@@ -156,6 +156,8 @@ GdFEQ         LONG,DIM(2)
 GrdArea       USHORT
             END
 GridQ       &GridQType,PRIVATE
+BoxIt       PROCEDURE(LONG FEQ=0)
+BoxItFEQ    LONG
 !------------ Event Logging 06/26/20
 EvtLog  GROUP
 Started   BYTE
