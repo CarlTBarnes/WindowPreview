@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 04-02-21.1700')
+VersionWndPrv EQUATE('WndPrv 04-02-21.2033')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -5048,14 +5048,19 @@ RefWnd WINDOW('Class Reflect'),AT(,,380,220),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),
         ENTRY(@s64),AT(32,3,155,11),USE(FindTxt),SKIP,FONT('Consolas')
         BUTTON('&Find'),AT(2,2,25,12),USE(?FindNext),SKIP
         BUTTON('Pre&v'),AT(191,2,26,12),USE(?FindPrev),SKIP
-        BUTTON('&Copy'),AT(238,2,,12),USE(?CopyBtn),SKIP,TIP('Copy Declaration')
-        BUTTON('&View Queue'),AT(286,2,,12),USE(?ViewQBtn),SKIP,TIP('View Queue Records')
+        BUTTON('&Copy'),AT(233,2,30,12),USE(?CopyBtn),SKIP,TIP('Copy Declaration')
+        BUTTON('&Gen ='),AT(268,2,30,12),USE(?GenEqBtn),SKIP,TIP('Generate Field= Lines to Clipboard')
+        BUTTON('&View Queue'),AT(303,2,50,12),USE(?ViewQBtn),SKIP,TIP('View Queue Records')
         LIST,AT(1,18),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ),FORMAT('18C|FM~Fld<13,10>No.~@' & |
                 'n3@115L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16@20R(6)|FM~Type<13,10>No.~C(0)@n3@30R(2)|FM~Size~' & |
                 'C(0)@n10@20R(6)|FM~How<13,10>Many~L(2)@n4@25L(6)|FM~Has<13,10>Value~C(0)@n3@135L(2)F~Data Value~@s255@1' & |
                 '35L(2)F~Any Long~@n11@'),ALRT(DeleteKey)
     END
-NAVR   PSTRING(2),AUTO
+X LONG,AUTO
+L BYTE,AUTO
+M BYTE,AUTO
+A ANY
+NAVR PSTRING(2),AUTO
 DValLong LONG,AUTO
 QueRef &QUEUE 
 GrpRef &GROUP
@@ -5079,6 +5084,7 @@ AtRGQ  LONG,DIM(4),STATIC
     ACCEPT 
         CASE ACCEPTED() 
         OF ?CopyBtn  ; SetClip2Queue(DeclareQ)
+        OF ?GenEqBtn ; DO GenEqRtn
         OF ?ViewQBtn ; QueueViewListVLB(FromQ, ThingName, DeclareQ)
         END
         CASE FIELD()
@@ -5116,28 +5122,14 @@ AtRGQ  LONG,DIM(4),STATIC
     PrvCls.AtSetOrSave(2, AtRGQ[])
     CLOSE(RefWnd)
     RETURN
-!----------------------
-!CBWndPreviewClass.QueueReflection PROCEDURE(*QUEUE FromQ, STRING FromWho) !View Queue without Window for Roberto Artigas
-!DeclareQ QUEUE(QueDeclareType),PRE(DecQ).
-!Window WINDOW('Q'),AT(,,316,280),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
-!        BUTTON('&Copy Declare'),AT(2,2,,12),USE(?CopyBtn),SKIP,TIP('Copy Queue Declaration')
-!        BUTTON('&View Queue Records'),AT(65,2,,12),USE(?ViewBtn),SKIP,TIP('View Queue Records')
-!        LIST,AT(1,17),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ), |
-!                FORMAT('28C|FM~Fld<13,10>No.~@n3@135L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16' & |
-!                '@24R(6)|FM~Type<13,10>No.~C(0)@n3@30L(6)|FM~Has<13,10>Value~C(0)@n3@33L(2)F~How<13>' & |
-!                '<10>Many~@n4@')
-!    END
-!    CODE
-!    OPEN(Window) ; DISPLAY ; QueueDeclareGet(FromQ,DeclareQ)
-!    0{PROP:Text}=FromWho & ' - ' & Records(DeclareQ) & ' Fields - ' & Records(FromQ) & ' Records ' & |
-!                               ' - &Queue=' & Hex8(INSTANCE(FromQ,Thread())) & ' - Address=' & Hex8(Address(FromQ))
-!    ACCEPT
-!        CASE ACCEPTED()
-!        OF ?CopyBtn ; SetClip2Queue(DeclareQ)
-!        OF ?ViewBtn ; QueueViewListVLB(FromQ, FromWho, DeclareQ)
-!        END
-!    END
-!    RETURN
+GenEqRtn ROUTINE
+  LOOP X=1 TO RECORDS(DeclareQ) ; GET(DeclareQ,X) ; L=LEN(CLIP(DecQ:Name)) ; IF L>M THEN M=L. ; END
+  L=PopupUnder(?,'Field = |Field =   !Data Type') ; IF ~L THEN EXIT.
+  A='    CLEAR(' & CLIP(ThingName) &')<13,10>'
+  LOOP X=1 TO RECORDS(DeclareQ) ; GET(DeclareQ,X)
+      A=A&'    '& CHOOSE(GrpClsFilQue=2,'SELF.','') & SUB(DecQ:Name,1,M)&' =' & CHOOSE(L=1,'',' {9}! ' & CLIP(DecQ:DType))&'<13,10>'
+  END  
+  SETCLIPBOARD(A) ; CLEAR(A)
 !----------------------
 CBWndPreviewClass.ListPROPs  PROCEDURE(LONG ListFEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
 !TODO Tab for FROM if it is Text, as 1 string and split into lines 
