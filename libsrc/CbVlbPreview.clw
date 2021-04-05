@@ -4,14 +4,28 @@
 ! Improve Clarion Window Designer Previews with VLB to provide sample data
 !-------------------------------------------------------------------------
 ! 04-Apr-2021   First Release, based in part on List Format Parser Preview
+! 05-Apr-2021   Cache Number 123 in Queue, Color Equates at Top
 !-------------------------------------------------------------------------
 
     INCLUDE('CbVlbPreview.INC'),ONCE
     MAP
 ChrCount PROCEDURE(STRING Text2Scan, STRING ChrList),LONG
     END
+COLOR_C_FG  EQUATE(COLOR:Maroon) ! * Text Color like a Red Shirt washed in HOT Water
+COLOR_C_BG  EQUATE(0FAFAFFH)     ! * Back Pinkish White
+COLOR_C_SFG EQUATE(COLOR:None)
+COLOR_C_SBG EQUATE(COLOR:None)
+COLOR_Z_FG  EQUATE(Color:Green)  !Z Col  Style Text 
+COLOR_Z_BG  EQUATE(0E0FFFFH)     !Z Col  Style Back  Lt Yellow
+COLOR_Y_FG  EQUATE(Color:Teal)   !Y Cell Style
+COLOR_Y_BG  EQUATE(0E0FFFFH)     !Y Cell Style Back  Lt Yellow
 n1234567890 EQUATE('1234567890123456789012345678901234567890')
-sAtoZ       EQUATE('abcdefghijklmnopqrstuvwxyz')
+sAtoZ       EQUATE('abcdefghijklmnopqrstuvwxyz') !Must be 26 bytes
+NumQ QUEUE,PRE(NumQ)  !Cache sample numbers for Pictures
+Picture CSTRING(24)
+Sample  DECIMAL(27,5)
+Sign    STRING(1)
+     END 
 !====================================================
 ChrCount PROCEDURE(STRING Text2Scan, STRING ChrList)!LONG
 X LONG,AUTO
@@ -109,11 +123,11 @@ TimeNow LONG
      IF ListFEQ{PROPLIST:Color, ColX} THEN
         CLEAR(ColQ)
         ColQ:Mod='*'
-        ColQ:IsLong=1  !Color like a Red Shirt washed in HOT Water
-        ColQ:DataLong=COLOR:Maroon ; DO AddColumnQ  !FG
-        ColQ:DataLong=0FAFAFFH     ; DO AddColumnQ  !BG  !Pinkish White
-        ColQ:DataLong=COLOR:None   ; DO AddColumnQ  !SFG
-        ColQ:DataLong=COLOR:None   ; DO AddColumnQ  !SBG
+        ColQ:IsLong=1
+        ColQ:DataLong=COLOR_C_FG  ; DO AddColumnQ  !Text
+        ColQ:DataLong=COLOR_C_BG  ; DO AddColumnQ  !Back
+        ColQ:DataLong=COLOR_C_SFG ; DO AddColumnQ  !Selected FG
+        ColQ:DataLong=COLOR_C_SBG ; DO AddColumnQ  !SBG
      END
      IF ListFEQ{PROPLIST:Icon, ColX} THEN        !Icon
         CLEAR(ColQ)
@@ -135,16 +149,16 @@ TimeNow LONG
 
      StyleZ=ListFEQ{PROPLIST:ColStyle,ColX}             !Z(#) Col Style
      IF StyleZ THEN
-        ListFEQ{PROPSTYLE:TextColor,StyleZ}=Color:Green !Olive
-        ListFEQ{PROPSTYLE:BackColor,StyleZ}=0E0FFFFH    !Lt Yellow
+        ListFEQ{PROPSTYLE:TextColor,StyleZ}=COLOR_Z_FG
+        ListFEQ{PROPSTYLE:BackColor,StyleZ}=COLOR_Z_BG
      END
      IF ListFEQ{PROPLIST:CellStyle, ColX} THEN          !Y Cell Style
         CLEAR(ColQ)
         ColQ:Mod='Y'
         ColQ:IsLong=1
         ColQ:DataLong=255    ; DO AddColumnQ
-        ListFEQ{PROPSTYLE:TextColor,255}=Color:Teal     !Teal on
-        ListFEQ{PROPSTYLE:BackColor,255}=0E0FFFFH       !Lt Yellow
+        ListFEQ{PROPSTYLE:TextColor,255}=COLOR_Y_FG
+        ListFEQ{PROPSTYLE:BackColor,255}=COLOR_Y_BG
      END
      IF ListFEQ{PROPLIST:Tip, ColX} THEN                !P Tip
         CLEAR(ColQ)
@@ -248,7 +262,7 @@ Worked_N    LIKE(N)     !Last Try w/o ####
 Commas_N    LIKE(N)     !Last try #,###,### with most Commas (Grouping ,._)
 CommaCnt    BYTE        !Want Max Commas, RTL will use Comma space for #
 NewCount    BYTE
-CPicture    CSTRING(32)
+CPicture    CSTRING(25)
 picFill     PSTRING(2)  ! _=Space *=**** 0=0000 kills Grouping
 picGrouping PSTRING(2)  !1000s Grouping . _=Space   Default Comma
 picPlaceSep PSTRING(2)  !Pennies . , v
@@ -257,6 +271,9 @@ picSign     STRING(1)   !- or (
     CODE
     Picture=lower(Picture)
     CPicture=CLIP(Picture)
+    NumQ:Picture=CPicture
+    GET(NumQ,NumQ:Picture)
+    IF ~ERRORCODE() THEN GOTO ReturnQLabel: .
     DO ParseForCommaPeriodRtn
     N=1 ; I=2
     LOOP 20 TIMES
@@ -271,8 +288,12 @@ picSign     STRING(1)   !- or (
         END
         N *= 10 ; N += I ; I += 1 ; IF I > 9 THEN I=0.
     END
-    IF ~OMITTED(OutSign) THEN OutSign=picSign.
-    RETURN CHOOSE(~Commas_N,Worked_N,Commas_N) + .12345
+    NumQ:Sample=CHOOSE(~Commas_N,Worked_N,Commas_N) + .12345
+    NumQ:Sign=picSign
+    ADD(NumQ,NumQ:Picture)
+ReturnQLabel:
+    IF ~OMITTED(OutSign) THEN OutSign=NumQ:Sign.
+    RETURN NumQ:Sample
 !-----------------------------
 ParseForCommaPeriodRtn ROUTINE
     DATA
