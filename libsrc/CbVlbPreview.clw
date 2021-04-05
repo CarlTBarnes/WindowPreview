@@ -5,6 +5,7 @@
 !-------------------------------------------------------------------------
 ! 04-Apr-2021   First Release, based in part on List Format Parser Preview
 ! 05-Apr-2021   Cache Number 123 in Queue, Color Equates at Top
+! 05-Apr-2021   ENTRY(@s) with UPR or CAP get sample 'BROWN FOX'/'Brown Fox'  in .EntryInit()
 !-------------------------------------------------------------------------
 
     INCLUDE('CbVlbPreview.INC'),ONCE
@@ -439,6 +440,8 @@ FEQ LONG,AUTO
 Picture STRING(32),AUTO
 !Change2 STRING(32),AUTO
 VlbCls  CbVlbPreviewClass
+CapText EQUATE('The Quick Brown Fox Jumps Over The Lazy Dog')
+UprText EQUATE('THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG')
     CODE
     IF SELF.EntryIsInit THEN RETURN. ; SELF.EntryIsInit=1
     IF BAND(KEYSTATE(),0100h) THEN RETURN.  !If Shift is Down skip
@@ -455,6 +458,11 @@ VlbCls  CbVlbPreviewClass
         OF 'n' ; CHANGE(FEQ,VlbCls.Sample_AtN(Picture))
         OF 'p' ; CHANGE(FEQ,VlbCls.Sample_AtP(Picture))
         OF 'k' ; CHANGE(FEQ,VlbCls.Sample_AtK(Picture)) ! ; FEQ{PROP:Tip}=Picture &'<13,10>'& CONTENTS(FEQ)
+        OF 's' ; IF FEQ{PROP:Upr} THEN
+                    CHANGE(FEQ,UprText)
+                 ELSIF FEQ{PROP:Cap} THEN 
+                    CHANGE(FEQ,CapText)
+                 END 
         END
     END
     DISPLAY
