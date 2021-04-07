@@ -6,15 +6,17 @@
 ! 04-Apr-2021   First Release, based in part on List Format Parser Preview
 ! 05-Apr-2021   Cache Number 123 in Queue, Color Equates at Top
 ! 05-Apr-2021   ENTRY(@s) with UPR or CAP get sample 'BROWN FOX'/'Brown Fox'  in .EntryInit()
+! 06-Apr-2021   Right-Click List Popup menu, Double Click Edit Value 
 !-------------------------------------------------------------------------
 
+    INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('CbVlbPreview.INC'),ONCE
     MAP
 ChrCount PROCEDURE(STRING Text2Scan, STRING ChrList),LONG
     END
 COLOR_C_FG  EQUATE(COLOR:Maroon) ! * Text Color like a Red Shirt washed in HOT Water
 COLOR_C_BG  EQUATE(0FAFAFFH)     ! * Back Pinkish White
-COLOR_C_SFG EQUATE(COLOR:None)
+COLOR_C_SFG EQUATE(COLOR:None)   ! * Selected normal
 COLOR_C_SBG EQUATE(COLOR:None)
 COLOR_Z_FG  EQUATE(Color:Green)  !Z Col  Style Text 
 COLOR_Z_BG  EQUATE(0E0FFFFH)     !Z Col  Style Back  Lt Yellow
@@ -27,29 +29,35 @@ Picture CSTRING(24)
 Sample  DECIMAL(27,5)
 Sign    STRING(1)
      END 
+G:Alter BYTE(1)     
+G:UPR   BYTE
 !====================================================
-ChrCount PROCEDURE(STRING Text2Scan, STRING ChrList)!LONG
+ChrCount PROCEDURE(STRING Txt, STRING ChrList)!LONG
 X LONG,AUTO
-CntChr LONG
-    CODE
-    LOOP X=1 TO SIZE(Text2Scan)
-        IF INSTRING(Text2Scan[X],ChrList) THEN CntChr += 1.
+C LONG
+  CODE
+  IF SIZE(ChrList)=1 THEN 
+    LOOP X=1 TO SIZE(Txt)
+        IF VAL(Txt[X])=VAL(ChrList[1]) THEN C += 1.
     END
-    RETURN CntChr
+  ELSE
+    LOOP X=1 TO SIZE(Txt)
+        IF INSTRING(Txt[X],ChrList) THEN C += 1.
+    END
+  END
+  RETURN C
 !--------------------------------------
 CbVlbPreviewClass.Construct PROCEDURE()
     CODE
     SELF.ColumnQ &= NEW(CbVlbColumnQueueType)
     SELF.DataQ &= NEW(CbVlbDataQueueType)
     RETURN
-
 !-------------------------------------
 CbVlbPreviewClass.Destruct PROCEDURE()
     CODE
     DISPOSE(SELF.ColumnQ)
     DISPOSE(SELF.DataQ)
     RETURN
-
 !---------------------------------------------
 CbVlbPreviewClass.Init PROCEDURE(LONG ListFEQ, LONG RowCount=0)
 K BYTE,AUTO
@@ -64,15 +72,16 @@ K BYTE,AUTO
     ListFEQ{PROP:VLBval} =ADDRESS(SELF)
     ListFEQ{PROP:VLBproc}=ADDRESS(SELF.VLBprc)
     LOOP K=255 TO 1 BY -1 ; ListFEQ{PROP:Alrt,K}=0 ; END  !Mouseleft can screw things uo
+    REGISTEREVENT(EVENT:NewSelection,  ADDRESS(SELF.TakeEvent), ADDRESS(SELF))    
     RETURN
-!TODO Right-Click POPUP on LIST to Offer Tricks. register AlertKey  !!!
-
 !----------------------------------------------------
 CbVlbPreviewClass.LoadColumnQ PROCEDURE()
 ListFEQ LONG,AUTO
 VlbCnt  USHORT(1)
 ColX    USHORT,AUTO
 FieldX  USHORT,AUTO
+ColPointer USHORT,AUTO
+ColMods    STRING(5),AUTO  !Modifiers for Column
 InX     LONG,AUTO
 Fmt     STRING(1024),AUTO
 AZ      STRING(sAtoZ)
@@ -90,40 +99,37 @@ TimeNow LONG
      ColQ:ColNo   = ColX
      FieldX       = ListFEQ{PROPLIST:FieldNo, ColX}
      ColQ:Picture = ListFEQ{PROPLIST:Picture, ColX}
-     ColQ:PicType = ColQ:Picture[2]
+     ColQ:PicType = lower(ColQ:Picture[2])
      ColQ:Format  = ListFEQ{PROPLIST:Format, ColX}  !for Debug in Q view
-     IF ColQ:PicType<>'P' THEN ColQ:PicType=lower(ColQ:PicType).
      CASE ColQ:PicType
      OF 'n' ; ColQ:DataText = SELF.Sample_AtN(ColQ:Picture, ColQ:PicSign)
      OF 'e' ; ColQ:IsLong=1 ; ColQ:DataLong=1234500
      OF 'd' ; ColQ:IsLong=1 ; ColQ:DataLong=DateNow
      OF 't' ; ColQ:IsLong=1 ; ColQ:DataLong=TimeNow
-     OF   'P'   !<-- Upper P
-     OROF 'p' ; ColQ:DataText=SELF.Sample_AtP(ColQ:Picture)
-     OF   'K'   !<-- Upper K
-     OROF 'k' ; ColQ:DataText=SELF.Sample_AtK(ColQ:Picture)
+     OF 'p' ; ColQ:DataText=SELF.Sample_AtP(ColQ:Picture)
+     OF 'k' ; ColQ:DataText=SELF.Sample_AtK(ColQ:Picture)
      ELSE !'s'
             ColQ:DataText=UPPER(AZ[1]) & AZ[2:26] & AZ ; AZ=AZ[2:26] & AZ[1]
             IF ColQ:PicType='s' AND DEFORMAT(ColQ:Picture) <=3 THEN
                ColQ:DataText=UPPER(ColQ:DataText)
             END
      END
-     DO AddColumnQ
+     DO AddColumnQ ; ColPointer=POINTER(ColQ) ; ColMods=''
     !    ---Sequence in Queue-------------------------------
-    !    1. LIST Column data to          Various
-    !    2. * Color Foreground           LONG  PROPLIST:Color
+    !    1. LIST Column data to          Various                   ModCol
+    !    2. * Color Foreground           LONG  PROPLIST:Color      1 *
     !    3. * Color Background           LONG  PROPLIST:Color
     !    4. * Color Selected Foreground  LONG  PROPLIST:Color
     !    5. * Color Selected Background  LONG  PROPLIST:Color
-    !  = 6. I Icon in {Prop:IconList,#}  LONG  PROPLIST:Icon
-    !  = 6. J Icon in {Prop:IconList,#}  LONG  PROPLIST:IconTrn
-    !    7. T Tree Level                 LONG  PROPLIST:Tree
-    !    8. Y Style Number for Cell      LONG  PROPLIST:CellStyle
-    !    9. P Tool Tip for Cell        STRING  PROPLIST:Tip
+    !  = 6. I Icon in {Prop:IconList,#}  LONG  PROPLIST:Icon       2 I
+    !  = 6. J Icon in {Prop:IconList,#}  LONG  PROPLIST:IconTrn    2 J
+    !    7. T Tree Level                 LONG  PROPLIST:Tree       3 T
+    !    8. Y Style Number for Cell      LONG  PROPLIST:CellStyle  4 Y  5 Z
+    !    9. P Tool Tip for Cell        STRING  PROPLIST:Tip        
 
-     IF ListFEQ{PROPLIST:Color, ColX} THEN
+     IF ListFEQ{PROPLIST:Color, ColX} THEN       !*Colors
         CLEAR(ColQ)
-        ColQ:Mod='*'
+        ColQ:ModFld='*' ; ColMods[1]='*'
         ColQ:IsLong=1
         ColQ:DataLong=COLOR_C_FG  ; DO AddColumnQ  !Text
         ColQ:DataLong=COLOR_C_BG  ; DO AddColumnQ  !Back
@@ -132,18 +138,18 @@ TimeNow LONG
      END
      IF ListFEQ{PROPLIST:Icon, ColX} THEN        !Icon
         CLEAR(ColQ)
-        ColQ:Mod='I'
+        ColQ:ModFld='I' ; ColMods[2]='I'
         ColQ:IsLong=1
         ColQ:DataLong=1    ; DO AddColumnQ
-     ELSIF ListFEQ{PROPLIST:IconTrn, ColX} THEN  !Tran Icon
+     ELSIF ListFEQ{PROPLIST:IconTrn, ColX} THEN  !Tran Icon J
         CLEAR(ColQ)
-        ColQ:Mod='J'
+        ColQ:ModFld='J' ; ColMods[2]='J'
         ColQ:IsLong=1
         ColQ:DataLong=2    ; DO AddColumnQ
      END
      IF ListFEQ{PROPLIST:Tree, ColX} THEN        !Tree
         CLEAR(ColQ)
-        ColQ:Mod='T'
+        ColQ:ModFld='T' ; ColMods[3]='T'
         ColQ:IsLong=1
         ColQ:DataLong=1    ; DO AddColumnQ
      END
@@ -152,10 +158,11 @@ TimeNow LONG
      IF StyleZ THEN
         ListFEQ{PROPSTYLE:TextColor,StyleZ}=COLOR_Z_FG
         ListFEQ{PROPSTYLE:BackColor,StyleZ}=COLOR_Z_BG
+                       ColMods[5]='Z'
      END
      IF ListFEQ{PROPLIST:CellStyle, ColX} THEN          !Y Cell Style
         CLEAR(ColQ)
-        ColQ:Mod='Y'
+        ColQ:ModFld='Y' ; ColMods[4]='Y'
         ColQ:IsLong=1
         ColQ:DataLong=255    ; DO AddColumnQ
         ListFEQ{PROPSTYLE:TextColor,255}=COLOR_Y_FG
@@ -163,8 +170,13 @@ TimeNow LONG
      END
      IF ListFEQ{PROPLIST:Tip, ColX} THEN                !P Tip
         CLEAR(ColQ)
-        ColQ:Mod='P'
+        ColQ:ModFld='P'
         ColQ:DataText='Tip for Column ' & ColX ; DO AddColumnQ
+     END 
+     IF ColMods THEN 
+        GET(ColQ,ColPointer) 
+        ColQ:ModsCol = ColMods
+        PUT(ColQ) 
      END
   END
   LOOP InX=1 TO 5
@@ -195,15 +207,15 @@ ColQ    &CbVlbColumnQueueType
     CODE
     ListFEQ=SELF.FEQ
     Date5[1]=TODAY()  ; Yr=YEAR(Date5[1])
-    Date5[2]=Date( 2, 3,Yr)            ! variety with 1 and 2 digits
-    Date5[3]=Date( 6,21,Yr)
-    Date5[4]=Date(10, 4,Yr)
+    Date5[2]=Date( 2, 2,Yr)
+    Date5[3]=Date( 6,23,Yr)
+    Date5[4]=Date(11, 4,Yr)
     Date5[5]=Date(12,25,Yr)
-    Time5[1]=DEFORMAT('07:02:11',@t4)
-    Time5[2]=DEFORMAT('09:23:22',@t4)
-    Time5[3]=DEFORMAT('10:04:13',@t4)
-    Time5[4]=DEFORMAT('11:45:24',@t4)
-    Time5[5]=DEFORMAT('22:56:09',@t4)
+    Time5[1]=CLOCK()  !DEFORMAT('07:01:11',@t4)
+    Time5[2]=DEFORMAT('09:02:12',@t4)
+    Time5[3]=DEFORMAT('10:33:23',@t4)
+    Time5[4]=DEFORMAT('11:04:34',@t4)
+    Time5[5]=DEFORMAT('22:55:45',@t4)
 
     DataQ &= SELF.DataQ ; FREE(DataQ) ; CLEAR(DataQ)
     ColQ  &= SELF.ColumnQ
@@ -216,18 +228,19 @@ ColQ    &CbVlbColumnQueueType
           GET(ColQ,ColX)
           DO CellRtn
        END
-       IF RowMod5=1 THEN Date5[1]+=34 ; Time5[1] += 60*100.
+       IF RowMod5=1 THEN Date5[1]+=32.
     END
     SORT(SELF.DataQ,SELF.DataQ.RowNo,SELF.DataQ.ColNo)
     RETURN
 CellRtn ROUTINE
     DataQ.RowNo    = RowX
     DataQ.ColNo    = ColQ:FldNo   !not ColQ:ColNo
-    DataQ.PicMod   = ColQ:PicType & ColQ:Mod
+    DataQ.PicType  = ColQ:PicType
+    DataQ.ModFld   = ColQ:ModFld
     DataQ.IsLong   = ColQ:IsLong
     DataQ.DataLong = ColQ:DataLong
     DataQ.DataText = ColQ:DataText
-    CASE ColQ:Mod
+    CASE ColQ:ModFld
     OF 'T' OROF 'I' OROF 'J'
         DataQ.DataLong = RowMod5  !Tree Level, Icons, there are 5
     END
@@ -395,6 +408,166 @@ AZ STRING(sAtoZ)
         IF lower(Ch1)=AZ[1] THEN AZ=AZ[2:26] & AZ[1].
     END !Loop
     RETURN SUB(Sample,1,S)
+!----------------------------------------------------
+CbVlbPreviewClass.TakeEvent PROCEDURE() !Register Event Calls
+X        LONG,AUTO
+mdRow    LONG,AUTO
+mdColumn LONG,AUTO
+QFieldNo LONG,AUTO
+ColQ     &CbVlbColumnQueueType
+DataQ    &CbVlbDataQueueType
+DataGrp  GROUP(CbVlbDataQueueType),PRE(DataG). !VLB may change DataQ so keep Group
+PopNo    SHORT
+ClrMods  PSTRING(4)
+ClrIcon  BYTE
+    CODE
+    CASE EVENT()
+    OF EVENT:NewSelection
+       CASE KEYCODE()
+       OF MouseRight ; PopNo = 1
+       OF MouseLeft2 ; PopNo = 2
+       END
+    END
+    IF ~PopNo THEN RETURN 0.
+    SETKEYCODE(0)
+    ColQ &= SELF.ColumnQ ; DataQ &= SELF.DataQ
+    mdRow   =SELF.FEQ{PROPLIST:MouseDownRow}
+    mdColumn=SELF.FEQ{PROPLIST:MouseDownField}
+    QFieldNo=SELF.FEQ{PROPLIST:FieldNo,mdColumn}
+    ColQ.ColNo = mdColumn
+    GET(ColQ,ColQ.ColNo)
+    IF ERRORCODE() THEN Message('Failed GET ColNo ' & mdColumn).
+    DataQ.RowNo = mdRow
+    DataQ.ColNo = QFieldNo
+    GET(DataQ,DataQ.RowNo,DataQ.ColNo)
+    IF ERRORCODE() THEN Message('Failed GET DataQ ' & mdRow&','& QFieldNo) ; PopNo=0.
+!The VLB may get "Events" and change DataQ while Edit Window is Open so save in Local Group
+    DataGrp=DataQ
+    EXECUTE PopNo
+      DO PopupRtn
+      DO EditRtn
+    END
+    RETURN 0 !Level:B9
+PopupRtn ROUTINE
+    PopNo=POPUP('Remove Colors' & |
+                '{{' & |
+                   '* Cell Colors' & |   !#1
+                   '|Y Cell Style' & |   !#2
+                   '|Z Column Style' & | !#3
+                   '|-' & |
+                   '|All Colors * Y Z' & |      !#4
+                '}' & |
+              '|-|Remove All Icons' & |  !#5
+                '|Check Box Icons'  & |  !#6
+              '|-|Edit Data<9>Click 2')  !#7
+    CASE PopNo
+    OF  1 ; ClrMods='*'                   ! # 1  * Cell Colors
+    OF  2 ; SELF.ClearYZ(255,255)         ! # 2  Y Cell Style
+    OF  3 ; SELF.ClearYZ(1,254)           ! # 3  Z Column Style
+    OF  4 ; SELF.ClearYZ(1,255) ; ClrMods='*'  ! # 4  All Colors * Y Z
+    OF  5 ; ClrMods='IJ'                  ! # 5  Remove Icons
+    OF  6 ; ClrMods='IJ' ; ClrIcon=1      ! # 6  Icon
+    OF  7 ; DO EditRtn ; EXIT             ! # 7  Edit Data
+    ELSE  ; EXIT
+    END
+    IF ClrMods THEN DO ClrRtn.
+    SELF.Changed=1
+    EXIT
+ClrRtn ROUTINE
+    LOOP X=1 TO RECORDS(DataQ)
+        GET(DataQ,X)
+        IF ~INSTRING(DataQ.ModFld,ClrMods,1) THEN CYCLE.
+        CASE DataQ.ModFld
+        OF '*'   ; DataQ.DataLong=COLOR:None
+        OF   'I'
+        OROF 'J' ; DataQ.DataLong=ClrIcon ; IF ClrIcon THEN ClrIcon=3-ClrIcon.
+        END
+        PUT(DataQ)
+    END
+EditRtn ROUTINE
+    DATA
+Txt STRING(255)
+EditWn WINDOW('Edit'),AT(,,250,70),GRAY,SYSTEM,FONT('Segoe UI',10),RESIZE
+        STRING('?'),AT(7,4,209),USE(?Pmt)
+        BUTTON,AT(233,4,12,10),USE(?PickBtn),SKIP,ICON(ICON:Ellipsis),TIP('Future - Test Data')
+        ENTRY(@s255),AT(8,16,,14),FULL,USE(Txt)
+        CHECK('&UPR'),AT(7,32),USE(G:Upr),SKIP,FONT(,9),TIP('Upper Case')
+        BUTTON('&OK'),AT(7,47,40,14),USE(?OKBtn),DEFAULT
+        BUTTON('Cancel'),AT(57,47,40,14),USE(?CanBtn),STD(STD:Close)
+        OPTION('Alter'),AT(113,31,123,32),USE(G:Alter),BOXED
+            RADIO('&All Rows'),AT(119,39),USE(?Alter:RADIO1)
+            RADIO('&Cell Only'),AT(119,49),USE(?Alter:RADIO2)
+            RADIO('Rows Abov&e'),AT(169,39),USE(?Alter:RADIO3)
+            RADIO('Rows Belo&w'),AT(169,49),USE(?Alter:RADIO4)
+        END
+    END
+CPicture CSTRING(25)
+IsOk BYTE
+aRow1 LONG
+aRow2 LONG
+ColHead STRING(30),AUTO
+W LONG,DIM(4),AUTO
+L LONG,DIM(4),AUTO
+    CODE
+    Txt=CHOOSE(~DataG:IsLong,DataG:DataText,''&DataG:DataLong)
+    CPicture=CLIP(ColQ.Picture)
+    IF DataG:PicType='p' THEN
+       X=ChrCount(CPicture,'<#') ; IF X=0 THEN X=1. !@p p
+       CPicture='@s' & X
+    END
+    ColHead=SELF.FEQ{PROPLIST:Header,mdColumn}
+    GETPOSITION(0,W[1],W[2]) ; GETPOSITION(SELF.FEQ,L[1],L[2],L[3],L[4]) ; L[1]+=W[1] ; L[2]+=W[2]
+    OPEN(EditWn)
+    GETPOSITION(0,W[1],W[2],W[3],W[4])
+    W[1]=L[1]+(L[3]-W[3])/2    ; IF W[1]<L[1] THEN W[1]=L[1].
+    W[2]=L[2]+(L[4]-W[4])/2-24 ; IF W[2]<L[2] THEN W[2]=L[2].
+    SETPOSITION(0,W[1],W[2])
+    0{PROP:MinWidth}=250 ; 0{PROP:MinHeight}=70 ; 0{PROP:MaxHeight}=70
+    0{PROP:Text}='Edit Data Row: ' & mdRow &', Column: ' & mdColumn &', Field: '& QFieldNo & |
+                 ' - ' & ColHead
+    ?Pmt{PROP:Text}='Column ' & mdColumn & ' - Picture ' & CLIP(ColQ.Picture) &' - '& ColHead
+    ?Txt{PROP:Text}=CPicture
+!    Txt=CHOOSE(~DataG:IsLong,DataG:DataText,''&DataG:DataLong)
+    IF G:Upr THEN POST(EVENT:Accepted,?G:Upr).
+    ACCEPT
+        CASE ACCEPTED()
+        OF ?OkBtn ; IsOk=1 ; BREAK
+        OF ?G:Upr ; ?Txt{PROP:Upr}=G:Upr ; IF G:Upr THEN Txt=UPPER(Txt) ; DISPLAY.
+        END
+        IF EVENT()=EVENT:Rejected THEN
+           DISPLAY ; SELECT(?) ; CYCLE
+        END
+    END
+    CLOSE(EditWn)
+    IF ~IsOk THEN EXIT.
+    aRow1=1 ; aRow2=SELF.RowCnt
+    CASE G:Alter
+    OF 2 ; aRow1=mdRow ; aRow2=mdRow
+    OF 3 ; aRow2=mdRow
+    OF 4 ; aRow1=mdRow
+    END
+    LOOP X=1 TO RECORDS(DataQ)
+         GET(DataQ,X)
+         IF DataQ.ColNo <> QFieldNo THEN CYCLE.
+         IF ~INRANGE(DataQ.RowNo,aRow1,aRow2) THEN CYCLE.
+         IF DataQ.IsLong THEN
+            DataQ.DataLong=Txt
+         ELSE
+            DataQ.DataText=Txt
+         END
+         PUT(DataQ)
+    END
+    SELF.Changed=1
+    EXIT
+!------------------------
+CbVlbPreviewClass.ClearYZ PROCEDURE(USHORT Style1, USHORT Style2)
+X USHORT,AUTO
+    CODE
+    LOOP X=Style1 TO Style2
+        SELF.FEQ{PROPSTYLE:TextColor,X}=COLOR:None
+        SELF.FEQ{PROPSTYLE:BackColor,X}=COLOR:None
+    END
+    RETURN
 
 !===================================================================
 
