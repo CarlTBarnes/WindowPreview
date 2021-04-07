@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 04-03-21.1147')
+VersionWndPrv EQUATE('WndPrv 04-07-21.1540')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -213,6 +213,7 @@ GridInc         BYTE(10)
 Grid5th         BYTE(5)
 GuideClr        LONG(0FFh)
 GridClr         LONG(8080h)
+BoxItShows      BYTE(1)
             END            
 ConfigKey   EQUATE('Software\CarlBarnes\WinPreview')
 !EndRegion Global Data
@@ -387,7 +388,19 @@ Now LONG,AUTO
     Glo:Built='(Built: ' & FORMAT(XQ:Time,@t4) &' '& SUB(FORMAT(XQ:Date,@d01),1,5) &CHOOSE(Now-XQ:Time<999,'',' - Run: ' & FORMAT(Now,@t1)) &')'
     XQ:Name=lower(XQ:Name) ; GLO:IsPreviewEXE=CHOOSE(XQ:Name[1:10]='winpreview' OR INSTRING('test',XQ:Name,1)) 
     RETURN
-
+!--------------
+CBWndPreviewClass.ShowReflection PROCEDURE(Window W, SIGNED SelectedLast)
+HoldTarget &Window 
+   CODE 
+    HoldTarget &= SYSTEM{PROP:Target}
+    SETTARGET(W) 
+    W{PROP:Active} = TRUE 
+    SELF.InitWorker(W)
+    SELF.SelectedLast=SelectedLast
+    SELF.Reflection()
+    SETTARGET(HoldTarget)
+    RETURN
+!--------------
 CBWndPreviewClass.InitList PROCEDURE(LONG FEQ,*QUEUE FrmQ,<STRING NameQ>)
 Ref GROUP,AUTO
 Q    &QUEUE
@@ -588,8 +601,7 @@ DevTpNoLIST BYTE
 DevTipEIP LONG
 AllColsHide USHORT,THREAD
 FindTxt STRING(64) 
-ConsolasFQ BYTE,THREAD      
-BoxItShows BYTE,THREAD     
+ConsolasFQ BYTE,THREAD          
 !    BUTTON('G'),AT(14,2,10,10),USE(?SysMenuTip),SKIP,FONT('Wingdings',12),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.'),flat
 !    BUTTON('<235>'),AT(2,2,10,10),USE(?UnderBtn),SKIP,FONT('Wingdings'),TIP('Move Preview under this Window')
 !    BUTTON('<74>'),AT(14,2,10,10),USE(?SysMenuTip),flat,SKIP,FONT('Wingdings 2',13),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.')
@@ -604,7 +616,7 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
         BUTTON('<37h>'),AT(63,2,13,10),USE(?AltKeyAnalBtn),SKIP,FONT('Wingdings',12),TIP('ALT+Key An' & |
                 'alysis<13,10>Show controls that can or have Alt+Key or KEY().<13,10>After can use R' & |
                 't Mouse Delete TAB Controls'),FLAT 
-        CHECK('<0a8h>'),AT(79,3,9,8),USE(BoxItShows),SKIP,TRN,FLAT,FONT('Wingdings 2',,COLOR:Maroon),ICON(ICON:None), |
+        CHECK('<0a8h>'),AT(79,3,9,8),USE(Cfg:BoxItShows),SKIP,TRN,FLAT,FONT('Wingdings 2',,COLOR:Maroon),ICON(ICON:None), |
                 TIP('Box selected Control in Red to find it on Window')
         BUTTON('8'),AT(225,14,13,10),USE(?RightTip),SKIP,FONT('Wingdings',12),TIP('TIP: Right-Click ' & |
                 'on List for Popup of Options'),FLAT
@@ -764,7 +776,7 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?UnderBtn   ; SysMenuCls_SYSCOMMAND(0{PROP:Handle},SMCmd_MoveUnder)
     OF ?WndPropBtn ; SELF.WindowPROPs()
     OF ?WndResizeBtn ; SELF.ResizeWindow() 
-    OF ?BoxItShows ; IF ~BoxItShows THEN SELF.BoxIt(0) ELSE POST(EVENT:NewSelection,?ListF).
+    OF ?Cfg:BoxItShows ; IF ~Cfg:BoxItShows THEN SELF.BoxIt(0) ELSE POST(EVENT:NewSelection,?ListF).
    END
     CASE FIELD()
     OF ?ListF
@@ -780,7 +792,7 @@ AcceptLoopRtn ROUTINE !--------------------
           END
        OF EVENT:DoMouseRight ; IF MouseRightSent THEN DO MouseRightMenuRtn ; MouseRightSent=0.
        OF EVENT:NewSelection                !Check Uncheck boxes
-          IF BoxItShows THEN SELF.BoxIt(FldQ:FeqNo).
+          IF Cfg:BoxItShows THEN SELF.BoxIt(FldQ:FeqNo).
           CASE KEYCODE()              
           OF MouseRight ;  MouseRightSent+=1 ; IF MouseRightSent=1 THEN POST(EVENT:DoMouseRight,?ListF).
           OF MouseLeft2 OROF CtrlMouseLeft2 OROF ShiftMouseLeft2 OROF AltMouseLeft2 
