@@ -7,6 +7,7 @@
 ! 05-Apr-2021   Cache Number 123 in Queue, Color Equates at Top
 ! 05-Apr-2021   ENTRY(@s) with UPR or CAP get sample 'BROWN FOX'/'Brown Fox'  in .EntryInit()
 ! 06-Apr-2021   Right-Click List Popup menu, Double Click Edit Value 
+! 08-Apr-2021   Override IDE Z Style Font changes
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
@@ -155,10 +156,14 @@ TimeNow LONG
      END
 
      StyleZ=ListFEQ{PROPLIST:ColStyle,ColX}             !Z(#) Col Style
-     IF StyleZ THEN
+     IF StyleZ THEN      ;   ColMods[5]='Z'
         ListFEQ{PROPSTYLE:TextColor,StyleZ}=COLOR_Z_FG
         ListFEQ{PROPSTYLE:BackColor,StyleZ}=COLOR_Z_BG
-                       ColMods[5]='Z'
+        ListFEQ{PROPSTYLE:FontName ,StyleZ}=ListFEQ{PROP:FontName}  !Undo IDE Preview Z
+        ListFEQ{PROPSTYLE:FontSize ,StyleZ}=ListFEQ{PROP:FontSize}
+        ListFEQ{PROPSTYLE:FontStyle,StyleZ}=ListFEQ{PROP:FontStyle}
+        ListFEQ{PROPSTYLE:TextSelected,StyleZ}=Color:None
+        ListFEQ{PROPSTYLE:BackSelected,StyleZ}=Color:None                       
      END
      IF ListFEQ{PROPLIST:CellStyle, ColX} THEN          !Y Cell Style
         CLEAR(ColQ)
