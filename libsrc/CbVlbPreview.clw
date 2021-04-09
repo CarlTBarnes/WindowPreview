@@ -8,6 +8,7 @@
 ! 05-Apr-2021   ENTRY(@s) with UPR or CAP get sample 'BROWN FOX'/'Brown Fox'  in .EntryInit()
 ! 06-Apr-2021   Right-Click List Popup menu, Double Click Edit Value 
 ! 08-Apr-2021   Override IDE Z Style Font changes
+! 08-Apr-2021   Edit Data [...] .PopupSample() data. UPR tied to Column
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
@@ -25,13 +26,14 @@ COLOR_Y_FG  EQUATE(Color:Teal)   !Y Cell Style
 COLOR_Y_BG  EQUATE(0E0FFFFH)     !Y Cell Style Back  Lt Yellow
 n1234567890 EQUATE('1234567890123456789012345678901234567890')
 sAtoZ       EQUATE('abcdefghijklmnopqrstuvwxyz') !Must be 26 bytes
+QikBrownCap EQUATE('The Quick Brown Fox Jumps Over The Lazy Dog ')
+QikBrownFox EQUATE('The quick brown fox jumps over the lazy dog ')
 NumQ QUEUE,PRE(NumQ)  !Cache sample numbers for Pictures
 Picture CSTRING(24)
 Sample  DECIMAL(27,5)
 Sign    STRING(1)
      END 
 G:Alter BYTE(1)     
-G:UPR   BYTE
 !====================================================
 ChrCount PROCEDURE(STRING Txt, STRING ChrList)!LONG
 X LONG,AUTO
@@ -492,11 +494,12 @@ ClrRtn ROUTINE
 EditRtn ROUTINE
     DATA
 Txt STRING(255)
+UprTxt &BYTE
 EditWn WINDOW('Edit'),AT(,,250,70),GRAY,SYSTEM,FONT('Segoe UI',10),RESIZE
         STRING('?'),AT(7,4,209),USE(?Pmt)
-        BUTTON,AT(233,4,12,10),USE(?PickBtn),SKIP,ICON(ICON:Ellipsis),TIP('Future - Test Data')
+        BUTTON,AT(233,4,12,10),USE(?PickBtn),DISABLE,SKIP,ICON(ICON:Ellipsis),TIP('Sample Data')
         ENTRY(@s255),AT(8,16,,14),FULL,USE(Txt)
-        CHECK('&UPR'),AT(7,32),USE(G:Upr),SKIP,FONT(,9),TIP('Upper Case')
+        CHECK('&UPR'),AT(7,32),USE(?UprTxt),SKIP,FONT(,9),TIP('Upper Case'),DISABLE
         BUTTON('&OK'),AT(7,47,40,14),USE(?OKBtn),DEFAULT
         BUTTON('Cancel'),AT(57,47,40,14),USE(?CanBtn),STD(STD:Close)
         OPTION('Alter'),AT(113,31,123,32),USE(G:Alter),BOXED
@@ -532,15 +535,17 @@ L LONG,DIM(4),AUTO
                  ' - ' & ColHead
     ?Pmt{PROP:Text}='Column ' & mdColumn & ' - Picture ' & CLIP(ColQ.Picture) &' - '& ColHead
     ?Txt{PROP:Text}=CPicture
-!    Txt=CHOOSE(~DataG:IsLong,DataG:DataText,''&DataG:DataLong)
-    IF G:Upr THEN POST(EVENT:Accepted,?G:Upr).
+    IF DataG:PicType='s' THEN ENABLE(?PickBtn) ; ENABLE(?UprTxt).
+    UprTxt &= ColQ.UprTxt ; ?UprTxt{PROP:Use}=ColQ.UprTxt
+    IF UprTxt THEN POST(EVENT:Accepted,?UprTxt).
     ACCEPT
-        CASE ACCEPTED()
-        OF ?OkBtn ; IsOk=1 ; BREAK
-        OF ?G:Upr ; ?Txt{PROP:Upr}=G:Upr ; IF G:Upr THEN Txt=UPPER(Txt) ; DISPLAY.
-        END
         IF EVENT()=EVENT:Rejected THEN
            DISPLAY ; SELECT(?) ; CYCLE
+        END
+        CASE ACCEPTED()
+        OF ?OkBtn   ; IsOk=1 ; BREAK
+        OF ?UprTxt  ; ?Txt{PROP:Upr}=UprTxt ; IF UprTxt THEN Txt=UPPER(Txt) ; DISPLAY. ; PUT(ColQ)
+        OF ?PickBtn ; SELF.PopupSample(?Txt,CPicture,UprTxt) ; SELECT(?Txt)
         END
     END
     CLOSE(EditWn)
@@ -571,6 +576,47 @@ X USHORT,AUTO
     LOOP X=Style1 TO Style2
         SELF.FEQ{PROPSTYLE:TextColor,X}=COLOR:None
         SELF.FEQ{PROPSTYLE:BackColor,X}=COLOR:None
+    END
+    RETURN
+!------------------------
+CbVlbPreviewClass.PopupSample PROCEDURE(LONG TxtFEQ,STRING Picture,BYTE IsUpr)
+AlphaBeta EQUATE('Alpha Beta Charlie Delta Echo Foxtrot Golf Hotel India Juliet Kilo Lima Mike November ')
+OscarPapa EQUATE('Oscar Papa Quebec Romeo Sierra Tango Uniform Victor Whiskey Xray Yankee Zulu ')
+LoremIp   EQUATE('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut ad. ')
+PopMenu ANY
+P PSTRING(40) ,DIM(18)
+D PSTRING(256),DIM(18)
+N BYTE
+X BYTE,AUTO
+    CODE !If you have any ideas on some sample data please let me know
+    N+=1 ; P[N]='Bartholomew'   !Christopher also 11 bytes but no W or M
+    N+=1 ; P[N]='Rostenkowsky'
+    N+=1 ; P[N]='Bartholomew W. Rostenkowsky'
+    N+=1 ; P[N]='Environmental Protection Agency'
+    N+=1 ; P[N]='-|1200 Pennsylvania Avenue, N.W.'
+    N+=1 ; P[N]='Manchester by the Sea'         !Carpentersville
+    N+=1 ; P[N]='Manchester by the Sea, MA 01944'
+    N+=1 ; P[N]='Massachussetts'
+    N+=1 ; P[N]='-|Nnnnn Nnnnn ...'     ; D[N]=ALL('Nnnnn ',255)
+    N+=1 ; P[N]='12345 67890 ...'       ; D[N]=ALL('12345 67890 ',255)
+    N+=1 ; P[N]='1234567890...'         ; D[N]=ALL('1234567890',255)
+    N+=1 ; P[N]='Alpha Beta Charlie ...'; D[N]=ALL(AlphaBeta,255)
+    N+=1 ; P[N]='Oscar Papa Quebec ...' ; D[N]=ALL(OscarPapa,255)
+    N+=1 ; P[N]='Lorem Ipsum ...'       ; D[N]=LoremIp&LoremIp
+    N+=1 ; P[N]=sAtoZ                   ; D[N]=ALL(sAtoZ,255)
+    N+=1 ; P[N]=QikBrownFox             ; D[N]=ALL(QikBrownFox,255)
+    N+=1 ; P[N]=QikBrownCap             ; D[N]=ALL(QikBrownCap,255)
+    LOOP X=1 TO N
+        PopMenu=CHOOSE(X=1,'',PopMenu&'|') & P[X]
+        IF ~D[X] THEN
+            D[X]=P[X]
+            IF SUB(D[X],1,2)='-|' THEN D[X]=SUB(D[X],3,999).
+        END
+    END
+    X=POPUP(PopMenu)
+    IF X THEN
+       IF IsUpr THEN D[X]=UPPER(D[X]).
+       CHANGE(TxtFEQ,D[X])
     END
     RETURN
 
@@ -618,8 +664,6 @@ FEQ LONG,AUTO
 Picture STRING(32),AUTO
 !Change2 STRING(32),AUTO
 VlbCls  CbVlbPreviewClass
-CapText EQUATE('The Quick Brown Fox Jumps Over The Lazy Dog')
-UprText EQUATE('THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG')
     CODE
     IF SELF.EntryIsInit THEN RETURN. ; SELF.EntryIsInit=1
     IF BAND(KEYSTATE(),0100h) THEN RETURN.  !If Shift is Down skip
@@ -637,9 +681,9 @@ UprText EQUATE('THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG')
         OF 'p' ; CHANGE(FEQ,VlbCls.Sample_AtP(Picture))
         OF 'k' ; CHANGE(FEQ,VlbCls.Sample_AtK(Picture)) ! ; FEQ{PROP:Tip}=Picture &'<13,10>'& CONTENTS(FEQ)
         OF 's' ; IF FEQ{PROP:Upr} THEN
-                    CHANGE(FEQ,UprText)
+                    CHANGE(FEQ,UPPER(QikBrownFox))
                  ELSIF FEQ{PROP:Cap} THEN 
-                    CHANGE(FEQ,CapText)
+                    CHANGE(FEQ,QikBrownCap)
                  END 
         END
     END

@@ -34,7 +34,8 @@ PicType   STRING(1)       !ColQ:PicType  n e s d t p P  Picture[2]
 PicSign   STRING(1)       !ColQ:PicSign  -( if @n-9.2 or @n(9) allows negative
 IsLong    BOOL            !ColQ:IsLong
 DataLong  LONG            !ColQ:DataLong   Data LONG for VLB
-DataText  STRING(60)      !ColQ:DataText   Data STRING for VLB
+DataText  STRING(60)      !ColQ:DataText   Data STRING for VLB 
+UprTxt    BYTE            !ColQ:UprTxt
 Format    STRING(96)      !ColQ:Format     Col Format for Debug
         END !ColQ
 
@@ -70,7 +71,8 @@ LoadDataQ   PROCEDURE()
 VLBprc      PROCEDURE(LONG xRow, USHORT xCol),STRING
 Sample_AtN  PROCEDURE(STRING sPicture, <*STRING OutSign>),STRING  !@n#.# sample
 Sample_AtP  PROCEDURE(STRING sPicture),STRING                     !@p###p
-Sample_AtK  PROCEDURE(STRING sPicture),STRING                     !@k###k 
+Sample_AtK  PROCEDURE(STRING sPicture),STRING                     !@k###k
+PopupSample PROCEDURE(LONG TxtFEQ,STRING Picture,BYTE IsUpr),VIRTUAL
 TakeEvent   PROCEDURE(),BYTE,PRIVATE
 ClearYZ     PROCEDURE(USHORT Style1, USHORT Style2)
                     END
