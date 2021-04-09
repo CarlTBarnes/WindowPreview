@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 04-07-21.1540')
+VersionWndPrv EQUATE('WndPrv 04-08-21.0826')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -776,7 +776,7 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?UnderBtn   ; SysMenuCls_SYSCOMMAND(0{PROP:Handle},SMCmd_MoveUnder)
     OF ?WndPropBtn ; SELF.WindowPROPs()
     OF ?WndResizeBtn ; SELF.ResizeWindow() 
-    OF ?Cfg:BoxItShows ; IF ~Cfg:BoxItShows THEN SELF.BoxIt(0) ELSE POST(EVENT:NewSelection,?ListF).
+    OF ?Cfg:BoxItShows ; IF ~Cfg:BoxItShows THEN SELF.BoxIt(0) ELSE POST(EVENT:NewSelection,?ListF). ; SELF.ConfigPut(Cfg:BoxItShows)
    END
     CASE FIELD()
     OF ?ListF
