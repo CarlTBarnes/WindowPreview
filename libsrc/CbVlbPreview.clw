@@ -9,6 +9,7 @@
 ! 06-Apr-2021   Right-Click List Popup menu, Double Click Edit Value 
 ! 08-Apr-2021   Override IDE Z Style Font changes
 ! 08-Apr-2021   Edit Data [...] .PopupSample() data. UPR tied to Column
+! 09-Apr-2021   Edit Data improvements - show bytes, date input spin
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
@@ -75,7 +76,9 @@ K BYTE,AUTO
     ListFEQ{PROP:VLBval} =ADDRESS(SELF)
     ListFEQ{PROP:VLBproc}=ADDRESS(SELF.VLBprc)
     LOOP K=255 TO 1 BY -1 ; ListFEQ{PROP:Alrt,K}=0 ; END  !Mouseleft can screw things uo
-    REGISTEREVENT(EVENT:NewSelection,  ADDRESS(SELF.TakeEvent), ADDRESS(SELF))    
+    REGISTEREVENT(EVENT:NewSelection, ADDRESS(SELF.TakeEvent), ADDRESS(SELF))  
+    REGISTEREVENT(EVENT:Expanded, ADDRESS(SELF.TakeEvent), ADDRESS(SELF))  
+    REGISTEREVENT(EVENT:Contracted, ADDRESS(SELF.TakeEvent), ADDRESS(SELF))   
     RETURN
 !----------------------------------------------------
 CbVlbPreviewClass.LoadColumnQ PROCEDURE()
@@ -429,7 +432,7 @@ ClrMods  PSTRING(4)
 ClrIcon  BYTE
     CODE
     CASE EVENT()
-    OF EVENT:NewSelection
+    OF EVENT:NewSelection OROF EVENT:Expanded OROF EVENT:Contracted
        CASE KEYCODE()
        OF MouseRight ; PopNo = 1
        OF MouseLeft2 ; PopNo = 2
@@ -486,7 +489,7 @@ ClrRtn ROUTINE
         IF ~INSTRING(DataQ.ModFld,ClrMods,1) THEN CYCLE.
         CASE DataQ.ModFld
         OF '*'   ; DataQ.DataLong=COLOR:None
-        OF   'I'
+        OF 'I'
         OROF 'J' ; DataQ.DataLong=ClrIcon ; IF ClrIcon THEN ClrIcon=3-ClrIcon.
         END
         PUT(DataQ)
@@ -497,16 +500,18 @@ Txt STRING(255)
 UprTxt &BYTE
 EditWn WINDOW('Edit'),AT(,,250,70),GRAY,SYSTEM,FONT('Segoe UI',10),RESIZE
         STRING('?'),AT(7,4,209),USE(?Pmt)
-        BUTTON,AT(233,4,12,10),USE(?PickBtn),DISABLE,SKIP,ICON(ICON:Ellipsis),TIP('Sample Data')
+        BUTTON('&Data...'),AT(217,2,28,11),USE(?PickBtn),SKIP,FONT(,9),HIDE,TIP('Sample Data Popup')
         ENTRY(@s255),AT(8,16,,14),FULL,USE(Txt)
-        CHECK('&UPR'),AT(7,32),USE(?UprTxt),SKIP,FONT(,9),TIP('Upper Case'),DISABLE
+        SPIN(@d2),AT(8,16,226,14),USE(Txt,, ?DateTxt),HIDE,HVSCROLL
+        CHECK('&UPR'),AT(7,32),USE(?UprTxt),SKIP,DISABLE,FONT(,9),TIP('Upper Case')
+        STRING(''),AT(57,32),USE(?Bytes),FONT(,9)
         BUTTON('&OK'),AT(7,47,40,14),USE(?OKBtn),DEFAULT
         BUTTON('Cancel'),AT(57,47,40,14),USE(?CanBtn),STD(STD:Close)
         OPTION('Alter'),AT(113,31,123,32),USE(G:Alter),BOXED
-            RADIO('&All Rows'),AT(119,39),USE(?Alter:RADIO1)
-            RADIO('&Cell Only'),AT(119,49),USE(?Alter:RADIO2)
-            RADIO('Rows Abov&e'),AT(169,39),USE(?Alter:RADIO3)
-            RADIO('Rows Belo&w'),AT(169,49),USE(?Alter:RADIO4)
+            RADIO('&All Rows'),AT(119,39),USE(?Alter:1)
+            RADIO('&Cell Only'),AT(119,49),USE(?Alter:2)
+            RADIO('Rows Abov&e'),AT(169,39),USE(?Alter:3)
+            RADIO('Rows Belo&w'),AT(169,49),USE(?Alter:R4)
         END
     END
 CPicture CSTRING(25)
@@ -518,11 +523,6 @@ W LONG,DIM(4),AUTO
 L LONG,DIM(4),AUTO
     CODE
     Txt=CHOOSE(~DataG:IsLong,DataG:DataText,''&DataG:DataLong)
-    CPicture=CLIP(ColQ.Picture)
-    IF DataG:PicType='p' THEN
-       X=ChrCount(CPicture,'<#') ; IF X=0 THEN X=1. !@p p
-       CPicture='@s' & X
-    END
     ColHead=SELF.FEQ{PROPLIST:Header,mdColumn}
     GETPOSITION(0,W[1],W[2]) ; GETPOSITION(SELF.FEQ,L[1],L[2],L[3],L[4]) ; L[1]+=W[1] ; L[2]+=W[2]
     OPEN(EditWn)
@@ -534,10 +534,16 @@ L LONG,DIM(4),AUTO
     0{PROP:Text}='Edit Data Row: ' & mdRow &', Column: ' & mdColumn &', Field: '& QFieldNo & |
                  ' - ' & ColHead
     ?Pmt{PROP:Text}='Column ' & mdColumn & ' - Picture ' & CLIP(ColQ.Picture) &' - '& ColHead
+    CPicture=CLIP(ColQ.Picture)
+    CASE DataG:PicType 
+    OF 'd' ; ?DateTxt{PROP:Text}=CPicture ; UNHIDE(?DateTxt) ; HIDE(?Txt) ; SELECT(?DateTxt)
+    OF 'p' ; X=ChrCount(CPicture,'<#') ; IF X=0 THEN X=1. ; CPicture='@s' & X
+    OF 's' ; UNHIDE(?PickBtn) ; ENABLE(?UprTxt) 
+             UprTxt &= ColQ.UprTxt ; ?UprTxt{PROP:Use}=ColQ.UprTxt
+             IF UprTxt THEN POST(EVENT:Accepted,?UprTxt).
+             ?Txt{PROP:Imm}=1 ; POST(EVENT:NewSelection) !Bytes typing
+    END
     ?Txt{PROP:Text}=CPicture
-    IF DataG:PicType='s' THEN ENABLE(?PickBtn) ; ENABLE(?UprTxt).
-    UprTxt &= ColQ.UprTxt ; ?UprTxt{PROP:Use}=ColQ.UprTxt
-    IF UprTxt THEN POST(EVENT:Accepted,?UprTxt).
     ACCEPT
         IF EVENT()=EVENT:Rejected THEN
            DISPLAY ; SELECT(?) ; CYCLE
@@ -546,6 +552,12 @@ L LONG,DIM(4),AUTO
         OF ?OkBtn   ; IsOk=1 ; BREAK
         OF ?UprTxt  ; ?Txt{PROP:Upr}=UprTxt ; IF UprTxt THEN Txt=UPPER(Txt) ; DISPLAY. ; PUT(ColQ)
         OF ?PickBtn ; SELF.PopupSample(?Txt,CPicture,UprTxt) ; SELECT(?Txt)
+        END
+        IF DataG:PicType='s' THEN
+           CASE EVENT()
+           OF EVENT:Accepted     ; ?Bytes{PROP:Text}=LEN(CLIP(Txt))&' bytes'
+           OF EVENT:NewSelection ; ?Bytes{PROP:Text}=LEN(CLIP(?Txt{PROP:ScreenText}))&' bytes'
+           END
         END
     END
     CLOSE(EditWn)
@@ -567,7 +579,8 @@ L LONG,DIM(4),AUTO
          END
          PUT(DataQ)
     END
-    SELF.Changed=1
+    SELF.Changed=1 
+    DISPLAY
     EXIT
 !------------------------
 CbVlbPreviewClass.ClearYZ PROCEDURE(USHORT Style1, USHORT Style2)
@@ -588,6 +601,7 @@ P PSTRING(40) ,DIM(18)
 D PSTRING(256),DIM(18)
 N BYTE
 X BYTE,AUTO
+B LONG,DIM(4),AUTO
     CODE !If you have any ideas on some sample data please let me know
     N+=1 ; P[N]='Bartholomew'   !Christopher also 11 bytes but no W or M
     N+=1 ; P[N]='Rostenkowsky'
@@ -613,7 +627,8 @@ X BYTE,AUTO
             IF SUB(D[X],1,2)='-|' THEN D[X]=SUB(D[X],3,999).
         END
     END
-    X=POPUP(PopMenu)
+    GETPOSITION(TxtFEQ,B[1],B[2],,B[4])
+    X=POPUP(PopMenu,B[1],B[2]+B[4],1)
     IF X THEN
        IF IsUpr THEN D[X]=UPPER(D[X]).
        CHANGE(TxtFEQ,D[X])
