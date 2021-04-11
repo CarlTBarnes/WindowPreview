@@ -11,6 +11,7 @@
 ! 08-Apr-2021   Edit Data [...] .PopupSample() data. UPR tied to Column
 ! 09-Apr-2021   Edit Data improvements - show bytes, date input spin
 ! 09-Apr-2021   Muliple LISTs. Turn off Mark. Added Tree Click2 then commented. Negative Samples.
+! 11-Apr-2021   Prop:MARK() implemented with FromQ
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
@@ -59,12 +60,14 @@ CbVlbPreviewClass.Construct PROCEDURE()
     CODE
     SELF.ColumnQ &= NEW(CbVlbColumnQueueType)
     SELF.DataQ &= NEW(CbVlbDataQueueType)
+!    SELF.MarkQ &= NEW(CbVlbMarkQueueType) If you're going to some times actually access the MarkQ you probably don't want it NULL and GPF
     RETURN
 !-------------------------------------
 CbVlbPreviewClass.Destruct PROCEDURE()
     CODE
     DISPOSE(SELF.ColumnQ)
     DISPOSE(SELF.DataQ)
+    DISPOSE(SELF.MarkQ)
     RETURN
 !---------------------------------------------
 CbVlbPreviewClass.Init PROCEDURE(LONG ListFEQ, LONG RowCount=0)
@@ -72,12 +75,13 @@ K BYTE,AUTO
     CODE
     IF ~ListFEQ{PROP:Format} THEN RETURN.
     SELF.FEQ=ListFEQ
-    SELF.Items=ListFEQ{PROP:Items} ; IF SELF.Items<1 THEN SELF.Items=1.
-    IF RowCount < 1 THEN RowCount=SELF.Items * 2.
+    SELF.Items=ListFEQ{PROP:Items} 
+    IF SELF.Items<1 THEN SELF.Items=9. !List Height fits header only
+    IF RowCount < 1 THEN RowCount=SELF.Items * 2.    
     SELF.RowCnt = RowCount
-    ListFEQ{PROP:Mark}='' !Mark requires Q so disable. Seemed to work, needs Queue.
     SELF.ClmCnt = SELF.LoadColumnQ() ; IF SELF.ClmCnt=0 THEN RETURN.
     SELF.LoadDataQ()
+    IF ListFEQ{PROP:Mark} THEN DO MarkRtn. !PROP:Mark=1 if List has MARK(Q.Mark)
     ListFEQ{PROP:VLBval} =ADDRESS(SELF)
     ListFEQ{PROP:VLBproc}=ADDRESS(SELF.VLBprc)
     LOOP K=255 TO 1 BY -1 ; ListFEQ{PROP:Alrt,K}=0 ; END  !Mouseleft can screw things uo
@@ -85,6 +89,14 @@ K BYTE,AUTO
 !    REGISTEREVENT(EVENT:Expanded,  ADDRESS(SELF.TakeEvent),ADDRESS(SELF),,ListFEQ)  Let Tree Click 2
 !    REGISTEREVENT(EVENT:Contracted,ADDRESS(SELF.TakeEvent),ADDRESS(SELF),,ListFEQ)  expand & contract  
     RETURN
+MarkRtn ROUTINE
+!MARK() worked visually marking rows with the preview generated queue, but it's not proper. 
+!For a VLB this sets up a Queue and MARK to be able to find marked records.
+    SELF.MarkQ &= NEW(CbVlbMarkQueueType)
+    ListFEQ{PROP:From}=SELF.MarkQ           !Yes, a VLB can also have a Queue
+    ListFEQ{PROP:Mark}=SELF.MarkQ.Mark      !that queue is used for Mark(Q.Mark)
+    CLEAR(SELF.MarkQ)
+    LOOP RowCount TIMES ; ADD(SELF.MarkQ) ; END
 !----------------------------------------------------
 CbVlbPreviewClass.LoadColumnQ PROCEDURE()
 ListFEQ LONG,AUTO
@@ -467,7 +479,7 @@ DBugPop  PSTRING(32)
     RETURN 0 !Level:B9
 PopupRtn ROUTINE
  COMPILE('!**DBugQ END**', DbugQs)
-    DBugPop='|-|Debug{{Column Q|Data Q}' 
+    DBugPop='|-|Debug{{Column Q|Data Q|Mark Q}' 
  !**DBugQ END**
     PopNo=POPUP('Remove Colors' & |
                 '{{' & |
@@ -491,6 +503,7 @@ PopupRtn ROUTINE
  COMPILE('!**DBugQ END**', DbugQs)
     OF  8 ; DBugPrv.QueueReflection(ColQ,'ColumnQ')
     OF  9 ; DBugPrv.QueueReflection(DataQ,'DataQ')
+    OF  10 ; IF NOT SELF.MarkQ &= NULL THEN DBugPrv.QueueReflection(SELF.MarkQ,'MarkQ').
  !**DBugQ END**
     ELSE  ; EXIT
     END

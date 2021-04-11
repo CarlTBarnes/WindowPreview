@@ -48,7 +48,9 @@ IsLong    BOOL            !VlbQ:IsLong
 DataLong  LONG            !VlbQ:DataLong  Data LONG for VLB
 DataText  STRING(255)     !VlbQ:DataText  Data STRING for VLB
         END
-
+CbVlbMarkQueueType QUEUE,TYPE !Queue feeds MARK()
+Mark BYTE
+    END
 !----------------- CbVlbPreviewClass -----------------
 CbVlbPreviewClass   CLASS,TYPE,MODULE('CbVlbPreview.CLW'),LINK('CbVlbPreview.CLW')
 Init        PROCEDURE(LONG ListFEQ, LONG RowCount=0)  !Does Everything
@@ -61,6 +63,7 @@ ClmCnt      USHORT
 Changed     BOOL
 ColumnQ     &CbVlbColumnQueueType
 DataQ       &CbVlbDataQueueType
+MarkQ       &CbVlbMarkQueueType
 
 !Internal Methods
 !---------- Internal
