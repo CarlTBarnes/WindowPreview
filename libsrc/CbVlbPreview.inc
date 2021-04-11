@@ -69,7 +69,7 @@ Destruct    PROCEDURE()
 LoadColumnQ PROCEDURE(),LONG
 LoadDataQ   PROCEDURE()
 VLBprc      PROCEDURE(LONG xRow, USHORT xCol),STRING
-Sample_AtN  PROCEDURE(STRING sPicture, <*STRING OutSign>),STRING  !@n#.# sample
+Sample_AtN  PROCEDURE(STRING sPicture, <*STRING OutSign>, BOOL Negate=0),STRING  !@n#.# sample
 Sample_AtP  PROCEDURE(STRING sPicture),STRING                     !@p###p
 Sample_AtK  PROCEDURE(STRING sPicture),STRING                     !@k###k
 PopupSample PROCEDURE(LONG TxtFEQ,STRING Picture,BYTE IsUpr),VIRTUAL

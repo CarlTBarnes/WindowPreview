@@ -10,10 +10,14 @@
 ! 08-Apr-2021   Override IDE Z Style Font changes
 ! 08-Apr-2021   Edit Data [...] .PopupSample() data. UPR tied to Column
 ! 09-Apr-2021   Edit Data improvements - show bytes, date input spin
+! 09-Apr-2021   Muliple LISTs. Turn off Mark. Added Tree Click2 then commented. Negative Samples.
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('CbVlbPreview.INC'),ONCE
+DbugQs EQUATE(0)
+!    INCLUDE('cbWndPreview.inc')
+!DbugPrv CbWndPreviewClass    
     MAP
 ChrCount PROCEDURE(STRING Text2Scan, STRING ChrList),LONG
     END
@@ -71,14 +75,15 @@ K BYTE,AUTO
     SELF.Items=ListFEQ{PROP:Items} ; IF SELF.Items<1 THEN SELF.Items=1.
     IF RowCount < 1 THEN RowCount=SELF.Items * 2.
     SELF.RowCnt = RowCount
+    ListFEQ{PROP:Mark}='' !Mark requires Q so disable. Seemed to work, needs Queue.
     SELF.ClmCnt = SELF.LoadColumnQ() ; IF SELF.ClmCnt=0 THEN RETURN.
     SELF.LoadDataQ()
     ListFEQ{PROP:VLBval} =ADDRESS(SELF)
     ListFEQ{PROP:VLBproc}=ADDRESS(SELF.VLBprc)
     LOOP K=255 TO 1 BY -1 ; ListFEQ{PROP:Alrt,K}=0 ; END  !Mouseleft can screw things uo
-    REGISTEREVENT(EVENT:NewSelection, ADDRESS(SELF.TakeEvent), ADDRESS(SELF))  
-    REGISTEREVENT(EVENT:Expanded, ADDRESS(SELF.TakeEvent), ADDRESS(SELF))  
-    REGISTEREVENT(EVENT:Contracted, ADDRESS(SELF.TakeEvent), ADDRESS(SELF))   
+    REGISTEREVENT(EVENT:NewSelection, ADDRESS(SELF.TakeEvent), ADDRESS(SELF),,ListFEQ)  
+!    REGISTEREVENT(EVENT:Expanded,  ADDRESS(SELF.TakeEvent),ADDRESS(SELF),,ListFEQ)  Let Tree Click 2
+!    REGISTEREVENT(EVENT:Contracted,ADDRESS(SELF.TakeEvent),ADDRESS(SELF),,ListFEQ)  expand & contract  
     RETURN
 !----------------------------------------------------
 CbVlbPreviewClass.LoadColumnQ PROCEDURE()
@@ -160,7 +165,7 @@ TimeNow LONG
         ColQ:DataLong=1    ; DO AddColumnQ
      END
 
-     StyleZ=ListFEQ{PROPLIST:ColStyle,ColX}             !Z(#) Col Style
+     StyleZ=ListFEQ{PROPLIST:ColStyle,ColX}      !Z(#) Col Style
      IF StyleZ THEN      ;   ColMods[5]='Z'
         ListFEQ{PROPSTYLE:TextColor,StyleZ}=COLOR_Z_FG
         ListFEQ{PROPSTYLE:BackColor,StyleZ}=COLOR_Z_BG
@@ -170,7 +175,7 @@ TimeNow LONG
         ListFEQ{PROPSTYLE:TextSelected,StyleZ}=Color:None
         ListFEQ{PROPSTYLE:BackSelected,StyleZ}=Color:None                       
      END
-     IF ListFEQ{PROPLIST:CellStyle, ColX} THEN          !Y Cell Style
+     IF ListFEQ{PROPLIST:CellStyle, ColX} THEN   !Y Cell Style
         CLEAR(ColQ)
         ColQ:ModFld='Y' ; ColMods[4]='Y'
         ColQ:IsLong=1
@@ -178,7 +183,7 @@ TimeNow LONG
         ListFEQ{PROPSTYLE:TextColor,255}=COLOR_Y_FG
         ListFEQ{PROPSTYLE:BackColor,255}=COLOR_Y_BG
      END
-     IF ListFEQ{PROPLIST:Tip, ColX} THEN                !P Tip
+     IF ListFEQ{PROPLIST:Tip, ColX} THEN         !P Tip
         CLEAR(ColQ)
         ColQ:ModFld='P'
         ColQ:DataText='Tip for Column ' & ColX ; DO AddColumnQ
@@ -278,7 +283,7 @@ DataQ   &CbVlbDataQueueType
   IF DataQ.IsLong THEN RETURN DataQ.DataLong.
   RETURN DataQ.DataText
 !--------------------------------------------
-CbVlbPreviewClass.Sample_AtN PROCEDURE(STRING Picture, <*STRING OutSign>)!,STRING
+CbVlbPreviewClass.Sample_AtN PROCEDURE(STRING Picture, <*STRING OutSign>, BOOL Negate=0)!,STRING
 N       DECIMAL(21)
 I       DECIMAL(2)
 NewTry      CSTRING(32)
@@ -317,6 +322,7 @@ picSign     STRING(1)   !- or (
     ADD(NumQ,NumQ:Picture)
 ReturnQLabel:
     IF ~OMITTED(OutSign) THEN OutSign=NumQ:Sign.
+    IF Negate AND NumQ:Sign THEN RETURN '-' & NumQ:Sample.
     RETURN NumQ:Sample
 !-----------------------------
 ParseForCommaPeriodRtn ROUTINE
@@ -430,9 +436,10 @@ DataGrp  GROUP(CbVlbDataQueueType),PRE(DataG). !VLB may change DataQ so keep Gro
 PopNo    SHORT
 ClrMods  PSTRING(4)
 ClrIcon  BYTE
+DBugPop  PSTRING(32)
     CODE
     CASE EVENT()
-    OF EVENT:NewSelection OROF EVENT:Expanded OROF EVENT:Contracted
+    OF EVENT:NewSelection !OROF EVENT:Expanded OROF EVENT:Contracted
        CASE KEYCODE()
        OF MouseRight ; PopNo = 1
        OF MouseLeft2 ; PopNo = 2
@@ -459,6 +466,9 @@ ClrIcon  BYTE
     END
     RETURN 0 !Level:B9
 PopupRtn ROUTINE
+ COMPILE('!**DBugQ END**', DbugQs)
+    DBugPop='|-|Debug{{Column Q|Data Q}' 
+ !**DBugQ END**
     PopNo=POPUP('Remove Colors' & |
                 '{{' & |
                    '* Cell Colors' & |   !#1
@@ -469,7 +479,7 @@ PopupRtn ROUTINE
                 '}' & |
               '|-|Remove All Icons' & |  !#5
                 '|Check Box Icons'  & |  !#6
-              '|-|Edit Data<9>Click 2')  !#7
+              '|-|Edit Data<9>Click 2' & DBugPop)  !#7 
     CASE PopNo
     OF  1 ; ClrMods='*'                   ! # 1  * Cell Colors
     OF  2 ; SELF.ClearYZ(255,255)         ! # 2  Y Cell Style
@@ -478,6 +488,10 @@ PopupRtn ROUTINE
     OF  5 ; ClrMods='IJ'                  ! # 5  Remove Icons
     OF  6 ; ClrMods='IJ' ; ClrIcon=1      ! # 6  Icon
     OF  7 ; DO EditRtn ; EXIT             ! # 7  Edit Data
+ COMPILE('!**DBugQ END**', DbugQs)
+    OF  8 ; DBugPrv.QueueReflection(ColQ,'ColumnQ')
+    OF  9 ; DBugPrv.QueueReflection(DataQ,'DataQ')
+ !**DBugQ END**
     ELSE  ; EXIT
     END
     IF ClrMods THEN DO ClrRtn.
@@ -692,7 +706,7 @@ VlbCls  CbVlbPreviewClass
         Picture=FEQ{PROP:Text}
         IF Picture[1]<>'@' THEN Picture='@' & Picture.
         CASE lower(Picture[2])
-        OF 'n' ; CHANGE(FEQ,VlbCls.Sample_AtN(Picture))
+        OF 'n' ; CHANGE(FEQ,VlbCls.Sample_AtN(Picture,,1))
         OF 'p' ; CHANGE(FEQ,VlbCls.Sample_AtP(Picture))
         OF 'k' ; CHANGE(FEQ,VlbCls.Sample_AtK(Picture)) ! ; FEQ{PROP:Tip}=Picture &'<13,10>'& CONTENTS(FEQ)
         OF 's' ; IF FEQ{PROP:Upr} THEN
