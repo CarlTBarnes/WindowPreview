@@ -36,7 +36,7 @@ IsLong    BOOL            !ColQ:IsLong
 DataLong  LONG            !ColQ:DataLong   Data LONG for VLB
 DataText  STRING(60)      !ColQ:DataText   Data STRING for VLB 
 UprTxt    BYTE            !ColQ:UprTxt
-Format    STRING(96)      !ColQ:Format     Col Format for Debug
+Format    STRING(128)     !ColQ:Format     Col Format shows on Data window
         END !ColQ
 
 CbVlbDataQueueType QUEUE,TYPE    !Queue feeds VLB Data

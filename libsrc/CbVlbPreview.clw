@@ -12,6 +12,7 @@
 ! 09-Apr-2021   Edit Data improvements - show bytes, date input spin
 ! 09-Apr-2021   Muliple LISTs. Turn off Mark. Added Tree Click2 then commented. Negative Samples.
 ! 11-Apr-2021   Prop:MARK() implemented with FromQ
+! 12-Apr-2021   Data Window shows Column Format string at bottom
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
@@ -525,14 +526,14 @@ EditRtn ROUTINE
     DATA
 Txt STRING(255)
 UprTxt &BYTE
-EditWn WINDOW('Edit'),AT(,,250,70),GRAY,SYSTEM,FONT('Segoe UI',10),RESIZE
-        STRING('?'),AT(7,4,209),USE(?Pmt)
+EditWn WINDOW('Edit'),AT(,,250,80),GRAY,SYSTEM,FONT('Segoe UI',10),RESIZE
+        STRING('?'),AT(5,4,209),USE(?Pmt)
         BUTTON('&Data...'),AT(217,2,28,11),USE(?PickBtn),SKIP,FONT(,9),HIDE,TIP('Sample Data Popup')
-        ENTRY(@s255),AT(8,16,,14),FULL,USE(Txt)
-        SPIN(@d2),AT(8,16,226,14),USE(Txt,, ?DateTxt),HIDE,HVSCROLL
-        CHECK('&UPR'),AT(7,32),USE(?UprTxt),SKIP,DISABLE,FONT(,9),TIP('Upper Case')
+        ENTRY(@s255),AT(6,16,,14),FULL,USE(Txt)
+        SPIN(@d2),AT(6,16,229,14),USE(Txt,, ?DateTxt),HIDE,HVSCROLL
+        CHECK('&UPR'),AT(5,32),USE(?UprTxt),SKIP,DISABLE,FONT(,9),TIP('Upper Case')
         STRING(''),AT(57,32),USE(?Bytes),FONT(,9)
-        BUTTON('&OK'),AT(7,47,40,14),USE(?OKBtn),DEFAULT
+        BUTTON('&OK'),AT(5,47,40,14),USE(?OKBtn),DEFAULT
         BUTTON('Cancel'),AT(57,47,40,14),USE(?CanBtn),STD(STD:Close)
         OPTION('Alter'),AT(113,31,123,32),USE(G:Alter),BOXED
             RADIO('&All Rows'),AT(119,39),USE(?Alter:1)
@@ -540,6 +541,7 @@ EditWn WINDOW('Edit'),AT(,,250,70),GRAY,SYSTEM,FONT('Segoe UI',10),RESIZE
             RADIO('Rows Abov&e'),AT(169,39),USE(?Alter:3)
             RADIO('Rows Belo&w'),AT(169,49),USE(?Alter:R4)
         END
+        TEXT,AT(4,67,,11),FULL,USE(ColQ.Format),SKIP,TRN,FLAT,FONT('Consolas'),TIP('Format'),READONLY,SINGLE
     END
 CPicture CSTRING(25)
 IsOk BYTE
@@ -557,7 +559,7 @@ L LONG,DIM(4),AUTO
     W[1]=L[1]+(L[3]-W[3])/2    ; IF W[1]<L[1] THEN W[1]=L[1].
     W[2]=L[2]+(L[4]-W[4])/2-24 ; IF W[2]<L[2] THEN W[2]=L[2].
     SETPOSITION(0,W[1],W[2])
-    0{PROP:MinWidth}=250 ; 0{PROP:MinHeight}=70 ; 0{PROP:MaxHeight}=70
+    0{PROP:MinWidth}=250 ; 0{PROP:MinHeight}=80 ; 0{PROP:MaxHeight}=80
     0{PROP:Text}='Edit Data Row: ' & mdRow &', Column: ' & mdColumn &', Field: '& QFieldNo & |
                  ' - ' & ColHead
     ?Pmt{PROP:Text}='Column ' & mdColumn & ' - Picture ' & CLIP(ColQ.Picture) &' - '& ColHead
