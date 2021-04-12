@@ -693,7 +693,8 @@ ReOpenLOOP:Label:
   FldQ:FeqName = 0{PROP:Text}     
   OPEN(Window) ; SysMenuCls.Init(Window) ; SELF.AtSetOrSave(1, AtWndReflect[], AtNoSetXY) ; AtNoSetXY=0 
   ?MenuItems{PROP:Use}=SELF.MenuItemShows
-  0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv &'  '& PWnd{'Proc_Name'}
+  0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv
+  IF PWnd{'Proc_Name'} THEN 0{PROP:Text}=PWnd{'Proc_Name'} &' - '& 0{PROP:Text}. !Tpl Procedure Name
   IF Format_ListF THEN ?ListF{PROP:Format}=Format_ListF.
   LineHt(?ListF)
   ?ListF{PROPSTYLE:FontName,1}='Wingdings 2'
