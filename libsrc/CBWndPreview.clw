@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 04-12-21.0916')
+VersionWndPrv EQUATE('WndPrv 04-13-21.1355')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -5407,8 +5407,13 @@ FromP LONG
 PROP:FromPtr  EQUATE(7A0EH) !ABLLIST.INT &= IMappedListContents ? 0800xxxxH usually, 7C98h also an II ptr?
 PROP:FromQRef EQUATE(7A23H) !Showed up in 13505 = &QUEUE unless no FROM(Q) then ?= Interface for WB see 0800xxxxh
   CODE
-  IF CList.FromIsText(PWnd$ListFEQ{PROP:From}) THEN EXIT. ; IF PWnd$ListFEQ{PROP:VLBval}>0 THEN Message('VLB') ; EXIT.
-  Val=PWnd$ListFEQ{'FromWho'} ; IF ~Val THEN Val='From(Q)'. ; FromWho=CLIP(Val) 
+  IF CList.FromIsText(PWnd$ListFEQ{PROP:From}) THEN EXIT.
+  IF PWnd$ListFEQ{PROP:VLBval}>0 THEN
+     MESSAGE('LIST is a VLB. If this is a Preview the Queue was replaced by CB VLB Preview.'&|
+     '||For a LIST From(Queue) press Shift when clicking the Preview button, then |hold down Shift until the preview appears.','Virtual List Box')
+     EXIT
+  END
+  Val=PWnd$ListFEQ{'FromWho'} ; IF ~Val THEN Val='From(Q)'. ; FromWho=CLIP(Val)
   DO MoreHeadRtn ; ?LIST:FrmFldQ{PROPLIST:Header,3}=FromWho
   IF FromQ&=NULL THEN 
      FromA=PWnd$ListFEQ{'FromQ'}
