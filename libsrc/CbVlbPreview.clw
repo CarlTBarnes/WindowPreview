@@ -13,6 +13,7 @@
 ! 09-Apr-2021   Muliple LISTs. Turn off Mark. Added Tree Click2 then commented. Negative Samples.
 ! 11-Apr-2021   Prop:MARK() implemented with FromQ
 ! 12-Apr-2021   Data Window shows Column Format string at bottom
+! 14-Apr-2021   Popup add Upper/Lower Column, About
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
@@ -22,6 +23,7 @@ DbugQs EQUATE(0)
 !DbugPrv CbWndPreviewClass    
     MAP
 ChrCount PROCEDURE(STRING Text2Scan, STRING ChrList),LONG
+AboutVlb PROCEDURE()
     END
 COLOR_C_FG  EQUATE(COLOR:Maroon) ! * Text Color like a Red Shirt washed in HOT Water
 COLOR_C_BG  EQUATE(0FAFAFFH)     ! * Back Pinkish White
@@ -210,7 +212,7 @@ TimeNow LONG
   LOOP InX=1 TO 5
         !v1 ListFEQ{PROP:IconList,InX}=CHOOSE(InX,ICON:Print,ICON:Copy,ICON:Cut,ICON:Paste,ICON:Save)
         ListFEQ{PROP:IconList,InX}=CHOOSE(InX,'~CheckOn.ico','~CheckOff.ico',ICON:Print,ICON:Copy,ICON:Paste,ICON:Save)
-  END  !TODO Add CheckOn.ico Off.ico from Images, and POPUP() offer option to make Icon Check
+  END
   PRAGMA('link(CheckOn.ico)') ; PRAGMA('link(CheckOff.ico)')
 
   RETURN RECORDS(ColQ)
@@ -449,6 +451,7 @@ DataGrp  GROUP(CbVlbDataQueueType),PRE(DataG). !VLB may change DataQ so keep Gro
 PopNo    SHORT
 ClrMods  PSTRING(4)
 ClrIcon  BYTE
+UpLow    BYTE
 DBugPop  PSTRING(32)
     CODE
     CASE EVENT()
@@ -490,21 +493,26 @@ PopupRtn ROUTINE
                    '|-' & |
                    '|All Colors * Y Z' & |      !#4
                 '}' & |
-              '|-|Remove All Icons' & |  !#5
+              '|-|Remove Icons' & |      !#5
                 '|Check Box Icons'  & |  !#6
-              '|-|Edit Data<9>Click 2' & DBugPop)  !#7 
+              '|-|UPPER Column|lower Column' & |  !#7 #8
+              '|-|Edit Column Data...<9>Click 2' & |  !#9 
+              '|-|About VLB Preview...' & DBugPop)  !#10 
     CASE PopNo
     OF  1 ; ClrMods='*'                   ! # 1  * Cell Colors
     OF  2 ; SELF.ClearYZ(255,255)         ! # 2  Y Cell Style
     OF  3 ; SELF.ClearYZ(1,254)           ! # 3  Z Column Style
     OF  4 ; SELF.ClearYZ(1,255) ; ClrMods='*'  ! # 4  All Colors * Y Z
     OF  5 ; ClrMods='IJ'                  ! # 5  Remove Icons
-    OF  6 ; ClrMods='IJ' ; ClrIcon=1      ! # 6  Icon
-    OF  7 ; DO EditRtn ; EXIT             ! # 7  Edit Data
+    OF  6 ; ClrMods='IJ' ; ClrIcon=1      ! # 6  Icon Checkbox
+    OF  7 ; UpLow=1 ; DO UpLoRtn          ! # 7  UPPER
+    OF  8 ; DO UpLoRtn                    ! # 8  Lower
+    OF  9 ; DO EditRtn ; EXIT             ! # 9  Edit Data 
+    OF 10 ; AboutVlb() ; EXIT
  COMPILE('!**DBugQ END**', DbugQs)
-    OF  8 ; DBugPrv.QueueReflection(ColQ,'ColumnQ')
-    OF  9 ; DBugPrv.QueueReflection(DataQ,'DataQ')
-    OF  10 ; IF NOT SELF.MarkQ &= NULL THEN DBugPrv.QueueReflection(SELF.MarkQ,'MarkQ').
+    OF  11 ; DBugPrv.QueueReflection(ColQ,'ColumnQ')
+    OF  12 ; DBugPrv.QueueReflection(DataQ,'DataQ')
+    OF  13 ; IF NOT SELF.MarkQ &= NULL THEN DBugPrv.QueueReflection(SELF.MarkQ,'MarkQ').
  !**DBugQ END**
     ELSE  ; EXIT
     END
@@ -522,6 +530,13 @@ ClrRtn ROUTINE
         END
         PUT(DataQ)
     END
+UpLoRtn ROUTINE
+    LOOP X=1 TO RECORDS(DataQ)
+        GET(DataQ,X) 
+        IF NOT (DataQ.ColNo=QFieldNo AND DataQ.PicType='s') THEN CYCLE. 
+        DataQ.DataText=CHOOSE(UpLow=1,UPPER(DataQ.DataText),lower(DataQ.DataText))
+        PUT(DataQ)
+    END    
 EditRtn ROUTINE
     DATA
 Txt STRING(255)
@@ -640,6 +655,7 @@ B LONG,DIM(4),AUTO
     N+=1 ; P[N]='Manchester by the Sea'         !Carpentersville
     N+=1 ; P[N]='Manchester by the Sea, MA 01944'
     N+=1 ; P[N]='Massachussetts'
+    N+=1 ; P[N]='(800) 123-4567 1234'
     N+=1 ; P[N]='-|Nnnnn Nnnnn ...'     ; D[N]=ALL('Nnnnn ',255)
     N+=1 ; P[N]='12345 67890 ...'       ; D[N]=ALL('12345 67890 ',255)
     N+=1 ; P[N]='1234567890...'         ; D[N]=ALL('1234567890',255)
@@ -649,6 +665,7 @@ B LONG,DIM(4),AUTO
     N+=1 ; P[N]=sAtoZ                   ; D[N]=ALL(sAtoZ,255)
     N+=1 ; P[N]=QikBrownFox             ; D[N]=ALL(QikBrownFox,255)
     N+=1 ; P[N]=QikBrownCap             ; D[N]=ALL(QikBrownCap,255)
+    !18
     LOOP X=1 TO N
         PopMenu=CHOOSE(X=1,'',PopMenu&'|') & P[X]
         IF ~D[X] THEN
@@ -733,3 +750,19 @@ VlbCls  CbVlbPreviewClass
     END
     DISPLAY
     RETURN
+!----------
+AboutVlb PROCEDURE()
+  CODE
+  MESSAGE('VLB Preview List by Carl Barnes 2021' & |
+     '    ----    https://github.com/CarlTBarnes/WindowPreview'&|
+     '||The generated Clarion Preview Window often has problems with List '&|
+     'modifiers and random sample data that is not useful.'&|
+     '|CbVlbPreview Class changes the list to be supplied by a VLB that '&|
+     'handles all modifiers correctly. It provides sample data'&|
+     '|to show the maximum that can be displayed. Right-click on the List for '&|
+     'a Popup with features.'&|
+     '||VLB Preview happens due to a WindowProeviewer.inc file in your '&|
+     'LibSrc that includes the CbVlbPreview.INC file.'&|
+     '||To see the preview LIST From(Queue) press Shift when clicking the '&|
+     'Preview button, then hold it down until preview appears.', |
+     'CbVlbPreview.clw', ICON:Clarion,,,02h)    
