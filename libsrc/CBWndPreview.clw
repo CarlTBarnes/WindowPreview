@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 04-13-21.1355')
+VersionWndPrv EQUATE('WndPrv 04-17-21.1625')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -107,6 +107,7 @@ If1Clear            PROCEDURE(*? TFV, LONG AcceptFEQ),BOOL,PROC,PRIVATE
 GroupMoveChildren   PROCEDURE(LONG FromGroup, LONG ToControl, LONG XAdjust=0, LONG YAdjust=0),PRIVATE 
 KeyStateSCA         PROCEDURE(BYTE Shft1_Ctrl2_Alt4),BYTE,PRIVATE
 LineHt              PROCEDURE(LONG ListFEQ, SHORT LineHeightAdd=1),PRIVATE !List Prop:LineHeight +=1
+ListColumnPositions PROCEDURE(LONG ListFEQ, *QUEUE OutColumnPosQ)
 ListDrop            PROCEDURE(LONG ListFEQ, BYTE Down0_Up1=0),PRIVATE
 ListFormatDejaVu    PROCEDURE(LONG ListFEQ, STRING WindowID, BYTE Closing=0)
 ListHelpCW          PROCEDURE(LONG SetBtnTip=0),PRIVATE
@@ -993,7 +994,6 @@ Trick_DevTips_LIST_Rtn ROUTINE
 ColX        USHORT,AUTO
 InX         LONG,AUTO
 GrpNo       SHORT
-!GrpCnt      SHORT
 LastGrpNo   SHORT
 ColsInGrp   SHORT
 AlnCol      PSTRING(8)
@@ -4092,7 +4092,27 @@ KeyStateSCA PROCEDURE(BYTE S1C2A4)
 !-----------
 LineHt PROCEDURE(LONG F, SHORT L)
   CODE ; F{PROP:LineHeight}=L+F{PROP:LineHeight}
-!---------
+!------------------  
+ListColumnPositions PROCEDURE(LONG ListFEQ, *QUEUE PosQueue) 
+EipFEQ LONG,AUTO
+ListX  LONG,AUTO 
+ListY  LONG,AUTO 
+CPQ GROUP,PRE(),AUTO 
+P LONG,DIM(4)
+    END      
+C USHORT,AUTO
+  CODE 
+  SETTARGET(PWnd)
+  GETPOSITION(ListFEQ,ListX,ListY)
+  EipFEQ=CREATE(0,CREATE:Button)  
+  LOOP C=1 TO ListFEQ{PROPList:Exists,0}
+     ListFEQ{PROP:Edit,C}=EipFEQ 
+     GETPOSITION(EipFEQ,P[1],P[2],P[3],P[4]) ; ListFEQ{PROP:Edit,C}=0
+     P[1]+=ListX ; P[2]+=ListY
+     PosQueue=CPQ ; ADD(PosQueue)
+  END 
+  DESTROY(EipFEQ) ; SETTARGET()  
+  RETURN 
 ListDrop PROCEDURE(LONG F, BYTE U=0)  !0=Dn 1=Up
   CODE  !CB_SHOWDROPDOWN = &H14F
   PostMessage(PWnd$F{PROP:Handle},14Fh,U-1,0)
@@ -6402,10 +6422,10 @@ GridArea    &USHORT
 GridAreaS4  STRING(4) 
 GridAppend  BYTE,STATIC
 GridHVB  STRING('B'),STATIC
-GLWindow WINDOW('Guide and Grid Lines'),AT(,,156,194),GRAY,SYSTEM,FONT('Segoe UI',9),DOUBLE
+GLWindow WINDOW('Guide and Grid Lines'),AT(,,156,204),GRAY,SYSTEM,FONT('Segoe UI',9),DOUBLE
         GROUP(' Guide Lines '),AT(6,1,145,89),USE(?GRP1),BOXED
-            string('X / Y'),AT(58,10),USE(?GdHead1)
-            string('Width'),AT(101,10),USE(?GdHead2)
+            STRING('X / Y'),AT(58,10),USE(?GdHead1)
+            STRING('Width'),AT(101,10),USE(?GdHead2)
             PROMPT('&Horizontal:'),AT(13,22),USE(?GdH:Pmt)
             SPIN(@n_5),AT(49,21,40),USE(Poz:GuideXY[1,2]),HVSCROLL,RANGE(0,999),STEP(-1)
             SPIN(@n2),AT(102,21,20),USE(Poz:GuideWd[1]),RANGE(0,99)
@@ -6415,9 +6435,9 @@ GLWindow WINDOW('Guide and Grid Lines'),AT(,,156,194),GRAY,SYSTEM,FONT('Segoe UI
             CHECK('No G&uide Lines'),AT(13,53,,11),USE(?HideGuides),SKIP
             BUTTON,AT(127,30,10,10),USE(?GuideColorBtn),SKIP
             BUTTON('&Snap to PROMPT'),AT(13,68,66,14),USE(?SnapToFEQ)
-            BUTTON('&Snap to Window'),AT(82,68,58,14),USE(?SnapToWnd)
+            BUTTON('Snap to &Window'),AT(82,68,58,14),USE(?SnapToWnd)
         END
-        GROUP(' Grid Lines '),AT(6,95,146,79),USE(?GRP2),BOXED
+        GROUP(' Grid Lines '),AT(6,95,146,89),USE(?GRP2),BOXED
             PROMPT('&Increment:'),AT(13,107),USE(?GrdInc:Pmt)
             SPIN(@n2),AT(53,106,30),USE(Cfg:GridInc),HVSCROLL,RANGE(5,99)
             PROMPT('&Thick Every:'),AT(13,123),USE(?Grd5th:Pmt)
@@ -6434,18 +6454,19 @@ GLWindow WINDOW('Guide and Grid Lines'),AT(,,156,194),GRAY,SYSTEM,FONT('Segoe UI
             END
             BUTTON('Add &Grid'),AT(13,155,37,11),USE(?GridBtn)
             BUTTON('&Remove'),AT(57,155,37,11),USE(?GridOffBtn)
-            CHECK('A&ppend'),AT(105,155),USE(GridAppend),SKIP,TIP('Add Grid to Existing e.g. NE and SW')
+            BUTTON('|   &List   |<13,10>Columns'),AT(104,155,39,22),USE(?ListGridBtn),DISABLE,TIP('Grid Lines over List Columns')
+            CHECK('A&ppend'),AT(13,170),USE(GridAppend),SKIP,TIP('Add Grid to Existing e.g. NE and SW')
         END
-        BUTTON('&Close'),AT(117,177,35,13),USE(?CloseBtn),SKIP,STD(STD:Close)
-        CHECK('&Lines on Top of Controls'),AT(6,179),USE(?TRNControls),SKIP
+        BUTTON('&Close'),AT(117,187,35,13),USE(?CloseBtn),SKIP,STD(STD:Close)
+        CHECK('&Lines on Top of Controls'),AT(6,189),USE(?TRNControls),SKIP
     END
 SysMenuCls SysMenuClass
-Px LONG
+Px LONG !PWnd Pos
 Py LONG
 Pw LONG
 Ph LONG   
 PRsz SHORT
-Fx LONG
+Fx LONG !Feq Pos
 Fy LONG
 Fw LONG
 Fh LONG
@@ -6470,6 +6491,7 @@ GdY &LONG
     HideGuides&=SELF.GGLines.GdHide       ; ?HideGuides{PROP:Use}=HideGuides
     ?GridColorBtn{PROP:Color}=Cfg:GridClr 
     ?SnapToFEQ{PROP:Text}='&Snap to ' & FeqTypeName ; ?SnapToFEQ{PROP:Tip}='Snap Guidelines to control: ' & FeqName &' '& CLIP(FeqTypeName) &' '& CLIP(FeqName) &' '& FEQ
+    IF PWnd$FEQ{PROP:Type}=CREATE:List AND PWnd$FEQ{PROP:Drop}=0 THEN ENABLE(?ListGridBtn).
     DO StartRtn ; DO SetPosition_Poz2PreviewRtn
     ACCEPT
       CASE ACCEPTED()
@@ -6481,6 +6503,7 @@ GdY &LONG
       OF ?GridColorBtn  ; IF ~COLORDIALOG('Select Grid Line Color', Cfg:GridClr) THEN CYCLE.  ; ?GridColorBtn{PROP:Color}=Cfg:GridClr ; SELF.ConfigPut(Cfg:GridClr)
       OF ?GridAreaS4 ; GridArea=GridAreaS4 ;  ?{PROP:Tip}='GridAreaS4=' & GridAreaS4 &'  GridArea=' & GridArea
       OF ?TRNControls ; DO TRNControlsRtn ; CYCLE 
+      OF ?ListGridBtn ; DO ListGridRtn ; CYCLE 
       END        
       CASE EVENT()
       OF EVENT:NewSelection ; POST(EVENT:Accepted,?)  !Spin 
@@ -6502,7 +6525,7 @@ BX2  LONG
 BY1  LONG
 BY2  LONG
     CODE   
-  IF ~GridAppend AND RECORDS(GridQ) THEN DO GridOffRtn.
+  IF ~GridAppend THEN DO GridOffRtn.
   IF Cfg:GridInc < 5 THEN Cfg:GridInc=5.
   Bx1=CHOOSE(GridAreaS4[1],0,GdX,Pw) ; Bx2=CHOOSE(GridAreaS4[3],0,GdX,Pw)
   By1=CHOOSE(GridAreaS4[2],0,GdY,Ph) ; By2=CHOOSE(GridAreaS4[4],0,GdY,Ph)
@@ -6521,11 +6544,28 @@ Grid1Rtn ROUTINE
    SETPOSITION(GdFEQ,Fx,Fy,0 ,Fh) 
   END 
   IF C AND Cfg:Grid5th AND C % Cfg:Grid5th=0 THEN GdFEQ{PROP:LineWidth}=2. ; C+=1 
- ! IF PRsz THEN GdFEQ{PROP:Full}=1.  TODO when???
   GdFEQ{PROP:Color}=Cfg:GridClr ; UNHIDE(GdFEQ)
-  ADD(GridQ,GridQ.LnFEQ)  
+  ADD(GridQ,GridQ.LnFEQ) 
 GridOffRtn ROUTINE
+  IF ~RECORDS(GridQ) THEN EXIT.
   SETTARGET(PWnd) ; LOOP GX=1 TO RECORDS(GridQ) ; GET(GridQ,GX) ; DESTROY(GridQ.LnFEQ) ; END ; FREE(GridQ) ; SETTARGET()
+!----------
+ListGridRtn ROUTINE
+  DATA
+ColPozQ QUEUE,PRE()
+ClmX LONG
+ClmY LONG
+ClmW LONG
+ClmH LONG
+     END
+  CODE
+  IF ~GridAppend THEN DO GridOffRtn.
+  ListColumnPositions(FEQ,ColPozQ) ; IF ~RECORDS(ColPozQ) THEN EXIT.
+  SETTARGET(PWnd)   ; GX=2 ; Fy=0 ; Fh=Ph
+  LOOP X=1 TO RECORDS(ColPozQ)
+     GET(ColPozQ,X) ; C=0 ; Fx=ClmX ; DO Grid1Rtn
+  END               ; C=0 ; Fx=ClmX+ClmW ; DO Grid1Rtn
+  SETTARGET()
 !---------------
 SnapToFEQRtn ROUTINE
  DATA
@@ -6587,7 +6627,7 @@ TRNControlsRtn ROUTINE
        F{PROP:TRN}=''
     END 
   END ; SETTARGET() 
-  EXIT         
+  EXIT  
 !=============  Event Logging ============= 06/26/20
 CBWndPreviewClass.EvtLogStart PROCEDURE(BYTE Confirm=0)
   CODE           !e.g. WndPrv_EventLog_20-06-26_070345.txt
