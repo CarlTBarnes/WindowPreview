@@ -691,7 +691,7 @@ CbVlbAllPreviewClass.Destruct  PROCEDURE()
 Ndx USHORT,AUTO
     CODE
     IF SELF.VlbClassQ &= NULL THEN RETURN.
-    LOOP Ndx=RECORDS(SELF.VlbClassQ) TO 1 BY 1
+    LOOP Ndx=RECORDS(SELF.VlbClassQ) TO 1 BY -1
         GET(SELF.VlbClassQ,Ndx)
         DISPOSE(SELF.VlbClassQ.VlbCls)
     END
