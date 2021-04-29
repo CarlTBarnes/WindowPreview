@@ -1674,7 +1674,7 @@ A   LONG,DIM(4)
     SELF.PropQAdd(PQ, PROP:Type, 'Type', FeqTypeName )  
     PQ:Name=' At Pos XYWH' ; PWnd{PROP:Pixels}=0
     LOOP 2 TIMES
-        GETPOSITION(PWnd,A[1],A[2],A[3],A[4])
+        GETPOSITION(FEQ,A[1],A[2],A[3],A[4])
         SELF.PropQAdd(PQ,PROP:At, PQ:Name, A[1] &','& A[2] &' x '& A[3] &','& A[4] & |
                                    '  BottomX,RightY=' & A[1]+A[3] &','& A[2]+A[4] & CHOOSE(~Feq{PROP:Full},'','  FULL') )    
         PQ:Name=CLIP(PQ:Name) & '-Pixels' ; PWnd{PROP:Pixels}=1
