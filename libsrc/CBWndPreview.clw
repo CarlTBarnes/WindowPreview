@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 06-12-21.0111')  !11.1
+VersionWndPrv EQUATE('WndPrv 07-07-21.1708')  !11.1
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -6673,7 +6673,7 @@ E USHORT
   CODE
   LOOP E=1 TO 400h
     CASE E
-    OF 1 TO  1Fh OROF 101h TO 101h OROF 200h TO 250h  OROF 400h-1   !Skip 102h EVENT:Selecting too much
+    OF 1 TO  1Fh OROF 101h TO 102h OROF 200h TO 250h  OROF 400h-1   !Skip 102h EVENT:Selecting too much?
       IF UnReg THEN UNREGISTER(E,ADDRESS(SELF.EvtLogTakeEvt),ADDRESS(SELF),SELF.WndRef) |
                ELSE   REGISTER(E,ADDRESS(SELF.EvtLogTakeEvt),ADDRESS(SELF),SELF.WndRef).
     END
