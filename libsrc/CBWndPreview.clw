@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 07-07-21.1708')  !11.1
+VersionWndPrv EQUATE('WndPrv 07-27-21.1635')  !11.1
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -2716,7 +2716,7 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
         ENTRY(@s64),AT(24,119,88,11),USE(Poz:Picture),DISABLE,TIP('Clear to reset to original picture'),DISABLE
         PROMPT('Value:'),AT(3,136),USE(?EntryV:Pmt)
         ENTRY(@s255),AT(24,135,,11),FULL,USE(EntryV),TIP('Change ENTRY Value to try differen' & |
-                't sizes')
+                't data')
         TEXT,AT(2,3,,11),FULL,USE(B4Waz:AtCODE),SKIP,FONT('Consolas'),COLOR(COLOR:BTNFACE), |
                 TIP('Before AT()'),SINGLE
         TEXT,AT(2,16,,11),FULL,USE(Poz:AtCODE),SKIP,FONT('Consolas'),COLOR(COLOR:BTNFACE), |
@@ -2734,7 +2734,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     IsENTRY=INLIST(FeqTypeNo,CREATE:Entry,CREATE:Combo,CREATE:Spin,CREATE:SString)
     IsLINE=INLIST(FeqTypeNo,CREATE:Line,CREATE:box,CREATE:ellipse)
     IsLIST=INLIST(FeqTypeNo,CREATE:List,CREATE:Combo,CREATE:DropList,CREATE:DropCombo)
-        IF IsLIST=1 THEN IsDROP=PWnd$FEQ{PROP:Drop}. !Combo won't drop
+        IF IsLIST THEN IsDROP=PWnd$FEQ{PROP:Drop}.
     IsTEXT=INLIST(FeqTypeNo,CREATE:Text,CREATE:singleline) !na CREATE:rtf
     IsSHEET=CHOOSE(FeqTypeNo=CREATE:sheet)
     IsSTRING=INLIST(FeqTypeNo,CREATE:String,CREATE:sString) 
@@ -2979,7 +2979,14 @@ S1QWindowOpenRtn ROUTINE
        END
     END 
     IF IsENTRY THEN 
-       IF Poz:Picture THEN ENABLE(?Poz:Picture).
+       IF Poz:Picture THEN ENABLE(?Poz:Picture).  
+       IF FeqTypeNo=CREATE:Combo AND IsDROP THEN !Combo move @Pic and Value to fit ?Group:LIST
+          ?Poz:Picture{PROP:Width}=20
+          ?Poz:Picture{PROP:YPos}=?EntryV{PROP:YPos}
+          ?Picture:Pmt{PROP:YPos}=?EntryV:Pmt{PROP:YPos} ; HIDE(?EntryV:Pmt)
+          ?EntryV{PROP:XPos}=?Poz:Picture{PROP:XPos}+?Poz:Picture{PROP:Width}+4
+          ?EntryV{PROP:Tip}='Combo Entry value' ; ?Poz:Picture{PROP:Tip}='Combo @Picture'
+       END
     ELSE 
        HIDE(?Poz:Picture) ; HIDE(?Picture:Pmt)
     END
@@ -4125,9 +4132,10 @@ C USHORT,AUTO
   END 
   DESTROY(EipFEQ) ; SETTARGET()  
   RETURN 
-ListDrop PROCEDURE(LONG F, BYTE U=0)  !0=Dn 1=Up
+ListDrop PROCEDURE(LONG Feq, BYTE RollUp=0)  !0=Drop 1=Up
   CODE  !CB_SHOWDROPDOWN = &H14F
-  PostMessage(PWnd$F{PROP:Handle},14Fh,U-1,0)
+  IF PWnd$Feq{PROP:Type}=CREATE:Combo THEN Feq=PWnd$Feq{PROP:ButtonFeq}. !COMBO must Post to Button
+  PostMessage(PWnd$Feq{PROP:Handle},14Fh,1-RollUp,0)  
 ListHelpCW PROCEDURE(LONG BtnTip=0)
 Nm PSTRING(64),DIM(12)
 Hlp PSTRING(64),DIM(12)
