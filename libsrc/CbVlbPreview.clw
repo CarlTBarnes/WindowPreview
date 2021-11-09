@@ -14,6 +14,7 @@
 ! 11-Apr-2021   Prop:MARK() implemented with FromQ
 ! 12-Apr-2021   Data Window shows Column Format string at bottom
 ! 14-Apr-2021   Popup add Upper/Lower Column, About
+! 09-Nov-2021   FROM('One|#1') PROP:From leave as is
 !-------------------------------------------------------------------------
 
     INCLUDE('KEYCODES.CLW'),ONCE
@@ -76,7 +77,7 @@ CbVlbPreviewClass.Destruct PROCEDURE()
 CbVlbPreviewClass.Init PROCEDURE(LONG ListFEQ, LONG RowCount=0)
 K BYTE,AUTO
     CODE
-    IF ~ListFEQ{PROP:Format} THEN RETURN.
+    IF ~ListFEQ{PROP:Format} OR ListFEQ{PROP:From} THEN RETURN.
     SELF.FEQ=ListFEQ
     SELF.Items=ListFEQ{PROP:Items} 
     IF SELF.Items<1 THEN SELF.Items=9. !List Height fits header only
@@ -710,7 +711,7 @@ FEQ LONG,AUTO
         OF CREATE:list OROF CREATE:combo
         ELSE ; CYCLE
         END
-        IF ~FEQ{PROP:Format} THEN CYCLE.
+        IF ~FEQ{PROP:Format} OR FEQ{PROP:From} THEN CYCLE.
         CLEAR(SELF.VlbClassQ)
         SELF.VlbClassQ.ListFEQ=FEQ
         SELF.VlbClassQ.Fmt=FEQ{PROP:Format}
