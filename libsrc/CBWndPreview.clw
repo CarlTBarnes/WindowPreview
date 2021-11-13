@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 11-13-21.1054')  !11.1
+VersionWndPrv EQUATE('WndPrv 11-13-21.1107')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -2098,6 +2098,9 @@ L  LONG,AUTO
 Val STRING(255),AUTO 
 ValLng LONG,AUTO
 SysOrPrt BYTE(1) 
+SystemOrPrinter PSTRING(8),AUTO
+Prop_:_ PSTRING(11),AUTO
+Object_Prop_ PSTRING(40),AUTO
 AllProp BYTE
 FindCls CBLocateCls
 FindTxt STRING(64),STATIC 
@@ -2118,7 +2121,7 @@ Window WINDOW('SYSTEM / PRINTER Properties'),AT(,,250,250),GRAY,SYSTEM,FONT('Seg
         BUTTON('&Find'),AT(2,18,25,11),USE(?FindNext),SKIP
         BUTTON('Pre&v'),AT(191,18,26,11),USE(?FindPrev),SKIP
         LIST,AT(0,33),FULL,USE(?LIST:PQ),VSCROLL,FONT('Consolas',10),FROM(PQ),FORMAT('27L(3)|FM~Equa' & |
-                'te~L(1)@s5@80L(2)|FM~Property~@s32@?20L(2)F~Value~@s255@'),ALRT(DeleteKey)
+                'te~L(1)@s5@80L(2)|FM~Property~@s32@?20L(2)F~Value~@s255@'),ALRT(DeleteKey),ALRT(CtrlC)
     END
 SysMenuCls SysMenuClass
 SortCls CBSortClass    
@@ -2141,16 +2144,25 @@ SortCls CBSortClass
     OF ?ScanBtn ; DISABLE(?) ; DO ScanRtn 
     OF ?SysMetBtn ; HIDE(0) ; SELF.SystemMetrics() ; UNHIDE(0)
     OF ?FontBtn ; DO FontRtn
-    OF ?HelpBtn ; GET(PQ,CHOICE(?LIST:PQ)) ; HelpCW(PQ:Name)
+    OF ?HelpBtn ; GET(PQ,CHOICE(?LIST:PQ)) ; HelpCW(CHOOSE(SysOrPrt=1,PQ:Name,Prop_:_ & PQ:Name))
     END
     IF FIELD()=?LIST:PQ THEN 
        GET(PQ,CHOICE(?LIST:PQ))
+       PQ:Name=Prop_:_ & PQ:Name
+       Object_Prop_ = SystemOrPrinter &'{{'& CLIP(PQ:Name) &'}'
        CASE EVENT()
-       OF EVENT:AlertKey ; IF KEYCODE()=DeleteKey THEN DELETE(PQ).
+       OF EVENT:AlertKey 
+          CASE KEYCODE()
+          OF DeleteKey ; DELETE(PQ)
+          OF CtrlC ; SetClipboard(Object_Prop_)
+          END 
        OF EVENT:NewSelection
-          IF KeyCode()=MouseLeft2 THEN
-             PropViewWindow('View SYSTEM '& PQ:Name, PQ, |
+          CASE KeyCode()
+          OF MouseLeft2
+             PropViewWindow('View '& SystemOrPrinter &' '& PQ:Name, PQ, |
                             CHOOSE(PQ:EqtLong <1, PQ:Value, CHOOSE(SysOrPrt=1,SYSTEM{PQ:EqtLong},PRINTER{PQ:EqtLong})) )
+          OF MouseRight ; X=POPUP('Copy Property<9>Ctrl+C|Copy Value|Copy Line') 
+                          IF X THEN SETCLIPBOARD(CHOOSE(X,Object_Prop_,PQ:Value,SystemOrPrinter &' '& PQ:EqtHex &' '& CLIP(PQ:Name) &' '& PQ:Value)).
           END
        OF EVENT:HeaderPressed ; SortCls.HeaderPressed()    
        END
@@ -2168,7 +2180,7 @@ CP STRING('7B00Devmode 7B01Paper 7B02PaperHeight 7B03PaperWidth 7B04Percent 7B05
   '7B28Device 7B29Port 7B2AContext 7B2BGenerateAll 7B2CExtend 7B2DSupportCopies 7B2ESupportCollate ')
 P7Q Parse7QType     
   CODE     
-  EquateXStringParse(P7Q,4,CP)
+  EquateXStringParse(P7Q,4,CP) ; Prop_:_='PropPrint:' ; SystemOrPrinter='PRINTER'
   LOOP X=1 TO RECORDS(P7Q) ; GET(P7Q, X)
     PE=P7Q:EqtLong
     Val=PRINTER{PE} ; IF ~Val AND AllProp THEN Val='<9>'. ; IF ~Val THEN CYCLE.
@@ -2195,7 +2207,7 @@ FntCat PSTRING(9)
 FP  LONG
 P7Q Parse7QType
   CODE     
-  EquateXStringParse(P7Q,4,CP)
+  EquateXStringParse(P7Q,4,CP) ; Prop_:_='PROP:'; SystemOrPrinter='SYSTEM'
   LOOP X=1 TO RECORDS(P7Q) ; GET(P7Q, X)
       PE=P7Q:EqtLong
       Val=SYSTEM{PE} ; IF ~Val AND AllProp THEN Val='<9>'. ; IF ~Val THEN CYCLE.
