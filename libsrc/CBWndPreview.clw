@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 07-27-21.1635')  !11.1
+VersionWndPrv EQUATE('WndPrv 11-13-21.1054')  !11.1
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -93,6 +93,7 @@ ClaListColResizable PROCEDURE(WINDOW WndRef, LONG ListFEQ)
 ClaPicture          PROCEDURE(LONG CtrlFEQ, LONG CtrlType),STRING,PRIVATE
 ClaSTDprop          PROCEDURE(LONG PropStd),STRING,PRIVATE
 
+HaltButton          PROCEDURE(LONG BtnFEQ)
 HelpCW              PROCEDURE(STRING HelpTxt, BYTE IsPROP=1),PRIVATE
 Hex8                PROCEDURE(LONG LongNum, SHORT Digits=0, BYTE AddH=1,BYTE SpaceAt5=0),STRING,PRIVATE
 Binary8             PROCEDURE(LONG  Num),STRING,PRIVATE
@@ -191,6 +192,7 @@ GloT:Hide          BYTE(1)      !Hide before Open(w)
             END
 Globals     GROUP,PRE(),PRIVATE
 Glo:IsPreviewEXE  BYTE         !Is WinPreview or Test EXE?
+Glo:IsDebugBuild  BYTE
 Glo:Built         PSTRING(38)
 AtWndReflect      LONG,DIM(4)  !Just W,H
 AtCtrlProps       LONG,DIM(4)  !For
@@ -304,6 +306,7 @@ CBWndPreviewClass.Construct        PROCEDURE()
     CODE
     SELF.FeqNmQ &= NEW(FeqNameQType) ; SELF.GridQ &= NEW(GridQType)
     SELF.Glo_IsPreviewEXE &= Glo:IsPreviewEXE ; SELF.Glo_Built &= Glo:Built ; SELF.GloT_Caption &= GloT:Caption
+?   Glo:IsDebugBuild=1
     RETURN
 !---------------------------------------
 CBWndPreviewClass.Destruct PROCEDURE()
@@ -649,7 +652,7 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
                 '7C00h is PROP:Text - Defined Range 7200-7DFF<13,10><13,10>For {{''UserProp''} enter a leading <39> quote'), |
                 ALRT(EnterKey)
         BUTTON('...'),AT(533,13,13,12),USE(?SeeMorePickBtn),SKIP,TIP('Property Pick List')
-        BUTTON('&Halt'),AT(557,13,22,12),USE(?HaltBtn),SKIP
+        BUTTON('Halt'),AT(557,13,22,12),USE(?HaltBtn),SKIP,TIP('Halt, Assert or GPF. Not for Preview.')
         BUTTON,AT(586,13,12,12),USE(?CopyBtn),SKIP,ICON(ICON:Copy),TIP('Copy Field Q'),FLAT
         CHECK('Hide'),AT(175,2,26),USE(GloT:Hide),SKIP,TRN,FONT(,8),TIP('Hide this Window when open o' & |
                 'ther window')
@@ -764,7 +767,7 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?CopyBtn ; F=5 ; R=14 ; P=POPUPunder(?,'Visible List|Debug Queue|TabQ|-|FieldQ VLB View') ; IF P=2 THEN F=1 ; R=99.
                   IF P=4 THEN QueueViewListVLB(FieldQ,'FieldQ') ; CYCLE.
                   IF P<3 THEN SetClip2Queue(FieldQ,1,,'FldQ:',F,R) ELSE SetClip2Queue(TabQ).
-    OF ?HaltBtn ; HALT
+    OF ?HaltBtn ; HaltButton(?)
     OF ?HelpBtn ; GET(FieldQ,CHOICE(?ListF)) ; HelpCW(UPPER(ClaControlTypeName(FldQ:TypeNo)))
     OF ?LISTsBtn ; DO LISTsBtnRtn
     OF ?RightTip   ; DO MouseRightMenuRtn ; MouseRightSent=0  
@@ -2768,7 +2771,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
         OF Event:Rejected ; BEEP ; SELECT(?) ; CYCLE
         END
         CASE ACCEPTED()
-        OF ?HaltBtn ; HALT 
+        OF ?HaltBtn ; HaltButton(?)
         OF ?Cfg:ResizeSnapTo ; SELF.SnapToPreview() ; SELF.ConfigPut(Cfg:ResizeSnapTo)
         OF ?List:AlignQ ; Poz:ALCRDn=CHOICE(?List:AlignQ) ; GET(AlignQ,Poz:ALCRDn)
         OF ?Poz:ShJoin    ; Poz:ShHScroll=0
@@ -3489,7 +3492,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
         OF Event:Rejected ; BEEP ; SELECT(?) ; CYCLE
         END
         CASE ACCEPTED()
-        OF ?HaltBtn ; HALT 
+        OF ?HaltBtn ; HaltButton(?) 
         OF ?Cfg:ResizeSnapTo ; SELF.SnapToPreview() ; SELF.ConfigPut(Cfg:ResizeSnapTo)
         OF ?List:FrameQ ; Poz:FrmSDRN=CHOICE(?List:FrameQ) ; GET(FrameQ,Poz:FrmSDRN)
         OF ?SaveBtn   ; PWnd$Feq{PROP:Tip}=PWnd$Feq{PROP:Tip} &'<13,10>Before Resize: ' & CLIP(B4Waz:AtCODE) &'<13,10>After Resize: ' & CLIP(Poz:AtCODE)  
@@ -3730,6 +3733,16 @@ c CSTRING(80)
   IF ~F then return 'Window'. ; c=ClaFieldNameRTL(F)
   return choose(c<=' ','__Feq_'& F &'__',c)
 !------------------------------
+HaltButton PROCEDURE(LONG F)
+X LONG,AUTO
+Y LONG,AUTO
+AssertTxt PSTRING('~ASSERT - Requires Debug')
+ CODE
+? AssertTxt='ASSERT - Call Stack' 
+ IF GLO:IsPreviewEXE AND AssertTxt[1]='~' THEN HALT().
+ GETPOSITION(F,X,Y) ; IF F{PROP:InToolBar} THEN Y -= (0{PROP:ToolBar}){PROP:Height}.  
+ EXECUTE POPUP('HALT Program|-|'& AssertTxt &'|GPF',X+2,Y+2,1) ; HALT() ; ASSERT(0) ; PEEK(0,F) ; END
+!------------------------------
 HelpCW PROCEDURE(STRING HelpTxt, BYTE IsPROP)
 CWHlp CwHelpCls
 X LONG,AUTO
@@ -3756,21 +3769,13 @@ HxDig   SHORT,AUTO
     HX[4]=HEX[L[3]]
     HX[6]=HEX[L[2]]
     HX[8]=HEX[L[1]]
-    HX[9]='h'                      !   ~BAND(_Lng,0f0000000h)
-    IF Digits < 0 AND Digits > -8 !!AND HX[8]='0' THEN    !-4=4 minimum, 0 and -1 = 1 Digit Minimum  Negive is minimum
-       Digits = -1 * Digits 
-!       LOOP HxDig=8-Digits TO 1 BY -1 ; IF HX[HxDig]='0' THEN BREAK. ; END      
-       LOOP HxDig=0 TO 7-Digits ; IF HX[HxDig+1]<>'0' THEN BREAK. ; END 
-       HxDig=8-HxDig
-       
-  IF 0 and MESSAGE('Hx=' & Hx &'|Digits=' & Digits & '|HxDig='& HxDig &'<13,10>(8+HxDig)=' & 8-HxDig & |
-             '<13,10>BAND(Digits,2)=' & BAND(Digits,2) & |
-             '<13,10>BAND(HxDig,1)=' & BAND(HxDig,1) , 'Hex8',,'Continue |Halt',,MSGMODE:CANCOPY+MSGMODE:FIXEDFONT)=2 THEN HALT().
-
-                        !Want Even     but Not Even
-       IF HxDig < 8 AND ~BAND(Digits,1) AND BAND(HxDig,1) THEN HxDig+=1. !-2-4-6 return Even digits 
-!??? should I just do it for 2 or 4,        
-    ELSE    
+    HX[9]='h'
+    IF Digits < 0 AND Digits > -8 THEN    !-4=4 minimum, 0 and -1 = 1 Digit Minimum  Negive is minimum
+       Digits = -1 * Digits
+       LOOP HxDig=0 TO 7-Digits ; IF HX[HxDig+1]<>'0' THEN BREAK. ; END
+       HxDig=8-HxDig     !Want Even     but Not Even
+       IF HxDig < 8 AND ~BAND(Digits,1) AND BAND(HxDig,1) THEN HxDig+=1. !-2-4-6 return Even digits
+    ELSE
        HxDig=Digits 
     END
     IF HxDig < 1 OR HxDig > 8 THEN HxDig=8.
@@ -3783,10 +3788,9 @@ Binary8    PROCEDURE(LONG  Num)!,STRING
 D       USHORT(33)
 BS      STRING(33),AUTO
 BB      BYTE,DIM(32),OVER(BS) 
-    code 
-   ! IF ~Num THEN RETURN '0b'.
+    code
     BS[32:33]='0b'
-    LOOP WHILE Num 
+    LOOP WHILE Num
          D -= 1
          IF BAND(Num,1)
             BB[D]=31h
@@ -4773,7 +4777,7 @@ DoHide  BYTE,AUTO
    OF SMCmd_HideUnder ; DO HideUnderRtn     ; IF SysMnQ:DoinHide THEN DO MoveUnderRtn.    !HIDE Windows Under this One
    OF SMCmd_HidePWnd  ; DO HidePWndRtn
    OF SMCmd_MoveUnder ; DO MoveUnderRtn
-   OF   SMCmd_HaltThis  
+   OF   SMCmd_HaltThis
    OROF SMCmd_HaltCapt 
    OROF SMCmd_HaltALL ; DO TaskKillRtn
    OF SMCmd_RunAgain  ; RUN(COMMAND('0'))
@@ -4834,7 +4838,7 @@ Title   STRING(32)
   CODE
   IF ~GLO:IsPreviewEXE THEN
       IF 1=Message(COMMAND('0')&'||This is NOT a Preview EXE.||Do you really want to Halt It?','HALT',ICON:Hand,'Let Run|Halt It') THEN EXIT.
-  END 
+  END
   IF SMCmd_wParam=SMCmd_HaltThis THEN HALT().
   Tm8 = FORMAT(CLOCK(),@t05) &'00'
   BatFN='.\WinPreviewKill' & Tm8[1:4] &'-'& Tm8[5:8] &'.BAT'
@@ -5374,7 +5378,7 @@ SortPQCls CBSortClass
     OF ?ScanBtn ; ScanInclude=1-ScanInclude ; FREE(All7Q) 
                   MESSAGE('Extra Scan Props: ' & CHOOSE(~ScanInclude,'OFF','ON||PropList now includes undefined 7E34h=7E3Fh|Copy button "All Columns" is good way to see.'),'PropList Scan')
     OF ?HelpBtn ; ListHelpCW()
-    OF ?HaltBtn ; halt()
+    OF ?HaltBtn ; HaltButton(?)
     OF ?PROPBtn ; HIDE(0) ; SELF.ControlPROPs(ListFEQ,FeqTypeNo,FeqTypeName,FeqName) ; UNHIDE(0)
     of ?SizeBtn ; SELF.ResizeControl(ListFEQ,FeqTypeNo,FeqTypeName,FeqName)
     of ?ReFormatBtn ; SELF.ListReFORMAT(ListFEQ,FeqTypeNo,FeqTypeName,FeqName) 
@@ -6120,7 +6124,7 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     OF Event:Rejected ; BEEP ; SELECT(?) ; CYCLE
     END
     CASE ACCEPTED()
-    OF ?HaltBtn ; HALT 
+    OF ?HaltBtn ; HaltButton(?) 
     OF ?Cfg:ResizeSnapTo ; SELF.SnapToPreview() ; SELF.ConfigPut(Cfg:ResizeSnapTo)
     OF ?List:AlignDQ ; Poz:ClmALCRDnD=CHOICE(?List:AlignDQ) ; GET(AlignQ,Poz:ClmALCRDnD)
     OF ?List:AlignHQ ; Poz:ClmALCRDnH=CHOICE(?List:AlignHQ) ; GET(AlignHQ,Poz:ClmALCRDnH)
