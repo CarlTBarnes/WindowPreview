@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 11-13-21.1107')
+VersionWndPrv EQUATE('WndPrv 11-14-21.1530')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1726,7 +1726,11 @@ A   LONG,DIM(4)
              PQ:Value=Feq{PROP:IconList,X} ; IF ~PQ:Value THEN CYCLE. ; ClaIconEquate(PQ:Value)
              SELF.PropQAdd(PQ,PROP:IconList,'IconList,'& FORMAT(X,@n3),PQ:Value,,1) 
         END 
-    END    
+    END
+    IF FeqTypeNo=CREATE:Text
+       X=Feq{PROP:LineCount} ; SELF.PropQAdd(PQ,PROP:Line,'Line,1   ...',Feq{PROP:Line,1})
+       IF X>1 THEN SELF.PropQAdd(PQ,PROP:Line,'Line,'&X,Feq{PROP:Line,X}).
+    END
     DO PropHuntRtn  !Hunt thru a list of many properties
     SELF.Win32PropsAdd(PQ, FEQ{PROP:Handle}, FEQ, FeqTypeNo)     !Add Windows API properties
     EXIT
@@ -2555,7 +2559,7 @@ IsLIST  SHORT
 IsSHEET SHORT
 IsSTRING BYTE !1=Str 2=SStr
 IsTEXT  SHORT
-EntryV  STRING(255)  !prop:text
+EntryV  STRING(1024) !prop:text
 AlignQ QUEUE,PRE(AlnQ)
 Desc     STRING(8)
 ACode    PSTRING(8)
@@ -2576,17 +2580,21 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
             BUTTON('PV'),AT(93,1,14,12),USE(?PropsBtn),SKIP,TIP('PROP View')
             BUTTON('PE'),AT(109,1,14,12),USE(?PropEdBtn),SKIP,TIP('PROP Editor')
             BUTTON('LIST'),AT(125,1,21,12),USE(?LISTBtn),DISABLE,SKIP,TIP('PROPLIST Viewer')
-            BUTTON('<50>'),AT(149,14,12,12),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Under Windows to align under this one')
+            BUTTON('<50>'),AT(149,14,12,12),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Under Win' & |
+                    'dows to align under this one')
             LIST,AT(150,2,32,10),USE(Cfg:ResizeSnapTo),FONT(,8),TIP('How to Position Preview Window ' & |
                     'under the Resizer'),DROP(5,44),FROM('Right Snap|#1|Centr Snap|#2|Left Snap|#3|N' & |
                     'one|#9')
             BUTTON('F'),AT(31,14,13,12),USE(?FontBtn),SKIP,FONT(,10,,FONT:bold+FONT:italic),TIP('Font...')
             BUTTON('C'),AT(47,14,13,12),USE(?ColorBtn),SKIP,FONT(,10,COLOR:Red,FONT:bold), |
                     TIP('Pick Color PROPs')
-            BUTTON('<176>'),AT(63,14,13,12),USE(?GdLinesBtn),SKIP,FONT('Wingdings',14,Color:GrayText,FONT:bold),tip('Guide and Grid Lines')
-            BUTTON('<0a8h>'),AT(63+15,14,13,12),USE(?BoxItBtn),SKIP,FONT('Wingdings 2',14,COLOR:maroon),tip('Box in Red to find it on window')
+            BUTTON('<176>'),AT(63,14,13,12),USE(?GdLinesBtn),SKIP,FONT('Wingdings',14, |
+                    COLOR:GRAYTEXT,FONT:bold),TIP('Guide and Grid Lines')
+            BUTTON('<0a8h>'),AT(78,14,13,12),USE(?BoxItBtn),SKIP,FONT('Wingdings 2',14,COLOR:Maroon), |
+                    TIP('Box in Red to find it on window')
             BUTTON('Tip'),AT(93,14,17,12),USE(?SeeTipBtn),SKIP,TIP('See Control Tool Tip')
-            BUTTON('?'),AT(112,14,11,12),USE(?HelpBtn),KEY(F2Key),SKIP,FONT(,,,FONT:bold),TIP('Clarion Help on Control')
+            BUTTON('?'),AT(112,14,11,12),USE(?HelpBtn),KEY(F2Key),SKIP,FONT(,,,FONT:bold), |
+                    TIP('Clarion Help on Control')
             BUTTON('Test'),AT(125,14,21,12),USE(?TestBtn),SKIP
             BUTTON('G...'),AT(165,14,17,12),USE(?GradBtn),SKIP,TIP('GradientTypes')
         END
@@ -2629,14 +2637,16 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
                         '<10>Nudge it +1/-1 to get a List Height with no partial Lines showing.<13>' & |
                         '<10>Can set ?PROP:Items=?PROPItems at runtime to fo rnow partial lines.'), |
                         RANGE(1,999),STEP(1)
-                BUTTON('<47h>'),AT(363,46,12,11),USE(?DropBtn),DISABLE,SKIP,FONT('Wingdings 3',14),TIP('Drop the List'),FLAT, |
-                        TRN
+                BUTTON('<47h>'),AT(363,46,12,11),USE(?DropBtn),DISABLE,SKIP,FONT('Wingdings 3',14), |
+                        TIP('Drop the List'),FLAT,TRN
                 PROMPT('Drop:'),AT(381,48),USE(?DropCnt:Pmt),DISABLE,TRN
-                SPIN(@n2),AT(402,47,20,11),USE(Poz:DropCnt),DISABLE,RIGHT,TIP('LIST PROP:Drop'),RANGE(2,99),STEP(1)
+                SPIN(@n2),AT(402,47,20,11),USE(Poz:DropCnt),DISABLE,RIGHT,TIP('LIST PROP:Drop'), |
+                        RANGE(2,99),STEP(1)
                 PROMPT('Width:'),AT(427,48),USE(?DropWd:Pmt),DISABLE,TRN
-                SPIN(@n3),AT(450,47,22,11),USE(Poz:DropWd),DISABLE,RIGHT,TIP('LIST PROP:DropWidth'),RANGE(0,999),STEP(5)
+                SPIN(@n3),AT(450,47,22,11),USE(Poz:DropWd),DISABLE,RIGHT,TIP('LIST PROP:DropWidth'), |
+                        RANGE(0,999),STEP(5)
                 PROMPT('List Select:'),AT(363,61),USE(?Selectd:Pmt),TRN
-                SPIN(@n3),AT(402,60,20,11),USE(Poz:Selectd),RIGHT,TIP('LIST Selected'),RANGE(0,999),STEP(1)                        
+                SPIN(@n3),AT(402,60,20,11),USE(Poz:Selectd),RIGHT,TIP('LIST Selected'),RANGE(0,999),STEP(1)
             END
             GROUP,AT(360,70,115,12),USE(?Group:Line),HIDE
                 PROMPT('Line Width:'),AT(363,70),USE(?LineWd:Pmt)
@@ -2661,12 +2671,15 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
                 SPIN(@n4),AT(427,97,36,10),USE(Poz:StepTicks),HVSCROLL,RIGHT,RANGE(0,9999)
             END
         END
-        GROUP,AT(360,155,107,12),USE(?Group:Margin),HIDE
-            PROMPT('Margin L/R:'),AT(363,157),USE(?Margin:Pmt)
-            SPIN(@n-3),AT(404,156,22,11),USE(Poz:MarginL),RIGHT,TIP('TODO - PROP:TextLeftMargin -1=D' & |
+        GROUP,AT(360,147,107,24),USE(?Group:Margin),HIDE
+            PROMPT('Margin L/R:'),AT(363,149),USE(?Margin:Pmt)
+            SPIN(@n-3),AT(405,148,22,11),USE(Poz:MarginL),RIGHT,TIP('TODO - PROP:TextLeftMargin -1=D' & |
                     'efault -2=RTL'),RANGE(-2,999)
-            SPIN(@n-3),AT(430,156,22,11),USE(Poz:MarginR),RIGHT,TIP('TODO - PROP:TextRightMargin -1=' & |
+            SPIN(@n-3),AT(430,148,22,11),USE(Poz:MarginR),RIGHT,TIP('TODO - PROP:TextRightMargin -1=' & |
                     'Default -2=RTL'),RANGE(-2,999)
+            BUTTON('Text 1|2|3|'),AT(362,162,38,11),USE(?EntryVEq123Btn),SKIP,HIDE,TIP('Set TEXT to:' & |
+                    '<13,10>1<13,10>2<13,10>3...')
+            STRING('Line Height: #'),AT(408,164),USE(?TextLnHt)
         END
         CHECK('Window Resize'),AT(3,151,58),USE(Poz:WndResize),TIP('Make Window Resizable<13,10>With' & |
                 ' FULL allows sizing LIST or TEXT')
@@ -2707,7 +2720,8 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
             CHECK('NoSheet'),AT(251,81),USE(Poz:ShNoSheet),SKIP,TIP('No visible 3D Panel.<13,10>Tab ' & |
                     'Ear location and orientation reverses.')
             CHECK('Wizard'),AT(251,91),USE(Poz:ShWizard),SKIP,TIP('No Tab Ears')
-            CHECK('No Theme'),AT(251,101),USE(Poz:ShNoTheme),SKIP,TIP('No Visual Styles for SHEET<13,10>Also for LIST, must set before Accept loop')
+            CHECK('No Theme'),AT(251,101),USE(Poz:ShNoTheme),SKIP,TIP('No Visual Styles for SHEET' & |
+                    '<13,10>Also for LIST, must set before Accept loop')
             LIST,AT(251,112,42,10),USE(Poz:ShStyle),SKIP,TIP('PROP:TabSheetStyle visual style of the' & |
                     ' Tab Ears'),DROP(5),FROM('Defaut|#0|B & W|#1|Colored|#2|Squared|#3|Boxed|#4')
             BUTTON,AT(295,79,14,13),USE(?TabPickBtn),SKIP,ICON(ICON:Pick),TIP('Pick Tab to Show')
@@ -2724,14 +2738,14 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
                 BUTTON('L'),AT(173,83,10,11),USE(?BtnLO7),SKIP
                 BUTTON('l'),AT(189,83,10,11),USE(?BtnLI8),SKIP
                 BUTTON('A'),AT(173,108,10,11),USE(?BevAllEdgeBtn),SKIP,TIP('Set All Edges')
-                BUTTON('<170>'),AT(226,108,10,11),USE(?BevPopBtn),SKIP,TIP('Bevel edge pattern choices'),font('Wingdings 2')
+                BUTTON('<170>'),AT(226,108,10,11),USE(?BevPopBtn),SKIP,FONT('Wingdings 2'), |
+                        TIP('Bevel edge pattern choices')
             END
         END
         PROMPT('@Pic:'),AT(3,119),USE(?Picture:Pmt)
-        ENTRY(@s64),AT(24,119,88,11),USE(Poz:Picture),DISABLE,TIP('Clear to reset to original picture'),DISABLE
+        ENTRY(@s64),AT(24,119,88,11),USE(Poz:Picture),DISABLE,TIP('Clear to reset to original picture')
         PROMPT('Value:'),AT(3,136),USE(?EntryV:Pmt)
-        ENTRY(@s255),AT(24,135,,11),FULL,USE(EntryV),TIP('Change ENTRY Value to try differen' & |
-                't data')
+        ENTRY(@s255),AT(24,135,,11),FULL,USE(EntryV),TIP('Change ENTRY Value to try different data')
         TEXT,AT(2,3,,11),FULL,USE(B4Waz:AtCODE),SKIP,FONT('Consolas'),COLOR(COLOR:BTNFACE), |
                 TIP('Before AT()'),SINGLE
         TEXT,AT(2,16,,11),FULL,USE(Poz:AtCODE),SKIP,FONT('Consolas'),COLOR(COLOR:BTNFACE), |
@@ -2800,11 +2814,12 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
         OF ?Poz:Picture ; IF ~Poz:Picture THEN Poz:Picture=B4Waz:Picture. ; Poz:Picture=LEFT(Poz:Picture)
         OF ?EntryV   ; SETTARGET(PWnd)
                        IF IsENTRY OR IsTEXT THEN 
-                          CHANGE(FEQ,EntryV) 
-                       ELSE 
+                          CHANGE(FEQ,CHOOSE(~EntryVisQuoted,EntryV,UNQUOTE(EntryV)))
+                       ELSE
                           PWnd$FEQ{PROP:Text}=CHOOSE(~EntryVisQuoted,EntryV,UNQUOTE(EntryV))
                        END ; DISPLAY ; SETTARGET() ; CYCLE
-        OF ?BtnBO1 TO ?BtnLI8 ; BevCls.BtnClick(?) 
+        OF ?EntryVEq123Btn ; EntryV='1' ; LOOP X=2 TO 30 ; EntryV=CLIP(EntryV)&'<<13,10>'& X ; END ; POST(EVENT:Accepted,?EntryV)
+        OF ?BtnBO1 TO ?BtnLI8 ; BevCls.BtnClick(?)
         OF ?BevAllEdgeBtn     ; BevCls.AllBtn()
         OF ?BevPopBtn ; DO BevPopRtn
         OF ?SeeTipBtn ; Message(PWnd$FEQ{PROP:Tip},'Tip: ' & FEQ &' '& CLIP(FeqTypeName) & FeqName)
@@ -2967,7 +2982,9 @@ S1QWindowOpenRtn ROUTINE
              ?Poz:Selectd{PROP:YPos}=?Poz:DropWd{PROP:YPos}
           END    
     ELSIF IsENTRY OR IsText THEN
-          GroupMoveChildren(?Group:Margin,?Group:Spot1) ; UNHIDE(?Group:Margin)  !TODO a LIST can have Margins (I think)    
+          GroupMoveChildren(?Group:Margin,?Group:Spot1) ; UNHIDE(?Group:Margin)  !TODO a LIST can have Margins (I think)
+          IF IsText=1 THEN UNHIDE(?EntryVEq123Btn,?TextLnHt) ; ?TextLnHt{PROP:Text}='Line Height: ' & PWnd$FEQ{PROP:LineHeight}.
+          ?TextLnHt{PROP:TIP}='Set TEXT Height = (Line Height * Line Count) + 1 or 2'
     END
     IF IsDROP THEN ENABLE(?DropBtn,?Poz:DropWd) ELSE HIDE(?DropBtn,?Poz:DropWd).       
     IF IsSheet THEN 
@@ -2978,7 +2995,7 @@ S1QWindowOpenRtn ROUTINE
     ELSE
         HIDE(?Group:Sheet) ; HIDE(?Group:Bevel2) 
     END
-   
+    ?EntryV{PROP:Text}='@s1024'
     IF NOT(IsENTRY OR IsTEXT) THEN !Combo ISEntry=1
        EntryV=PWnd$FEQ{PROP:Text}
        IF INLIST(FeqTypeNo,CREATE:button,CREATE:prompt,CREATE:check,CREATE:state3,CREATE:radio)  !API CHECK RADIO allow 13,10
@@ -3032,7 +3049,8 @@ GetPositionOnceRtn ROUTINE !Setup the Initial Poz, Haz and Waz
     Poz:AngleSpin=Poz:Angle10/10  !in S1Q
     
     IF IsENTRY THEN Poz:Picture=FEQ{PROP:Text}.
-    IF IsENTRY OR IsTEXT THEN EntryV=CONTENTS(FEQ).  !SString needs Contents
+    IF IsENTRY OR IsTEXT=2 THEN EntryV=CONTENTS(FEQ).  !SString needs Contents
+    IF IsTEXT=1 THEN EntryV=QUOTE(CLIP(CONTENTS(FEQ))) ; EntryVisQuoted=1.  !TEXT not Single
     IF IsLIST THEN Poz:Items=Feq{PROP:Items} ; Poz:LineHt=Feq{PROP:LineHeight} ; Poz:Selectd=PWnd$FEQ{PROP:Selected}.
     IF IsDROP THEN Poz:DropCnt=PWnd$FEQ{PROP:Drop} ; Poz:DropWd =PWnd$FEQ{PROP:DropWidth}.
     LOOP X=1 TO 5     !Check Align e.g. PROP:Left or if NONE the Default 
