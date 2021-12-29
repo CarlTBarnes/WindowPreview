@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 12-28-21.0849')
+VersionWndPrv EQUATE('WndPrv 12-29-21.0953')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -36,8 +36,8 @@ DTypeNo  BYTE
 Size     LONG
 HowMany  USHORT               
 HasValue BYTE !An ANY can take
-DValue   STRING(255)
 NameAttr STRING(255) !12/28/21 Who/NAME() if has Pipes
+DValue   STRING(255)
       END
 FrmFldQtype QUEUE,TYPE
 Column   STRING(3)
@@ -5184,12 +5184,12 @@ RefWnd WINDOW('Class Reflect'),AT(,,430,220),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),
         BUTTON('Pre&v'),AT(191,2,26,12),USE(?FindPrev),SKIP
         BUTTON('&Copy'),AT(233,2,30,12),USE(?CopyBtn),SKIP,TIP('Copy Declaration')
         BUTTON('&Gen ='),AT(268,2,30,12),USE(?GenEqBtn),SKIP,TIP('Generate Field= Lines to Clipboard')
-        BUTTON('&View Queue'),AT(303,2,50,12),USE(?ViewQBtn),SKIP,TIP('View Queue Records')
+        BUTTON('&View Queue Records'),AT(341,2,,12),USE(?ViewQBtn),SKIP
         LIST,AT(1,18),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ), |
                 FORMAT('18C|FM~Fld<13,10>No.~@n3@115L(2)|FM~Field Name (Who)~@s64@?61L(2)|FM~Type~C(' & |
                 '0)@s16@20R(6)|FM~Type<13,10>No.~C(0)@n3@30R(2)|FM~Size~C(0)@n10@20R(6)|FM~How<13>' & |
-                '<10>Many~L(2)@n4@25L(6)|M~Has<13,10>Value~C(0)@n3@60L(2)|M~Data Value~@s255@135L(2)' & |
-                '~Name()~@s255@'),ALRT(DeleteKey)
+                '<10>Many~L(2)@n4@25L(6)|M~Has<13,10>Value~C(0)@n3@40L(2)|M~Name(||)~@s255@135L(2)~D' & |
+                'ata Value~@s255@'),ALRT(DeleteKey)
     END
 X LONG,AUTO
 L BYTE,AUTO
