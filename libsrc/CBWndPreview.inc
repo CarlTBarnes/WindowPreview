@@ -98,7 +98,7 @@ QueueReflection PROCEDURE(*QUEUE ListFromQueue, STRING NameOfQueue, BYTE ViewQRe
 ClassReflection PROCEDURE(*GROUP ClassRef, STRING NameOfClass) !03/14/21
 GroupReflection PROCEDURE(*GROUP GroupRef, STRING NameOfGroup) !03/14/21
 FileReflection  PROCEDURE(*FILE FileRef, <STRING NameOfFile>)  !View File RECORD
-ShowReflection  PROCEDURE(Window W, SIGNED SelectedLast)  !MG Call into .Reflection
+ShowReflection  PROCEDURE(Window W, SIGNED SelectedLast)  !MG Call into .Reflection of Window
 InitWorker      PROCEDURE(Window W) 
 Glo_IsPreviewEXE  &BYTE    !&=Glo:IsPreviewEXE
 Glo_Built         &PSTRING !&=Glo:Built (38)

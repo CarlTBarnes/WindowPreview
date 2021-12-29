@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 11-14-21.1530')
+VersionWndPrv EQUATE('WndPrv 12-28-21.0849')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -37,6 +37,7 @@ Size     LONG
 HowMany  USHORT               
 HasValue BYTE !An ANY can take
 DValue   STRING(255)
+NameAttr STRING(255) !12/28/21 Who/NAME() if has Pipes
       END
 FrmFldQtype QUEUE,TYPE
 Column   STRING(3)
@@ -4807,7 +4808,7 @@ DoHide  BYTE,AUTO
    OF SMCmd_HideUnder ; DO HideUnderRtn     ; IF SysMnQ:DoinHide THEN DO MoveUnderRtn.    !HIDE Windows Under this One
    OF SMCmd_HidePWnd  ; DO HidePWndRtn
    OF SMCmd_MoveUnder ; DO MoveUnderRtn
-   OF   SMCmd_HaltThis
+   OF   SMCmd_HaltThis ; IF KeyStateSCA(1) THEN ASSERT(0) ; RETURN. !Secret Shift+Halt ASSERTs
    OROF SMCmd_HaltCapt 
    OROF SMCmd_HaltALL ; DO TaskKillRtn
    OF SMCmd_RunAgain  ; RUN(COMMAND('0'))
@@ -5074,14 +5075,21 @@ WhatAsStrLng LONG,OVER(WhatAsStr)
 DTypeNm STRING(16)
 GroupCnt LONG
 RetCount LONG
+PipePos LONG,AUTO
    CODE
    LOOP X=1 TO 999 
       AnyWHAT &= WHAT(pGrpRef,X) ; IF AnyWHAT &= NULL THEN BREAK.
       CLEAR(DeclQ) 
       DeclQ.FieldX=X
-      WhoName=pLevelPrefix & WHO(pGrpRef,X)
+      WhoName=WHO(pGrpRef,X)            !12/28/21 was: WhoName=pLevelPrefix & WHO(pGrpRef,X)
+      PipePos=INSTRING('|',WhoName)     !Who() can return NAME() Extended Attributes that are Pipe Delimited  NAME('Date | @d4')
+      IF PipePos THEN
+         DeclQ.NameAttr=WhoName             !Save Name Pipe Attr
+         WhoName=SUB(WhoName,1,PipePos-1)   !Who() w/o extra Pipe data
+      END
+      WhoName=pLevelPrefix & WhoName    !12/28/21 was: pLevelPrefix & WHO(pGrpRef,X)
       DeclQ.Name=WhoName
-      DT=ClaDataType(AnyWHAT ,DTypeNm, DeclQ.HasValue, DeclQ.Size) 
+      DT=ClaDataType(AnyWHAT ,DTypeNm, DeclQ.HasValue, DeclQ.Size)
       DeclQ.DTypeNo=DT  ! DataType:xxx
       DeclQ.DType  =DTypeNm
       DeclQ.HowMany=HOWMANY(pGrpRef,X)  !Is array?
@@ -5170,17 +5178,18 @@ DeclareQ QUEUE(QueDeclareType),PRE(DecQ).
 SortCls CBSortClass
 FindCls CBLocateCls
 FindTxt STRING(64),STATIC
-RefWnd WINDOW('Class Reflect'),AT(,,380,220),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
+RefWnd WINDOW('Class Reflect'),AT(,,430,220),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
         ENTRY(@s64),AT(32,3,155,11),USE(FindTxt),SKIP,FONT('Consolas')
         BUTTON('&Find'),AT(2,2,25,12),USE(?FindNext),SKIP
         BUTTON('Pre&v'),AT(191,2,26,12),USE(?FindPrev),SKIP
         BUTTON('&Copy'),AT(233,2,30,12),USE(?CopyBtn),SKIP,TIP('Copy Declaration')
         BUTTON('&Gen ='),AT(268,2,30,12),USE(?GenEqBtn),SKIP,TIP('Generate Field= Lines to Clipboard')
         BUTTON('&View Queue'),AT(303,2,50,12),USE(?ViewQBtn),SKIP,TIP('View Queue Records')
-        LIST,AT(1,18),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ),FORMAT('18C|FM~Fld<13,10>No.~@' & |
-                'n3@115L(2)|FM~Field Name~@s64@?61L(2)|FM~Type~C(0)@s16@20R(6)|FM~Type<13,10>No.~C(0)@n3@30R(2)|FM~Size~' & |
-                'C(0)@n10@20R(6)|FM~How<13,10>Many~L(2)@n4@25L(6)|FM~Has<13,10>Value~C(0)@n3@135L(2)F~Data Value~@s255@1' & |
-                '35L(2)F~Any Long~@n11@'),ALRT(DeleteKey)
+        LIST,AT(1,18),FULL,USE(?LIST:DeclareQ),VSCROLL,FONT('Consolas',10),FROM(DeclareQ), |
+                FORMAT('18C|FM~Fld<13,10>No.~@n3@115L(2)|FM~Field Name (Who)~@s64@?61L(2)|FM~Type~C(' & |
+                '0)@s16@20R(6)|FM~Type<13,10>No.~C(0)@n3@30R(2)|FM~Size~C(0)@n10@20R(6)|FM~How<13>' & |
+                '<10>Many~L(2)@n4@25L(6)|M~Has<13,10>Value~C(0)@n3@60L(2)|M~Data Value~@s255@135L(2)' & |
+                '~Name()~@s255@'),ALRT(DeleteKey)
     END
 X LONG,AUTO
 L BYTE,AUTO

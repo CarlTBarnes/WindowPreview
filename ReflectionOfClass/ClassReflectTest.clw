@@ -57,7 +57,17 @@ PopupFailQueue        QUEUE
 ControlID                SIGNED 
                       END
 QueueRef_Rsz_ControlQueue  &QUEUE
-QueueRef_Rsz_ResizeList    &QUEUE   
+QueueRef_Rsz_ResizeList    &QUEUE     
+
+PetsQueue  QUEUE                            !12/28/21 Capesoft Reflection Example Queue with Extended NAME() ... modified
+id            Long,name('Id | attribute')   !         https://clarionhub.com/t/a-proposed-convention-for-the-extended-use-of-the-name-attribute/2792
+Name          Group,name('Name')
+WholeName       String(20),name('WholeName')
+NickName        String(20),name('Nickname | attribute')
+              End
+DateOfBirth   Long,name('Birthday | @d6 | date | Optional ')                 
+            End
+!PetsQueue      QUEUE(PetsQueueType).
 
 PozGroup    GROUP(PositionGroup),PRE(Poz1) .    !Group to test 
 TestGroup   GROUP(ControlQueue) .               !Q as Group to test .GroupReflection
@@ -69,8 +79,8 @@ Window WINDOW('Class Reflection Test CBWndPreviewClass'),AT(,,382,204),CENTER,GR
         BUTTON('Select Class'),AT(3,15,57,13),USE(?ClassSelectBtn),TIP('Select Class to View in List below using JS Priv' & |
                 'ate Data,<13,10>then push Class Reflection button')
         BUTTON('View .ClassReflection() of CBWndPrv'),AT(71,15,,13),USE(?ClassReflectBtn),TIP('Open CBWndPreview.ClassReflection')
-        BUTTON('Queue Reflection'),AT(233,15,,13),USE(?QueueBtn),TIP('View .QueueReflection(Q) of CB Window Preview Class')
-        BUTTON('Group Reflection'),AT(306,15,,13),USE(?GroupBtn),TIP('View .GroupReflection() of CB Window Preview Class<13,10>Shows GROUP(ControlQueue) with child group  LIKE(PositionGroup)')
+        BUTTON('Queue Reflection'),AT(233,15,,13),USE(?QueueBtn),TIP('View CBWndPreviewClass.QueueReflection(*QUEUE Q,STRING NameOfQueue [,BOOL ShowsRecords] )')
+        BUTTON('Group Reflection'),AT(306,15,,13),USE(?GroupBtn),TIP('View CBWndPreviewClass.GroupReflection(*GROUP G,STRING NameOfGroup)<13,10>Shows GROUP(ControlQueue) with child group  LIKE(PositionGroup)')
         PROMPT('JSPrivateClass Enumeration of the Class Properties ...'),AT(5,31),USE(?EnumPrompt),TRN
         LIST,AT(5,42,372,156),USE(?EnumItemsList),from(EnumItemsQ),VSCROLL,FORMAT('138L(2)|M~JSPrivateClass   -   Label ~L(2)@s60@54L(2)|M~Da' & |
                 'ta Type~C(0)@s60@38R(2)|M~Size~C(0)@n20@48R(2)|M~Address~C(0)@n20@25C(2)|M~NULL~C(0)@n1@20C(2)|M~Refere' & |
@@ -84,6 +94,7 @@ ViewQueue   PROCEDURE()
 EnumPrompt      PSTRING(64) 
 ViewClassRef    &GROUP   
 ViewClassName   STRING(64)
+
   CODE
   SYSTEM{7A58h}=1  !PROP:PropVScroll
   OPEN(Window)
@@ -208,6 +219,7 @@ H LONG
               '|EnumItemsQ PRE(ENumQ) Local Queue' & |
               '|POPUP Class Queue' & |
               '|Resize ResizeList' & |
+              '|PetsQueue with Extended NAME() Attributes' & |
               '',X,Y+H,1) 
       return
       WndPrvCls.QueueReflection(QueueRef_Rsz_ControlQueue,'Resize ControlQueue') 
@@ -215,5 +227,6 @@ H LONG
       WndPrvCls.QueueReflection(EnumItemsQ,'EnumItemsQ PRE(ENumQ)')          
       WndPrvCls.QueueReflection(QueueRef_PopupItems,'Popup Items Queue')          
       WndPrvCls.QueueReflection(QueueRef_Rsz_ResizeList  ,'Resize ResizeList')          
+      WndPrvCls.QueueReflection(PetsQueue                ,'PetsQueue')          
     END 
     
