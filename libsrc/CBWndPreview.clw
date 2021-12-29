@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 12-29-21.0953')
+VersionWndPrv EQUATE('WndPrv 12-29-21.1505')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -112,7 +112,7 @@ LineHt              PROCEDURE(LONG ListFEQ, SHORT LineHeightAdd=1),PRIVATE !List
 ListColumnPositions PROCEDURE(LONG ListFEQ, *QUEUE OutColumnPosQ)
 ListDrop            PROCEDURE(LONG ListFEQ, BYTE Down0_Up1=0),PRIVATE
 ListFormatDejaVu    PROCEDURE(LONG ListFEQ, STRING WindowID, BYTE Closing=0)
-ListHelpCW          PROCEDURE(LONG SetBtnTip=0),PRIVATE
+ListHelpCW          PROCEDURE(LONG SetTipOnBtnFeq=0,LONG BtnFeqPopUnder=0),PRIVATE
 ListHelpMods        PROCEDURE(),STRING,PRIVATE
 LocateInLIST        PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn),PRIVATE
 MakeOverLIST        PROCEDURE(LONG ListFEQ, BYTE CfgChg=0),PRIVATE
@@ -3774,6 +3774,9 @@ AssertTxt PSTRING('~ASSERT - Requires Debug')
  GETPOSITION(F,X,Y) ; IF F{PROP:InToolBar} THEN Y -= (0{PROP:ToolBar}){PROP:Height}.  
  EXECUTE POPUP('HALT Program|-|'& AssertTxt &'|GPF',X+2,Y+2,1) ; HALT() ; ASSERT(0) ; PEEK(0,F) ; END
 !------------------------------
+CBWndPreviewClass.CwHelpOpenTopic PROCEDURE(STRING HelpTxt, BYTE IsPROP)
+  CODE
+  HelpCW(HelpTxt,IsPROP)
 HelpCW PROCEDURE(STRING HelpTxt, BYTE IsPROP)
 CWHlp CwHelpCls
 X LONG,AUTO
@@ -4170,8 +4173,11 @@ C USHORT,AUTO
 ListDrop PROCEDURE(LONG Feq, BYTE RollUp=0)  !0=Drop 1=Up
   CODE  !CB_SHOWDROPDOWN = &H14F
   IF PWnd$Feq{PROP:Type}=CREATE:Combo THEN Feq=PWnd$Feq{PROP:ButtonFeq}. !COMBO must Post to Button
-  PostMessage(PWnd$Feq{PROP:Handle},14Fh,1-RollUp,0)  
-ListHelpCW PROCEDURE(LONG BtnTip=0)
+  PostMessage(PWnd$Feq{PROP:Handle},14Fh,1-RollUp,0)
+CBWndPreviewClass.CwHelpListPopup PROCEDURE(LONG BtnFeqToPopUnder)
+  CODE
+  ListHelpCW(0,BtnFeqToPopUnder)
+ListHelpCW PROCEDURE(LONG BtnTip=0,LONG PopUnderBtn=0)
 Nm PSTRING(64),DIM(12)
 Hlp PSTRING(64),DIM(12)
 N  USHORT
@@ -4194,17 +4200,18 @@ PM CSTRING(2000)
   N+=1 ; Nm[N]='LIST Mouse Click Properties'         ; Hlp[N]='~format___list_box_mouse_click_properties.htm'  
   N+=1 ; Nm[N]='PROPLIST - Properties Index'         ; Hlp[N]='~Proplist_properties_index.htm'
   PM=Nm[1] ; LOOP P=2 TO N ; PM=PM &'|'& Nm[P] ; END
-  P=POPUPunder(?, PM) ; IF P>1 THEN HelpCW(Hlp[P]).; IF P=1 THEN MESSAGE(ListHelpMods(),'FORMAT Modifiers',ICON:Help).
+  IF PopUnderBtn=0 THEN PopUnderBtn=?.
+  P=POPUPunder(PopUnderBtn, PM) ; IF P>1 THEN HelpCW(Hlp[P]).; IF P=1 THEN MESSAGE(ListHelpMods(),'FORMAT Modifiers',ICON:Help).
 ListHelpMods PROCEDURE()
   CODE
-  RETURN '<13,10> Pipe = Right Border   M=Resizable <13,10> _ = Underline <13,10> / = LastOnLine <13,10> ? = Locator <13,10> # = FieldNo <13,10,13,10> * = Colors in Q <13,10> B(c)=BarFrame Color ' & |
- '<13,10> E(fbsb)=Color Defaults <13,10>  <13,10> F = Fixed (cannot scroll) <13,10> I = Icon <13,10> J = Icon Transparent <13,10> M = Resizable     |=RightBorder <13,10> P = Tip Cell QText' & |
- '<13,10> Q = Tip "Default" Column <13,10> S(w)=ScrollBar <13,10> T(s)=Tree (Surpress: B=Boxes I=Indent L=Lines R=Root 1=Offset) <13,10> Y = Cell Style No. in Q <13,10> Z(#) = Column Style' &|
- '<13,10,13,10> Queue Order: *Color - Icon index - Tree level - Y style code - P tip text'  
-!  RETURN '<13,10>Pipe = Right Border   M=Resizable <13,10>_ = Underline <13,10>/ = LastOnLine <13,10>? = Locator <13,10># = FieldNo <13,10> <13,10>* = Colors in Q <13,10>B(c)=BarFrame Color ' & |
-! '<13,10>E(fbsb)=Color Defaults <13,10> <13,10>F = Fixed (cannot scroll) <13,10>I = Icon <13,10>J = Icon Transparent <13,10>M = Resizable     |=RightBorder <13,10>P = Tip Cell QText' & |
-! '<13,10>Q = Tip "Default" Column <13,10>S(w)=ScrollBar <13,10>T(s)=Tree (Surpress: B=Boxes I=Indent L=Lines R=Root 1=Offset) <13,10>Y = Cell Style No. in Q <13,10>Z(#) = Column Style' &|
-! '<13,10><13,10>Queue Order: *Color - Icon index - Tree level - Y style code - P tip text'
+  RETURN '<13,10> Pipe <166> = Right Border Line <13,10> M = Resizable  "movable right line" ' & |
+         '<13,10> F = Fixed (cannot scroll) <13,10> _ = Underline Column <13,10> / = LastOnLine in [Group] <13,10> ? = Locator <13,10> # = Field Number in Queue (skip fields) ' & |
+   '<13,10,13,10> * = Colors (4 x Long in Queue) <13,10> B(c) = Bar Frame Color <13,10> E(fbsb) = Cell Color Defaults ' & | 
+         '<13,10> HB(c) = Header Back Color <13,10> HT(c) = Header Text Color ' & |  
+   '<13,10,13,10> Y = Cell Style (Long in Queue) <13,10> Z(#) = Column Style ' & |
+   '<13,10,13,10> I = Icon <13,10> J = Icon Transparent <13,10> P = Tip for Cell (String in Queue)' & |
+         '<13,10> Q = Tip "Default" Column <13,10> S(w)=ScrollBar <13,10> T(s)=Tree (Surpress: B=Boxes I=Indent L=Lines R=Root 1=Offset)' &|
+   '<13,10,13,10> Queue Order: *Color - Icon index - Tree level - Y style code - P tip text'  
 !-----------
 LocateInList PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn) !Field list could not use fancy Locate CLs
 Fnd &CBLocateCls
