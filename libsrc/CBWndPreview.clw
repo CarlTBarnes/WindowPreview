@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 12-29-21.1505')
+VersionWndPrv EQUATE('WndPrv 01-06-22.1438')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -2680,7 +2680,7 @@ Window WINDOW('WYSIWYG Resize'),AT(,,485,207),GRAY,IMM,SYSTEM,FONT('Segoe UI',9)
                     'Default -2=RTL'),RANGE(-2,999)
             BUTTON('Text 1|2|3|'),AT(362,162,38,11),USE(?EntryVEq123Btn),SKIP,HIDE,TIP('Set TEXT to:' & |
                     '<13,10>1<13,10>2<13,10>3...')
-            STRING('Line Height: #'),AT(408,164),USE(?TextLnHt)
+            STRING('Line Height: #'),AT(408,164),USE(?TextLnHt),HIDE
         END
         CHECK('Window Resize'),AT(3,151,58),USE(Poz:WndResize),TIP('Make Window Resizable<13,10>With' & |
                 ' FULL allows sizing LIST or TEXT')
