@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 01-06-22.1438')
+VersionWndPrv EQUATE('WndPrv 06-13-22.1536')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -252,7 +252,7 @@ SMCmd_RunAgain    EQUATE    !RUN this Preview.exe again
                 END           
 !EndRegion SysMenuClass
 !Region Classes
-CwHelpCls CLASS,TYPE,PRIVATE
+CwHelpCls_WnPv CLASS,TYPE,PRIVATE   !06/13/22 rename CwHelpCls with _WnPv
 OpenHelp    PROCEDURE(string sHlp)  !Open a "~Context.htm" or "Keyword"
 bInit       BYTE
 HHLoaded    BYTE
@@ -261,7 +261,7 @@ IsInited    PROCEDURE(),BYTE
 HHOcxLoad   PROCEDURE(),BOOL
 HHCaller    PROCEDURE(long HH_Command, long dwData=0)
           END
-CBSortClass CLASS,TYPE,PRIVATE
+SortClass_WnPv CLASS,TYPE,PRIVATE  !06/13/22 rename CBSortClass with _WnPv 
 QRef        &QUEUE
 FEQ         LONG
 ColumnNow   SHORT            
@@ -286,7 +286,7 @@ AllBtn       PROCEDURE()
 BtnConfig    PROCEDURE(BYTE Edge1To8, BYTE StyleNRLG),PROTECTED
 Edge2Style   PROCEDURE(),PROTECTED
                     END
-CBLocateCls CLASS,TYPE,PRIVATE
+LocateCls_WnPv CLASS,TYPE,PRIVATE   !06/13/22 rename CBLocateCls with _WnPv due to compiler bug Private not working
 Init          PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG FindTextFEQ, LONG BtnNextFEQ, LONG BtnPrevFEQ, BYTE Hack=0)
 Kill          PROCEDURE()
 DisableIfNone PROCEDURE()
@@ -684,7 +684,7 @@ ResizeControl EQUATE()
 DoMouseRight  EQUATE()
             END
 MouseRightSent SHORT
-SortCls CBSortClass
+SortCls SortClass_WnPv
 !------------------
   CODE
   SYSTEM{7A58h}=1 ; SYSTEM{7A7Dh}=MSGMODE:CANCOPY !PROP:PropVScroll PROP:MsgModeDefault
@@ -1576,7 +1576,7 @@ TN LONG,AUTO
 L  LONG,AUTO
 Val STRING(255),AUTO 
 ValLng LONG,AUTO
-FindCls CBLocateCls
+FindCls LocateCls_WnPv
 FindTxt STRING(64),STATIC 
 Window WINDOW('ControlPROPs'),AT(,,250,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
         BUTTON('<50>'),AT(2,2,12,12),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under th' & |
@@ -1600,7 +1600,7 @@ Window WINDOW('ControlPROPs'),AT(,,250,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZ
                 ALRT(DeleteKey)
     END
 SysMenuCls SysMenuClass
-SortCls CBSortClass
+SortCls SortClass_WnPv
     CODE
     PWnd &= SELF.WndRef
     SETTARGET(PWnd)
@@ -1800,7 +1800,7 @@ PE LONG,AUTO
 L  LONG,AUTO
 Val STRING(255),AUTO 
 VLg LONG,AUTO
-FindCls CBLocateCls
+FindCls LocateCls_WnPv
 FindTxt STRING(64),STATIC 
 Window WINDOW('Edit PROPs'),AT(,,247,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
         BUTTON('<50>'),AT(2,2,12,12),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under this Window'),FLAT
@@ -1818,7 +1818,7 @@ Window WINDOW('Edit PROPs'),AT(,,247,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
                 '~Property~@s32@?122L(2)F~Value (Double Click to Edit)~@s255@'),ALRT(DeleteKey), ALRT(EnterKey)
     END
 SysMenuCls SysMenuClass
-SortCls    CBSortClass 
+SortCls    SortClass_WnPv 
 AtPropEdit LONG,DIM(4),STATIC
     CODE
     PWnd &= SELF.WndRef
@@ -2053,7 +2053,7 @@ P7Q &Parse7QType
 LdP7Q Parse7QType
 PQ  PropQType        
 X   LONG,AUTO
-FindCls CBLocateCls
+FindCls LocateCls_WnPv
 FindTxt STRING(64) 
 Window WINDOW('Properties'),AT(,,200,290),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
         BUTTON('&Pick'),AT(2,2,19,12),USE(?SelectBtn),SKIP
@@ -2066,7 +2066,7 @@ Window WINDOW('Properties'),AT(,,200,290),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
                 'te~C(0)@s5@80L(2)F~Property~@s32@?'),ALRT(DeleteKey)
     END
 SysMenuCls SysMenuClass
-SortCls CBSortClass    
+SortCls SortClass_WnPv    
   CODE
   OPEN(Window) ; SysMenuCls.Init(Window)
   MakeOverList(?List:PQ) ; SELF.AtSetOrSave(1, AtPickProp[]) ; DISPLAY 
@@ -2107,7 +2107,7 @@ SystemOrPrinter PSTRING(8),AUTO
 Prop_:_ PSTRING(11),AUTO
 Object_Prop_ PSTRING(40),AUTO
 AllProp BYTE
-FindCls CBLocateCls
+FindCls LocateCls_WnPv
 FindTxt STRING(64),STATIC 
 Window WINDOW('SYSTEM / PRINTER Properties'),AT(,,250,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
         OPTION,AT(0,0,73,15),USE(SysOrPrt)
@@ -2129,7 +2129,7 @@ Window WINDOW('SYSTEM / PRINTER Properties'),AT(,,250,250),GRAY,SYSTEM,FONT('Seg
                 'te~L(1)@s5@80L(2)|FM~Property~@s32@?20L(2)F~Value~@s255@'),ALRT(DeleteKey),ALRT(CtrlC)
     END
 SysMenuCls SysMenuClass
-SortCls CBSortClass    
+SortCls SortClass_WnPv    
   CODE
   OPEN(Window) ; SysMenuCls.Init(Window) ; SELF.AtSetOrSave(1, AtCtrlProps[]) 
   MakeOverList(?List:PQ)
@@ -2311,7 +2311,7 @@ nNdx     LONG       !SMQ:nNdx
        END 
 X  LONG,AUTO
 CB ANY
-FindCls CBLocateCls
+FindCls LocateCls_WnPv
 FindTxt STRING(64),STATIC
 Window WINDOW('System Metrics'),AT(,,273,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
         BUTTON('&Copy'),AT(2,2,29,11),USE(?CopyBtn),SKIP,TIP('Copy Prop list to Clipboard')
@@ -2323,7 +2323,7 @@ Window WINDOW('System Metrics'),AT(,,273,250),GRAY,SYSTEM,FONT('Segoe UI',9),RES
                 'SM_ Equate~@s32@?80L(2)|FM~Description~@s32@?20L(2)F~Value~@s32@'),ALRT(DeleteKey)
     END
 SysMenuCls SysMenuClass
-SortCls CBSortClass    
+SortCls SortClass_WnPv    
   CODE
   OPEN(Window) ; SysMenuCls.Init(Window) ; SELF.AtSetOrSave(1, AtSM[])
   MakeOverList(?List:SMQ)
@@ -3778,7 +3778,7 @@ CBWndPreviewClass.CwHelpOpenTopic PROCEDURE(STRING HelpTxt, BYTE IsPROP)
   CODE
   HelpCW(HelpTxt,IsPROP)
 HelpCW PROCEDURE(STRING HelpTxt, BYTE IsPROP)
-CWHlp CwHelpCls
+CWHlp CwHelpCls_WnPv
 X LONG,AUTO
   CODE
   IF IsPROP THEN
@@ -4214,7 +4214,7 @@ ListHelpMods PROCEDURE()
    '<13,10,13,10> Queue Order: *Color - Icon index - Tree level - Y style code - P tip text'  
 !-----------
 LocateInList PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn) !Field list could not use fancy Locate CLs
-Fnd &CBLocateCls
+Fnd &LocateCls_WnPv
 A LONG
     CODE
     CASE EVENT()
@@ -4222,7 +4222,7 @@ A LONG
     OF EVENT:AlertKey ; IF ?=TextFEQ AND KEYCODE()=EnterKey THEN A=?.
     END 
     IF ~A THEN RETURN. ; UPDATE
-    Fnd &= NEW(CBLocateCls)
+    Fnd &= NEW(LocateCls_WnPv)
     Fnd.Init(QRef,ListFEQ,TextFEQ,NextBtn,PrevBtn,1)
     CASE A
     OF TextFEQ ; Fnd.Locate(1)
@@ -5182,8 +5182,8 @@ CBWndPreviewClass.QueueReflection PROCEDURE(*QUEUE QueueRef, STRING NameOfQueue,
 !----------------------  
 ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsFilQue,*GROUP ThingRef, STRING ThingName,<*QUEUE FromQ>, BYTE ViewQRecs=0) 
 DeclareQ QUEUE(QueDeclareType),PRE(DecQ).
-SortCls CBSortClass
-FindCls CBLocateCls
+SortCls SortClass_WnPv
+FindCls LocateCls_WnPv
 FindTxt STRING(64),STATIC
 RefWnd WINDOW('Class Reflect'),AT(,,430,220),GRAY,SYSTEM,MAX,FONT('Segoe UI',9),RESIZE
         ENTRY(@s64),AT(32,3,155,11),USE(FindTxt),SKIP,FONT('Consolas')
@@ -5404,7 +5404,7 @@ PY  LONG,AUTO
 EVENT       ITEMIZE(Event:User),PRE
 ColumnProps  EQUATE() !               !TODO. WIll need to keep the Number of the LIST Column Showing
             END
-SortPQCls CBSortClass
+SortPQCls SortClass_WnPv
   CODE
   SELF.BoxIt() ; GETPOSITION(0,PX,PY) ; FEQ=ListFEQ
   CList.WndPrvCls &= SELF ; CList.LoadListQ()
@@ -6819,7 +6819,7 @@ X   USHORT,AUTO
     SETTARGET()
     RETURN
 !==========================================================
-CwHelpCls.IsInited  PROCEDURE()
+CwHelpCls_WnPv.IsInited  PROCEDURE()
 CwVer Decimal(3,1),AUTO
     CODE
     IF ~SELF.bInit THEN DO InitRtn.
@@ -6830,7 +6830,7 @@ InitRtn ROUTINE
     SELF.ChmFile=CLIP(GETREG(REG_LOCAL_MACHINE, 'SOFTWARE\SoftVelocity\Clarion' & CwVer ,'Root')) &'\bin\ClarionHelp.chm'
     IF ~EXISTS(SELF.ChmFile) THEN Message(CwVer & ' CW help not found|'&SELF.ChmFile) ; EXIT.
     IF SELF.HHOcxLoad() THEN SELF.bInit=1 ELSE Message('Cannot load HELP HH OCX').
-CwHelpCls.HHOcxLoad  PROCEDURE()
+CwHelpCls_WnPv.HHOcxLoad  PROCEDURE()
 DllName  CSTRING('hhctrl.ocx')
 ProcName CSTRING('HtmlHelpA')
 hDll LONG,AUTO
@@ -6841,11 +6841,11 @@ hDll LONG,AUTO
         IF HtmlHelp_fp THEN SELF.HHLoaded=1.
     END
     RETURN CHOOSE(SELF.HHLoaded=1)
-CwHelpCls.HHCaller PROCEDURE(LONG HH_Command, LONG dwData=0) !0=Topic 1=TOC 2=Index
+CwHelpCls_WnPv.HHCaller PROCEDURE(LONG HH_Command, LONG dwData=0) !0=Topic 1=TOC 2=Index
 CHM CSTRING(300)
     code
     IF SELF.IsInited() THEN HtmlHelp(0,SELF.CHMFile,HH_Command,dwData).
-CwHelpCls.OpenHelp PROCEDURE(string sHlp)   !Open a "~Context.htm" or "Keyword"
+CwHelpCls_WnPv.OpenHelp PROCEDURE(string sHlp)   !Open a "~Context.htm" or "Keyword"
 cData CSTRING(SIZE(sHlp)+1),AUTO
 cmd   CSTRING(500),AUTO
     CODE
@@ -6859,7 +6859,7 @@ cmd   CSTRING(500),AUTO
        cData=CLIP(sHlp) ; SELF.HHCaller(2h, ADDRESS(cData))  !2=HH_DISPLAY_INDEX
     END
 !==========================================================
-CBSortClass.Init PROCEDURE(QUEUE ListQueue, LONG ListFEQ, SHORT SortColNow=0)
+SortClass_WnPv.Init PROCEDURE(QUEUE ListQueue, LONG ListFEQ, SHORT SortColNow=0)
     CODE
     SELF.QRef &= ListQueue
     SELF.FEQ=ListFEQ
@@ -6870,7 +6870,7 @@ CBSortClass.Init PROCEDURE(QUEUE ListQueue, LONG ListFEQ, SHORT SortColNow=0)
     IF SortColNow THEN SELF.SetSortCol(SortColNow).
     RETURN
 !-----------------------------------
-CBSortClass.SetSortCol PROCEDURE(SHORT SortColNow)
+SortClass_WnPv.SetSortCol PROCEDURE(SHORT SortColNow)
     CODE
     SELF.ColumnNow=SortColNow
     SELF.FEQ{PROPLIST:Locator,ABS(SortColNow)}=1
@@ -6879,7 +6879,7 @@ CBSortClass.SetSortCol PROCEDURE(SHORT SortColNow)
     SELF.FEQ{PROPLIST:SortColumn}=ABS(SortColNow)
     RETURN    
 !-----------------------------------
-CBSortClass.HeaderPressed PROCEDURE(SHORT ForceSortByColumn=0)
+SortClass_WnPv.HeaderPressed PROCEDURE(SHORT ForceSortByColumn=0)
 QRecord    STRING(SIZE(SELF.QRef)),AUTO
 LChoice    LONG,AUTO
 X          LONG,AUTO
@@ -6991,7 +6991,7 @@ Ed4 STRING('{{No Edge|Raised|Lowered|Gray}')
     SELF.Edge2Style() ; DISPLAY
     RETURN
 !==========================================================
-CBLocateCls.Init  PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn, BYTE Hack=0)
+LocateCls_WnPv.Init  PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn, LONG PrevBtn, BYTE Hack=0)
   CODE
   SELF.IsInit=1 
   SELF.QRef   &= QRef    ; SELF.NextBtn = NextBtn
@@ -7009,7 +7009,7 @@ CBLocateCls.Init  PROCEDURE(QUEUE QRef, LONG ListFEQ, LONG TextFEQ, LONG NextBtn
      REGISTER(EVENT:Accepted,ADDRESS(SELF.TakeAccepted),ADDRESS(SELF),,PrevBtn)
   END   
   RETURN
-CBLocateCls.Kill  PROCEDURE()
+LocateCls_WnPv.Kill  PROCEDURE()
   CODE
   IF ~SELF.IsInit THEN RETURN.
   IF SELF.TextFEQ THEN 
@@ -7020,13 +7020,13 @@ CBLocateCls.Kill  PROCEDURE()
   IF SELF.PrevBtn THEN UnREGISTER(EVENT:Accepted,ADDRESS(SELF.TakeAccepted),ADDRESS(SELF),,SELF.PrevBtn).
   SELF.IsInit=0 ; SELF.TextFEQ=0 ; SELF.NextBtn=0 ; SELF.PrevBtn=0
   RETURN
-CBLocateCls.TakeAlertKey PROCEDURE()
+LocateCls_WnPv.TakeAlertKey PROCEDURE()
   CODE
   IF FIELD()=SELF.TextFEQ AND KEYCODE()=EnterKey THEN
      UPDATE(SELF.TextFEQ) ; SELF.Locate(1)
   END
   RETURN 0
-CBLocateCls.TakeAccepted PROCEDURE()
+LocateCls_WnPv.TakeAccepted PROCEDURE()
   CODE
   UPDATE !SKIP on ENTRY no Update for press Alt+F
   CASE FIELD()
@@ -7035,7 +7035,7 @@ CBLocateCls.TakeAccepted PROCEDURE()
   OF SELF.PrevBtn ;  SELF.Locate(-1,1)
   END
   RETURN 0
-CBLocateCls.Locate PROCEDURE(SHORT NextPrev=1, BOOL IsButton=0)
+LocateCls_WnPv.Locate PROCEDURE(SHORT NextPrev=1, BOOL IsButton=0)
 Txt   PSTRING(65),AUTO
 Ndx   LONG,AUTO
 RegEx BYTE
@@ -7057,7 +7057,7 @@ RegEx BYTE
      END
   END
   RETURN 
-CBLocateCls.DisableIfNone PROCEDURE()
+LocateCls_WnPv.DisableIfNone PROCEDURE()
 D STRING(1)
   CODE
   IF RECORDS(SELF.QRef)<2 THEN D='1'.
