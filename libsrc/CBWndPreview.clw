@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 06-13-22.1536')
+VersionWndPrv EQUATE('WndPrv 01-26-23.1300')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -138,7 +138,7 @@ ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsFilQue1234,*GR
 ReplaceInto         PROCEDURE(*string Into, string FindTxt,string ReplaceTxt, BYTE ClipInto=0),LONG,PROC,PRIVATE
 ReplaceText         PROCEDURE(string InText, string Find,string Repl, BYTE ClipInto=0),STRING
 SeeMore             PROCEDURE(LONG PropMore, LONG CtrlFEQ, LONG CtrlTypeNo),STRING,PRIVATE
-SetClip2Queue       PROCEDURE(QUEUE Q2Copy, BYTE HeadUL=1, <STRING Head9Text>, <STRING QueWhoPrefix>, USHORT ColMin=1, USHORT ColMax=999),PRIVATE
+SetClip2Queue       PROCEDURE(QUEUE Q2Copy, BYTE HeadUL=1, <STRING Head9Text>, <STRING QueWhoPrefix2Remove>, USHORT ColMin=1, USHORT ColMax=999),PRIVATE
 SetClip2Tab2Space PROCEDURE(STRING TabDelimText, BYTE GapClm=1, BYTE HeadDash=0, BYTE FootDash=0, BYTE NoAsk=0),PRIVATE
 TextViewWindow      PROCEDURE(STRING CapTxt, STRING Txt2See, STRING ValueOnly),PRIVATE
 HexDumpString       PROCEDURE (*STRING SrcStr, BOOL ClipSpaces=0),STRING,PRIVATE
@@ -598,7 +598,7 @@ SrtTwoWho PSTRING(16)
 SrtTr3Who PSTRING(16)
 FieldQ_LastFEQNo LONG,THREAD  !Last Selection overrides...
 Format_ListF ANY,THREAD
-AnyPropH STRING('7C00h {25}'),THREAD
+AnyPropH STRING('7CBAh {25}'),THREAD
 ReOpenSELECT  BYTE(1),THREAD    !Close and Reopen this Wnd so can Select(Ctrl)
 ReOpenHOW     LONG              !Am I doing the ReOpen now  1=CtrlProps 2=List 3=Resize
 ReOpenFEQNo   LONG              !Field being reopen
@@ -1585,7 +1585,7 @@ Window WINDOW('ControlPROPs'),AT(,,250,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZ
         BUTTON('LIST'),AT(78,2,27,12),USE(?LISTBtn),DISABLE,SKIP,TIP('PROPLIST Viewer')
         BUTTON('Resize'),AT(47,2,27,12),USE(?ResizeBtn),SKIP,TIP('Reposition i.e. Move or Resize')
         BUTTON('&Scan'),AT(154,2,27,12),USE(?ScanBtn),SKIP,TIP('Scan for undocumented PROPs 7900h-7DFF?')
-        BUTTON('&Copy'),AT(123,2,27,12),USE(?CopyBtn),SKIP
+        BUTTON('&Copy'),AT(123,2,27,12),USE(?CopyBtn),SKIP,TIP('Copy All Properties<13,10>Press Ctrl+C on line to copy one')
         BUTTON('?'),AT(108,2,12,12),USE(?HelpBtn),KEY(F2Key),SKIP,FONT(,,,FONT:bold),TIP('Clarion He' & |
                 'lp - F2')
         BUTTON('3'),AT(186,2,12,12),USE(?TrashBtn),SKIP,FONT('WingDings 2',14),TIP('Delete Clutter' & |
@@ -1597,7 +1597,7 @@ Window WINDOW('ControlPROPs'),AT(,,250,250),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZ
         BUTTON('Pre&v'),AT(216,18,26,11),USE(?FindPrev),SKIP
         LIST,AT(0,33),FULL,USE(?LIST:PQ),VSCROLL,FONT('Consolas',10),FROM(PQ),FORMAT('27L(3)|FM~Equa' & |
                 'te~L(1)@s5@80L(2)|FM~Property~@s32@?20L(2)F~Value  (Double Click for more)~@s255@'), |
-                ALRT(DeleteKey)
+                ALRT(DeleteKey),ALRT(CtrlC)
     END
 SysMenuCls SysMenuClass
 SortCls SortClass_WnPv
@@ -1627,16 +1627,28 @@ SortCls SortClass_WnPv
         IF FIELD()=?LIST:PQ THEN 
            GET(PQ,CHOICE(?LIST:PQ))
            CASE EVENT()
-           OF EVENT:AlertKey ; IF KEYCODE()=DeleteKey THEN DELETE(PQ).
+           OF EVENT:AlertKey
+              CASE KEYCODE()
+              OF DeleteKey ; DELETE(PQ)
+              OF CtrlC ; POST(EVENT:NewSelection,?)
+              END
            OF EVENT:NewSelection
-              IF KeyCode()=MouseLeft2 THEN 
+              CASE KeyCode()
+              OF MouseLeft2 OROF CtrlC
                  PropViewWindow('View ' & CLIP(FeqTypeName) & ' FEQ '& FEQ &' '& PQ:Name, PQ, |
                                 CHOOSE(PQ:EqtLong <1, PQ:Value, PWnd$Feq{PQ:EqtLong}) )
-                    
+              OF MouseRight
+                 SETKEYCODE(0)
+                 CASE POPUP('Copy PROP|Copy Value|Copy Hex|-|View PROP ...<9>Dbl Click')
+                 OF 1 ; SETCLIPBOARD('PROP:'& PQ:Name)
+                 OF 2 ; SETCLIPBOARD(PQ:Value)
+                 OF 3 ; SETCLIPBOARD(PQ:EqtHex &' = '& PQ:EqtLong &' = '& PQ:Value)
+                 OF 4 ; SETKEYCODE(MouseLeft2) ; POST(EVENT:NewSelection,?)
+                 END
               END
-           OF EVENT:HeaderPressed ; SortCls.HeaderPressed()              
+           OF EVENT:HeaderPressed ; SortCls.HeaderPressed()
            END !Case Event
-        END !IF List PreAlert       
+        END !IF List PQ
     END !Accept
     SELF.AtSetOrSave(2, AtCtrlProps[])
     CLOSE(Window)
@@ -2061,9 +2073,9 @@ Window WINDOW('Properties'),AT(,,200,290),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
         BUTTON('&Find'),AT(25,2,19,12),USE(?FindNext),SKIP
         BUTTON('Pre&v'),AT(149,2,18,12),USE(?FindPrev),SKIP
         BUTTON('?'),AT(169,2,12,12),USE(?HelpBtn),SKIP,FONT(,,,FONT:bold),TIP('Clarion Help - F2'),FLAT,KEY(F2Key)
-        BUTTON,AT(184,2,12,12),USE(?Copy),SKIP,ICON(ICON:Copy),FLAT
+        BUTTON,AT(184,2,12,12),USE(?Copy),SKIP,ICON(ICON:Copy),FLAT,TIP('Copy All Properties<13,10>Press Ctrl+C on line to copy one')
         LIST,AT(0,18),FULL,USE(?LIST:PQ),VSCROLL,FONT('Consolas',10),FROM(PQ),FORMAT('30L(3)|FM~Equa' & |
-                'te~C(0)@s5@80L(2)F~Property~@s32@?'),ALRT(DeleteKey)
+                'te~C(0)@s5@80L(2)F~Property~@s32@?'),ALRT(DeleteKey),ALRT(CtrlC)
     END
 SysMenuCls SysMenuClass
 SortCls SortClass_WnPv    
@@ -2071,8 +2083,8 @@ SortCls SortClass_WnPv
   OPEN(Window) ; SysMenuCls.Init(Window)
   MakeOverList(?List:PQ) ; SELF.AtSetOrSave(1, AtPickProp[]) ; DISPLAY 
   IF ~OMITTED(InP7Q) THEN P7Q &= InP7Q ELSE P7Q &= LdP7Q ; PropHuntLoadP7Q(P7Q,-1).
-  CLEAR(PQ) ; LOOP X=1 TO RECORDS(P7Q) ; GET(P7Q, X) ; PQ:EqtHex=P7Q.EqtHex ; PQ:Name=P7Q.Name ; ADD(PQ,PQ:Name) ; END
-  FindCls.Init(PQ,?LIST:PQ, ?FindTxt, ?FindNext, ?FindPrev) ; SortCls.Init(PQ,?LIST:PQ)
+  CLEAR(PQ) ; LOOP X=1 TO RECORDS(P7Q) ; GET(P7Q, X) ; PQ:EqtHex=P7Q.EqtHex ; PQ:Name=P7Q.Name ; ADD(PQ,PQ:Name) ; END 
+  FindCls.Init(PQ,?LIST:PQ, ?FindTxt, ?FindNext, ?FindPrev) ; SortCls.Init(PQ,?LIST:PQ)  
   ACCEPT
     IF EVENT()=EVENT:OpenWindow THEN SELECT(?LIST:PQ,1).
     CASE ACCEPTED()
@@ -2084,6 +2096,7 @@ SortCls SortClass_WnPv
        GET(PQ,CHOICE(?LIST:PQ))
        CASE EVENT()
        OF EVENT:AlertKey ; IF KEYCODE()=DeleteKey THEN DELETE(PQ).
+                           IF KEYCODE()=CtrlC THEN SETCLIPBOARD(CLIP(PQ:EqtHex) &' '& PQ:Name).
        OF EVENT:NewSelection ; IF KeyCode()=MouseLeft2 THEN RetBool=1 ; BREAK.
        OF EVENT:HeaderPressed ; SortCls.HeaderPressed()    
        END
