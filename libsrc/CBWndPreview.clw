@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 01-26-23.1300')
+VersionWndPrv EQUATE('WndPrv 07-11-23.1450')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -568,6 +568,8 @@ Follows   LONG        !FldQ:Follows
 
         END
 SeeMore:ColNum EQUATE(16)
+SeeMoreLastX BYTE(1),THREAD
+SeeMoreNoAsk BYTE
 Check0n EQUATE('<163>')   !"n"=Now Checked Wingdings 2  !These sort ascending to put checked first
 Check1n EQUATE('<84>')            
 Check0w EQUATE('<153>')   !"w"=was but you unchk
@@ -599,6 +601,7 @@ SrtTr3Who PSTRING(16)
 FieldQ_LastFEQNo LONG,THREAD  !Last Selection overrides...
 Format_ListF ANY,THREAD
 AnyPropH STRING('7CBAh {25}'),THREAD
+AnyPropNm STRING('ScreenText {20}'),THREAD
 ReOpenSELECT  BYTE(1),THREAD    !Close and Reopen this Wnd so can Select(Ctrl)
 ReOpenHOW     LONG              !Am I doing the ReOpen now  1=CtrlProps 2=List 3=Resize
 ReOpenFEQNo   LONG              !Field being reopen
@@ -691,7 +694,7 @@ SortCls SortClass_WnPv
   PWnd &= SELF.WndRef
   SELF.EvtLogWrite('** WndPreview Reflection Enter **')
   IF ~ConfigGrp_DidGet THEN SELF.ConfigGetAll().    
-  SETTARGET(SELF.WndRef) ;  DO LoadFieldQRtn ; SETTARGET()   !Must SETTARGET so reports work
+  SETTARGET(SELF.WndRef) ; DO LoadFieldQRtn ; SETTARGET()  !Must SETTARGET so reports work
   IF SELF.SelectedLast THEN FieldQ_LastFEQNo=SELF.SelectedLast.
 ReOpenLOOP:Label:    
   FREE(SysMenuClsQ) ; CLEAR(SysMenuClsQ) ; SysMnQ:WinRef &= PWnd ; SysMnQ:hWindow=PWnd{PROP:Handle} ; SysMnQ:ZOrder=1 ; ADD(SysMenuClsQ)
@@ -707,9 +710,9 @@ ReOpenLOOP:Label:
   ?ListF{PROPSTYLE:TextSelected,1} = COLOR:WindowText  !COLOR:Black   don't let selecting inverse the Wingding character
   ?ListF{PROPSTYLE:BackSelected,1} = COLOR:Window      !COLOR:White   or it can appear opposite desired
   MakeOverList(?ListF) 
+  IF ~SeeMoreNoAsk THEN DO SeeMoreButsAtOpenConfigAsItWasRtn.
   FldQ:FeqNo=FieldQ_LastFEQNo ; GET(FieldQ,FldQ:FeqNo) ; ?ListF{PROP:Selected}=POINTER(FieldQ)
   IF ConsolasFQ THEN POST(EVENT:Accepted,?ConsolasFQ).
-  
   DO AcceptLoopRtn ! ACCEPT .. CASE EVENT()  CASE ACCEPTED() END 
   SELF.BoxIt()
   SELF.AtSetOrSave(2, AtWndReflect[])
@@ -773,7 +776,7 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?LISTsBtn ; DO LISTsBtnRtn
     OF ?RightTip   ; DO MouseRightMenuRtn ; MouseRightSent=0  
     OF ?SeeMoreButs ; DO SeeMoreButsRtn
-    OF ?SeeMorePickBtn ; IF SELF.PropPickList(AnyPropH) THEN DO SeeMoreButsRtn.
+    OF ?SeeMorePickBtn ; IF SELF.PropPickList('PROP:',AnyPropH,AnyPropNm) THEN DO SeeMoreButsRtn.
     OF ?SettingsBtn ; DO SettingsRtn
     OF ?SysMenuTip ; MESSAGE(?{PROP:Tip},'FYI') ; PressKey(AltSpace)
     OF ?SystemBtn  ; SELF.SystemPROPs()
@@ -816,7 +819,7 @@ AcceptLoopRtn ROUTINE !--------------------
        OF EVENT:HeaderPressed ; DO SortListHeaderPressedRtn
        END          
     OF ?FindTxt OROF ?FindNext OROF ?FindPrev ; LocateInList(FieldQ, ?ListF,?FindTxt,?FindNext,?FindPrev)
-    OF ?AnyPropH ; IF EVENT()=EVENT:AlertKey AND KEYCODE()=EnterKey THEN UPDATE ; POST(EVENT:Accepted,?SeeMoreButs).
+    OF ?AnyPropH ; IF EVENT()=EVENT:AlertKey AND KEYCODE()=EnterKey THEN UPDATE ; AnyPropNm='' ; POST(EVENT:Accepted,?SeeMoreButs). ; IF EVENT()=EVENT:Accepted THEN AnyPropNm=''.
     END
   END
   EXIT
@@ -1163,6 +1166,8 @@ EdCapWnd WINDOW('Edit Caption'),AT(,,290,95),GRAY,SYSTEM,FONT('Segoe UI',9)
     CLOSE(EdCapWnd)
     EXIT     
 !----------------
+SeeMoreButsAtOpenConfigAsItWasRtn ROUTINE
+  SeeMoreNoAsk=1 ; DO SeeMoreButsRtn ; SeeMoreNoAsk=2 ; EXIT !  IF ~SeeMoreLast THEN SeeMoreLast=1.
 SeeMoreButsRtn ROUTINE
     DATA
 SeeX    LONG,AUTO
@@ -1182,15 +1187,15 @@ PXY     LONG,DIM(4)
 First1  USHORT
 PriorFldQ   GROUP(FieldQ),PRE(PrFQ).
 PopMenu    CSTRING(34*17)
-PUName     PSTRING(32),DIM(16)
-PUProp            LONG,DIM(16)
+PUName     PSTRING(32),DIM(18)
+PUProp            LONG,DIM(18)
 AK STRING('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'',-./;=')
 K1 STRING(1)
 IsAdds2 BYTE !Ctrl+ Prepends (Adds 2)
 FQSMadd2  LIKE(FieldQ:SeeMore)
   CODE
   FQSM &= FieldQ:SeeMore    
-  N += 1 ; PUProp[N]=-2           ; PUName[N]='Property: ' & AnyPropH
+  N += 1 ; PUProp[N]=-2           ; PUName[N]='Property: ' & CLIP(AnyPropH) &' '& AnyPropNm
   N += 1 ; PUProp[N]=PROP:CAP     ; PUName[N]='Entry Modifiers CAP UPR INS OVR IMM'
   N += 1 ; PUProp[N]=PROP:Font    ; PUName[N]='Font'
   N += 1 ; PUProp[N]=PROP:HLP     ; PUName[N]='Help HLP()'     
@@ -1201,16 +1206,22 @@ FQSMadd2  LIKE(FieldQ:SeeMore)
   N += 1 ; PUProp[N]=PROP:MSG     ; PUName[N]='MSG() Text'
   N += 1 ; PUProp[N]=-1*PROP:Text ; PUName[N]='@ Picture @'
   N += 1 ; PUProp[N]=PROP:REQ     ; PUName[N]='REQ Required'
+  N += 1 ; PUProp[N]=PROP:ScreenText ; PUName[N]='Screen Text'
+  N += 1 ; PUProp[N]=PROP:Text    ; PUName[N]='Text'
   N += 1 ; PUProp[N]=PROP:Tip     ; PUName[N]='TIP() Text'
   N += 1 ; PUProp[N]=PROP:Trn     ; PUName[N]='TRN Transparent'
   N += 1 ; PUProp[N]=-1*PROP:Value; PUName[N]='VALUE() or FROM()'
   N += 1 ; PUProp[N]=PROP:Value   ; PUName[N]='Value PROP:Value'
   N += 1 ; PUProp[N]=PROP:Visible ; PUName[N]='Visible PROP:Visible'
   N += 1 ; PUProp[N]=-1*PROP:XPos ; PUName[N]='X / Y Delta from Preceding'
-!**MUST change DIM(16)** to Add New 
+!**MUST change DIM(18)** to Add New 
   PopMenu=PUName[1] ; LOOP P=2 TO N ; PopMenu=PopMenu &'|'& PUName[P] ; END
-  SeeX=POPUPunder(?SeeMoreButs, PopMenu) ; IF ~SeeX THEN EXIT. 
-  IsAdds2=CHOOSE(KeyStateSCA(2))  !; IF IsAdds2 THEN message('IsAdds2=' & IsAdds2 ).
+  IF SeeMoreNoAsk=1 THEN
+     SeeX=SeeMoreLastX
+  ELSE
+    SeeX=POPUPunder(?SeeMoreButs, PopMenu) ; IF ~SeeX THEN EXIT. ; SeeMoreLastX=SeeX
+    IsAdds2=CHOOSE(KeyStateSCA(2))  !; IF IsAdds2 THEN message('IsAdds2=' & IsAdds2 ).
+  END
 SkipPopLabel:  PropX=PUProp[SeeX]
     CaseX=PropX
     CASE CaseX
@@ -1312,7 +1323,9 @@ FType   LONG
          END
       OF CREATE:LIST OROF CREATE:COMBO  
          FldQ:Text=LEFT(CLIP(FldQ:Text) &' '& QUOTE(F{PROP:Format}) &' '& F{PROP:From})
-         R=F{PROP:Drop} ; IF R THEN FldQ:Type=CLIP(FldQ:Type)&'-Drop ' & R. 
+         R=F{PROP:Drop} ; IF R THEN FldQ:Type=CLIP(FldQ:Type)&'-Drop ' & R.
+      OF CREATE:Entry OROF CREATE:Spin OROF CREATE:SString
+         FldQ:Text=CLIP(FldQ:Text) &' = '& LEFT(F{PROP:ScreenText}) !01-27-23
       END 
       LOOP P=1 TO MAXIMUM(Prop:HDRS[],1) !Read Checkbox for Hide,Disable,ReadOnly,Skip PROPs
            FldQ:HDRSchk[P]=CHOOSE(F{Prop:HDRS[P]}=True,Check1w,Check0n)
@@ -2059,12 +2072,13 @@ L   LONG,AUTO
     END  !Case
     RETURN True
 !=====================================
-CBWndPreviewClass.PropPickList PROCEDURE(*STRING OutHexProp,<Parse7QType InP7Q>)!,BOOL
+CBWndPreviewClass.PropPickList PROCEDURE(STRING InPropPrfx:, *STRING OutHexProp,*STRING OutPropName, <Parse7QType InP7Q>)!,BOOL
 RetBool BOOL        
 P7Q &Parse7QType
 LdP7Q Parse7QType
 PQ  PropQType        
 X   LONG,AUTO
+SelectPQ LONG(1)
 FindCls LocateCls_WnPv
 FindTxt STRING(64) 
 Window WINDOW('Properties'),AT(,,200,290),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
@@ -2080,29 +2094,32 @@ Window WINDOW('Properties'),AT(,,200,290),GRAY,SYSTEM,FONT('Segoe UI',9),RESIZE
 SysMenuCls SysMenuClass
 SortCls SortClass_WnPv    
   CODE
-  OPEN(Window) ; SysMenuCls.Init(Window)
+  OPEN(Window) ; SysMenuCls.Init(Window) ; 0{PROP:Text}=0{PROP:Text} &' '& InPropPrfx:
   MakeOverList(?List:PQ) ; SELF.AtSetOrSave(1, AtPickProp[]) ; DISPLAY 
   IF ~OMITTED(InP7Q) THEN P7Q &= InP7Q ELSE P7Q &= LdP7Q ; PropHuntLoadP7Q(P7Q,-1).
-  CLEAR(PQ) ; LOOP X=1 TO RECORDS(P7Q) ; GET(P7Q, X) ; PQ:EqtHex=P7Q.EqtHex ; PQ:Name=P7Q.Name ; ADD(PQ,PQ:Name) ; END 
+  CLEAR(PQ) ; LOOP X=1 TO RECORDS(P7Q) ; GET(P7Q, X) ; PQ:EqtHex=P7Q.EqtHex ; PQ:Name=P7Q.Name ; ADD(PQ,PQ:Name) ; END
+  IF OutHexProp THEN 
+     PQ:EqtHex=OutHexProp ; GET(PQ,PQ:EqtHex) ; IF ~ERRORCODE() THEN SelectPQ=POINTER(PQ).
+  END 
   FindCls.Init(PQ,?LIST:PQ, ?FindTxt, ?FindNext, ?FindPrev) ; SortCls.Init(PQ,?LIST:PQ)  
   ACCEPT
-    IF EVENT()=EVENT:OpenWindow THEN SELECT(?LIST:PQ,1).
+    IF EVENT()=EVENT:OpenWindow THEN SELECT(?LIST:PQ,SelectPQ).
     CASE ACCEPTED()
     OF ?SelectBtn ; RetBool=1 ; BREAK
     OF ?HelpBtn ; GET(PQ,CHOICE(?LIST:PQ)) ; HelpCW(PQ:Name,1)
-    OF ?Copy ; SetClip2Queue(PQ,1,'Equate<9>Property',,1,2)
+    OF ?Copy ; SetClip2Queue(PQ,1,'Equate<9>Property ' &InPropPrfx:,,1,2)
     END
     IF FIELD()=?LIST:PQ THEN 
        GET(PQ,CHOICE(?LIST:PQ))
        CASE EVENT()
        OF EVENT:AlertKey ; IF KEYCODE()=DeleteKey THEN DELETE(PQ).
-                           IF KEYCODE()=CtrlC THEN SETCLIPBOARD(CLIP(PQ:EqtHex) &' '& PQ:Name).
+                           IF KEYCODE()=CtrlC THEN SETCLIPBOARD(CLIP(PQ:EqtHex) &' '& InPropPrfx: & PQ:Name).
        OF EVENT:NewSelection ; IF KeyCode()=MouseLeft2 THEN RetBool=1 ; BREAK.
        OF EVENT:HeaderPressed ; SortCls.HeaderPressed()    
        END
     END
   END !Accept
-  IF RetBool=1 THEN GET(PQ,CHOICE(?LIST:PQ)) ; OutHexProp=PQ:EqtHex.
+  IF RetBool=1 THEN GET(PQ,CHOICE(?LIST:PQ)) ; OutHexProp=PQ:EqtHex ; OutPropName=PQ:Name.
   SELF.AtSetOrSave(2, AtPickProp[])
   CLOSE(Window)
   DISPLAY
@@ -5503,14 +5520,14 @@ SortPQCls SortClass_WnPv
   RETURN
 !Region Routines ListPROPS
 SeeMoreRtn ROUTINE
-  IF ~Self.PropPickList(Val,All7Q) THEN EXIT.
+  IF ~Self.PropPickList('PropList:',Val,All7Q:Name,All7Q) THEN EXIT.
   CLEAR(All7Q) ; All7Q:EqtHex=Val ; GET(All7Q,All7Q:EqtHex) ; PE=All7Q:EqtLong
   Val=CLIP(All7Q:Name)&' '&Val ; DO MoreHeadRtn
   LOOP X=1 TO RECORDS(ListQ)
       GET(ListQ,X) ; LQ:More=PWnd$ListFEQ{PE+CHOOSE(~LQ:IsGroup,0,PROPLIST:Group),LQ:ColNo} ; PUT(ListQ)
   END ; DISPLAY ; EXIT
 MoreHeadRtn ROUTINE
-  L=?LIST:ListQ ; PY=MoreColNo ; L{PROPLIST:Header,PY}=Val ;L{PROPLIST:DefaultTip,PY}=Val
+  L=?LIST:ListQ ; PY=MoreColNo ; L{PROPLIST:Header,PY}=Val ;L{PROPLIST:DefaultTip,PY}='PROPLIST:'& Val
   IF MoreColWd THEN L{PROPLIST:Width,PY}=MoreColWd. ; MoreColWd=0
 FromQRtn ROUTINE
   DATA
