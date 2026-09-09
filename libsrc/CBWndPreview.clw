@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 07-11-23.1450')
+VersionWndPrv EQUATE('WndPrv 09-09-26.1106')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -4029,10 +4029,10 @@ SheetRtn ROUTINE  !Align shows Above/Below/Right/Left Up/Down wnshj for various 
 ClaDataType PROCEDURE(*? UAny, *STRING TypeName, *BYTE HasValue, *LONG USize)!,LONG
 UFO &UFOType
 UAddr LONG,AUTO 
-T LONG,AUTO
-S LONG,AUTO
-M LONG,AUTO
-N PSTRING(24)
+T LONG,AUTO     !local Type Number, out as RETURN T, same as DataType: Equates
+S LONG,AUTO     !local Size, Out as *USize
+M LONG,AUTO     !local Max, for TypeName "DIM(M)" 
+N PSTRING(24)   !local TypeName, Out as *TypeName e.g. LONG or STRING(Size)
 L USHORT
   CODE
   UAddr=ADDRESS(UAny) ; UFO&=(UAddr) ; IF UAddr=0 OR UFO &= NULL THEN TypeName='Null?' ; RETURN 0.
@@ -4047,14 +4047,18 @@ L USHORT
   OF 42 ; N='BSTRING' 
   OF 43 ; N='ASTRING' ; HasValue=1
   OF 45 ; N='VARIANT' 
-  ELSE                     !  1       2       3       4      5      6       7       8       9      10          11
+  OF 51 ; N='USTRINGu' ; HasValue=1
+  ELSE           !   0        1       2       3       4      5      6       7       8      9       10          11
     N=CHOOSE(T+1,'EndGroup','BYTE','SHORT','USHORT','DATE','TIME','LONG','ULONG','SREAL','REAL','DECIMALd','PDECIMALd',|
-               'Data12','BFLOAT4','BFLOAT8','UFO','Data16','Data17','STRINGs','CSTRINGs','PSTRINGs','MEMOs',|
-               'GROUPs','CLASS','Data23','Data24','QUEUE','BLOB','Data#'&T)  !Data#28
+               'Data12','BFLOAT4','BFLOAT8','UFO','Data16','Data17','STRINGs','CSTRINGs','PSTRINGs','MEMOs',|  !12-21
+               'GROUPs','CLASS','Data24','Data25','QUEUE','BLOB','Data#'&T)  !Data#28                          !22-27, 28+
   END
   L=LEN(N)             
-  IF N[L]='s' THEN N=N[1:L-1] &'(' & S &')'.
-  IF N[L]='d' THEN N=N[1:L-1] &'(' & S * 2 &',)'.   
+  CASE N[L]
+  OF 's' ; N=N[1:L-1] &'(' & S &')'
+  OF 'u' ; N=N[1:L-1] &'(' & S / 2 &')'     !USTRING(Chars) Size is in Bytes
+  OF 'd' ; N=N[1:L-1] &'(' & S * 2 &',)'    !DECIMAL Size is Half
+  END
   TypeName=N & CHOOSE(M=0,'',' Dim[' & M & ']')  ; IF M>1 THEN HasValue=0.
   RETURN T
 !-----------------
