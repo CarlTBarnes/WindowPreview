@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-10-26.1530')
+VersionWndPrv EQUATE('WndPrv 09-10-26.1653')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1792,6 +1792,8 @@ A   LONG,DIM(4)
     END    
     DO PropHuntRtn  !Hunt thru a list of many properties
     SELF.Win32PropsAdd(PQ, FEQ{PROP:Handle}, FEQ, FeqTypeNo)     !Add Windows API properties
+    Val=LEFT(CONTENTS(FEQ)) ; IF Val THEN SELF.PropQAdd(PQ, -31, 'CONTENTS(?)',Val).
+    X=CHOICE(FEQ) ; IF X THEN SELF.PropQAdd(PQ, -31, 'CHOICE(?)',X).
     EXIT
 !-----------------
 PropHuntRtn ROUTINE
@@ -2294,7 +2296,7 @@ P7Q Parse7QType
     END   
   END 
   LOOP X=1 TO 3
-     FntCat=CHOOSE(X,'','Tips ','Status ')
+     FntCat=CHOOSE(X,'Message ','Tips ','Status ')
      FP=CHOOSE(X,0, PROP:TipsFont ,PROP:StatusFont )   !' StatusFont0014 (11.1 0016) TipsFont0010'
      PE = FP + PROP:FontName    ; SELF.PropQAdd(PQ, PE, FntCat & 'FontName', SYSTEM{PE})
      PE = FP + PROP:FontSize    ; SELF.PropQAdd(PQ, PE, FntCat & 'FontSize', SYSTEM{PE})
@@ -2304,17 +2306,23 @@ P7Q Parse7QType
                                   SELF.PropQAdd(PQ, PE, FntCat & 'FontColor', Val)
   END     
   LOOP X=1 TO 15
-     Val = SYSTEM{PROP:WindowsVersion,X}       !TODO show HEX
+     Val = SYSTEM{PROP:WindowsVersion,X}
      IF X>10 AND ~Val THEN CYCLE.
      L=LEN(CLIP(Val)) ; IF L<12 THEN L=12.
      Val=SUB(Val,1,L) &'   '& |         
                       CHOOSE(X,'RTL Description','Win Version Name','Major','Minor','Build',|
-                      'Service Pack','64 bit="1"','Server="1"','WINVERSION: Equate','WINEDITION: Equate','') 
+                      'Service Pack','64 bit="1", 32 bit=""','Server="1", Desktop=""','WINVERSION: Equate','WINEDITION: Equate','Undocumented') 
      SELF.PropQAdd(PQ,PROP:WindowsVersion,'WindowsVersion,' & FORMAT(X,@n2),Val)
   END 
   PE=PROP:HelpEngine ; LOOP X=1 TO 16 ; L=SYSTEM{PE,X} ; IF L OR X=1 THEN SELF.PropQAdd(PQ,PE,'HelpEngine,' & X, L ). ; END
   PE=PROP:CustomColor ; LOOP X=1 TO 16 ; L=SYSTEM{PE,X} 
                         IF X=1 OR (L<>-1 AND L<>0FFFFFFh) THEN SELF.PropQAdd(PQ,PE,'CustomColor,' & X, ClaColorEquate(L) ). ; END
+  Val=CLIPBOARD() ; IF Val THEN SELF.PropQAdd(PQ, -31, 'CLIPBOARD()',Val).
+  X=CLOCK() ; SELF.PropQAdd(PQ, -31, 'CLOCK()',X&' = '&FORMAT(X,@t04))
+  X=TODAY() ; SELF.PropQAdd(PQ, -31, 'TODAY()',X&' = '&FORMAT(X,@d4)) ; SELF.PropQAdd(PQ, -31, 'THREAD()',THREAD())
+  SELF.PropQAdd(PQ, -31, 'COMMAND(0)',COMMAND('0')) ; Val=COMMAND() ; IF Val THEN SELF.PropQAdd(PQ, -31, 'COMMAND()',Val).
+  SELF.PropQAdd(PQ, -31, 'Path PATH()',PATH()) ; SELF.PropQAdd(PQ, -31, 'Path LongPath()',LongPATH()) ; SELF.PropQAdd(PQ, -31, 'Path ShortPath()',SHORTPATH())
+  LOOP L=1 TO 3 ; X=CHOOSE(L,PENCOLOR(),PENSTYLE(),PENWIDTH()) ; IF X THEN SELF.PropQAdd(PQ, -31, CHOOSE(L,'PenColor()','PenStyle()','PenWidth()'),X). ; END  
   EXIT
 !--------------    
 FontRtn ROUTINE
@@ -2476,10 +2484,10 @@ L   LONG,AUTO
         IF PQVal='<9>' THEN PQVal=''.  !Secret way to add blank values
         IF ~OMITTED(FilterVals) AND INSTRING(CLIP(PQVal),FilterVals,1) THEN RETURN.
         PrpQ.EqtLong = PQEquate
-        IF PQEquate=-32 THEN 
-           PrpQ.EqtHex = 'Win32'
-        ELSE
-           PrpQ.EqtHex = Hex8(PQEquate, -4) 
+        CASE PQEquate
+        OF -31 ; PrpQ.EqtHex = 'RTL'
+        OF -32 ; PrpQ.EqtHex = 'Win32'
+        ELSE   ; PrpQ.EqtHex = Hex8(PQEquate, -4) 
         END   
         PrpQ.Name   = PQName
         PrpQ.Value  = PQVal
