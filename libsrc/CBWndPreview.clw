@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-09-26.1106')
+VersionWndPrv EQUATE('WndPrv 09-10-26.1530')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -136,7 +136,7 @@ QueueViewListVLB    PROCEDURE(QUEUE ViewQ, STRING QName, QueDeclareType FrmFldQ)
 ReflectDeclareGet   PROCEDURE(*GROUP inGroupClassOrQueue, QueDeclareType DeclareQ, STRING LevelPrefix),LONG,PROC,PRIVATE !03/11/21
 ReflectGroupOrQueue PROCEDURE(CBWndPreviewClass PrvCls,BYTE GrpClsFilQue1234,*GROUP GrpClsQueRef, STRING NameOfGCQ,<*QUEUE FromQ>,BYTE ViewQRecords=0),PRIVATE  !03/11/21
 ReplaceInto         PROCEDURE(*string Into, string FindTxt,string ReplaceTxt, BYTE ClipInto=0),LONG,PROC,PRIVATE
-ReplaceText         PROCEDURE(string InText, string Find,string Repl, BYTE ClipInto=0),STRING
+ReplaceText         PROCEDURE(string InText, string Find,string Repl, BYTE ClipInto=0),STRING,PRIVATE
 SeeMore             PROCEDURE(LONG PropMore, LONG CtrlFEQ, LONG CtrlTypeNo),STRING,PRIVATE
 SetClip2Queue       PROCEDURE(QUEUE Q2Copy, BYTE HeadUL=1, <STRING Head9Text>, <STRING QueWhoPrefix2Remove>, USHORT ColMin=1, USHORT ColMax=999),PRIVATE
 SetClip2Tab2Space PROCEDURE(STRING TabDelimText, BYTE GapClm=1, BYTE HeadDash=0, BYTE FootDash=0, BYTE NoAsk=0),PRIVATE
@@ -547,14 +547,15 @@ FolSEQ    LONG        !FldQ:FolFEQ      5
 FeqNo     LONG        !FldQ:FeqNo       6
 Type      STRING(16)  !FldQ:Type        7
 FeqName   CSTRING(64) !FldQ:FeqName     8
-Text      STRING(256) !FldQ:Text        9
-TabName   CSTRING(32) !FldQ:TabName     10
-AtX       LONG        !FldQ:AtX         11
-AtY       LONG        !FldQ:AtY         12
-AtW       STRING(5)   !FldQ:AtW         13
-AtH       STRING(5)   !FldQ:AtH         14
-Align     STRING(8)   !FldQ:Align       15
-SeeMore   STRING(256) !FldQ:SeeMore     16  !see below SeeMore:ColNum     
+Text      STRING(128) !FldQ:Text        9
+Value     STRING(128) !FldQ:Value       10  !New 09/10/26
+TabName   CSTRING(32) !FldQ:TabName     11
+AtX       LONG        !FldQ:AtX         12
+AtY       LONG        !FldQ:AtY         13
+AtW       STRING(5)   !FldQ:AtW         14
+AtH       STRING(5)   !FldQ:AtH         15
+Align     STRING(8)   !FldQ:Align       16
+SeeMore   STRING(256) !FldQ:SeeMore     17  !see below SeeMore:ColNum EQUATE(17)    
 TypeNo    BYTE        !FldQ:TypeNo  BAND(,FFh)
 Type16    USHORT      !FldQ:Type16
 QMark     PSTRING(2)  !FldQ:QMark       
@@ -567,7 +568,7 @@ Precedes  LONG        !FldQ:Precedes
 Follows   LONG        !FldQ:Follows
 
         END
-SeeMore:ColNum EQUATE(16)
+SeeMore:ColNum EQUATE(17)
 SeeMoreLastX BYTE(1),THREAD
 SeeMoreNoAsk BYTE
 Check0n EQUATE('<163>')   !"n"=Now Checked Wingdings 2  !These sort ascending to put checked first
@@ -613,7 +614,7 @@ ConsolasFQ BYTE,THREAD
 !    BUTTON('G'),AT(14,2,10,10),USE(?SysMenuTip),SKIP,FONT('Wingdings',12),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.'),flat
 !    BUTTON('<235>'),AT(2,2,10,10),USE(?UnderBtn),SKIP,FONT('Wingdings'),TIP('Move Preview under this Window')
 !    BUTTON('<74>'),AT(14,2,10,10),USE(?SysMenuTip),flat,SKIP,FONT('Wingdings 2',13),TIP('TIP: There are 8 special items on System Menu. This is on EVERY window.')
-Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPage),FONT('Segoe UI',9), |
+WindReflect WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPage),FONT('Segoe UI',9), |
             RESIZE
         BUTTON('<50>'),AT(2,2,10,10),USE(?UnderBtn),SKIP,FONT('Webdings'),TIP('Move Preview under th' & |
                 'is Window'),FLAT
@@ -623,9 +624,9 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
                 'p on selected Control - F2'),FLAT
         BUTTON('<37h>'),AT(63,2,13,10),USE(?AltKeyAnalBtn),SKIP,FONT('Wingdings',12),TIP('ALT+Key An' & |
                 'alysis<13,10>Show controls that can or have Alt+Key or KEY().<13,10>After can use R' & |
-                't Mouse Delete TAB Controls'),FLAT 
-        CHECK('<0a8h>'),AT(79,3,9,8),USE(Cfg:BoxItShows),SKIP,TRN,FLAT,FONT('Wingdings 2',,COLOR:Maroon),ICON(ICON:None), |
-                TIP('Box selected Control in Red to find it on Window')
+                't Mouse Delete TAB Controls'),FLAT
+        CHECK('<0a8h>'),AT(79,3,9,8),USE(Cfg:BoxItShows),SKIP,TRN,FLAT,FONT('Wingdings 2',,COLOR:Maroon), |
+                ICON(ICON:None),TIP('Box selected Control in Red to find it on Window')
         BUTTON('8'),AT(225,14,13,10),USE(?RightTip),SKIP,FONT('Wingdings',12),TIP('TIP: Right-Click ' & |
                 'on List for Popup of Options'),FLAT
         BUTTON('T'),AT(225,2,13,10),USE(?SettingsBtn),SKIP,FONT('Wingdings',12),TIP('Settings...'),FLAT
@@ -652,14 +653,14 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
                 FLAT
         BUTTON('See &More...'),AT(447,13,42,12),USE(?SeeMoreButs),SKIP,TIP('Select the See More Colu' & |
                 'mn Data<13,10>Ctrl+Click on Popup Item to Add To (Prepend)'),LEFT
-        ENTRY(@s30),AT(492,15,39,9),USE(AnyPropH),SKIP,TIP('Type any PROP in Hex "h", Decimal or Expression <13,10>E.g. ' & |
-                '7C00h is PROP:Text - Defined Range 7200-7DFF<13,10><13,10>For {{''UserProp''} enter a leading <39> quote'), |
-                ALRT(EnterKey)
+        ENTRY(@s30),AT(492,15,39,9),USE(AnyPropH),SKIP,TIP('Type any PROP in Hex "h", Decimal or Exp' & |
+                'ression <13,10>E.g. 7C00h is PROP:Text - Defined Range 7200-7DFF<13,10><13,10>For {{' & |
+                '''UserProp''} enter a leading <39> quote'),ALRT(EnterKey)
         BUTTON('...'),AT(533,13,13,12),USE(?SeeMorePickBtn),SKIP,TIP('Property Pick List')
         BUTTON('Halt'),AT(557,13,22,12),USE(?HaltBtn),SKIP,TIP('Halt, Assert or GPF. Not for Preview.')
         BUTTON,AT(586,13,12,12),USE(?CopyBtn),SKIP,ICON(ICON:Copy),TIP('Copy Field Q'),FLAT
-        CHECK('Hide'),AT(175,2,26),USE(GloT:Hide),SKIP,TRN,FONT(,8),TIP('Hide this Window when open o' & |
-                'ther window')
+        CHECK('Hide'),AT(175,2,26),USE(GloT:Hide),SKIP,TRN,FONT(,8),TIP('Hide this Window when open ' & |
+                'other window')
         CHECK('Select'),AT(99,2,30),USE(ReOpenSELECT),SKIP,TRN,FONT(,8),TIP('SELECT Control on Previ' & |
                 'ew window before open Control Properties<13,10>Requires Close and ReOpen Window.')
         CHECK('2mRsz'),AT(141,2,30),USE(Cfg:ResizeOnMouse2),SKIP,TRN,FONT(,8),TIP('Check for Control' & |
@@ -670,13 +671,13 @@ Window WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:JumpPa
         CHECK('Menus'),AT(317,2),USE(?MenuItems),SKIP,DISABLE,HIDE,FONT(,8),TIP('TODO - MENU ITEM')
         LIST,AT(1,28),FULL,USE(?ListF),HVSCROLL,VCR,FROM(FieldQ),FORMAT('[12C|F~H~@s1@Z(1)12C|F~D~@s' & |
                 '1@Z(1)12C|F~RO~@s1@Z(1)13L(2)F~Skip~L(0)@s1@Z(1)]|M~Hide Disable...~16R(2)|FM~Flw' & |
-                '<13,10>Seq~C(0)@n3@22R(2)|FM~FEQ<13,10>No.~C(0)@n-_6@36L(2)|FM~Control<13><10> Type' & |
-                '~C(0)@s16@76L(2)|M~FEQ Name~C(0)@s63@?112L(2)|M~Text / Description~@s255@40L(2)|M~T' & |
-                'ab Name~@s31@[16R(2)|M~X~C(0)@n-7@16R(2)|M~Y~C(0)@n-7@16R(2)|M~Wd~C(0)@s5@16R(2)|M~' & |
-                'Ht~C(0)@s8@18L(2)|M~Aln~C(0)@s8@]|~Position~120L(2)|M~See More....~@s255@'), |
-                ALRT(EnterKey), ALRT(MouseRight2), ALRT(DeleteKey), ALRT(CtrlMouseLeft2), |
-                 ALRT(ShiftMouseLeft2), ALRT(AltMouseLeft2), ALRT(CtrlEnter), ALRT(ShiftEnter), |
-                 ALRT(AltEnter), ALRT(CtrlC)
+                '<13,10>Seq~C(0)@n3@22R(2)|FM~FEQ<13,10>No.~C(0)@n-_6@36L(2)|FM~Control<13,10> Type' & |
+                '~C(0)@s16@76L(2)|M~FEQ Name~C(0)@s63@?72L(2)|M~Text / Description~@s128@72L(2)|M~V' & |
+                'alue~@s128@40L(2)|M~Tab Name~@s31@[16R(2)|M~X~C(0)@n-7@16R(2)|M~Y~C(0)@n-7@16R(2)|M~' & |
+                'Wd~C(0)@s5@16R(2)|M~Ht~C(0)@s8@18L(2)|M~Aln~C(0)@s8@]|~Position~120L(2)|M~See More.' & |
+                '...~@s255@'),ALRT(EnterKey), ALRT(MouseRight2), ALRT(DeleteKey), |
+                 ALRT(CtrlMouseLeft2), ALRT(ShiftMouseLeft2), ALRT(AltMouseLeft2), ALRT(CtrlEnter), |
+                 ALRT(ShiftEnter), ALRT(AltEnter), ALRT(CtrlC)
     END
 SysMenuCls SysMenuClass
 AtNoSetXY   BYTE(1)
@@ -699,7 +700,7 @@ SortCls SortClass_WnPv
 ReOpenLOOP:Label:    
   FREE(SysMenuClsQ) ; CLEAR(SysMenuClsQ) ; SysMnQ:WinRef &= PWnd ; SysMnQ:hWindow=PWnd{PROP:Handle} ; SysMnQ:ZOrder=1 ; ADD(SysMenuClsQ)
   FldQ:FeqName = 0{PROP:Text}     
-  OPEN(Window) ; SysMenuCls.Init(Window) ; SELF.AtSetOrSave(1, AtWndReflect[], AtNoSetXY) ; AtNoSetXY=0 
+  OPEN(WindReflect) ; SysMenuCls.Init(WindReflect) ; SELF.AtSetOrSave(1, AtWndReflect[], AtNoSetXY) ; AtNoSetXY=0 
   ?MenuItems{PROP:Use}=SELF.MenuItemShows
   0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv
   IF PWnd{'Proc_Name'} THEN 0{PROP:Text}=PWnd{'Proc_Name'} &' - '& 0{PROP:Text}. !Tpl Procedure Name
@@ -709,7 +710,7 @@ ReOpenLOOP:Label:
   ?ListF{PROPSTYLE:FontSize,1}=12
   ?ListF{PROPSTYLE:TextSelected,1} = COLOR:WindowText  !COLOR:Black   don't let selecting inverse the Wingding character
   ?ListF{PROPSTYLE:BackSelected,1} = COLOR:Window      !COLOR:White   or it can appear opposite desired
-  MakeOverList(?ListF) 
+  MakeOverList(?ListF)
   IF ~SeeMoreNoAsk THEN DO SeeMoreButsAtOpenConfigAsItWasRtn.
   FldQ:FeqNo=FieldQ_LastFEQNo ; GET(FieldQ,FldQ:FeqNo) ; ?ListF{PROP:Selected}=POINTER(FieldQ)
   IF ConsolasFQ THEN POST(EVENT:Accepted,?ConsolasFQ).
@@ -718,7 +719,7 @@ ReOpenLOOP:Label:
   SELF.AtSetOrSave(2, AtWndReflect[])
   GET(FieldQ,CHOICE(?ListF)) ; FieldQ_LastFEQNo=FldQ:FeqNo
   Format_ListF=?ListF{PROP:Format} 
-  CLOSE(Window)   
+  CLOSE(WindReflect)   
 !TODO ??? can I just make sure Parent Tab is Visible i.e. Sheet has it selected and ~Hide    
   IF ReOpenSELECT AND ReOpenHOW AND ReOpenFEQNo THEN  !Cannot seem to Select control on Under Window Preview witout closing
      F=FldQ:FeqNo
@@ -768,7 +769,7 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?ConPropBtn ; POST(Event:ControlPROPs) 
     OF ?ConResizeBtn ; POST(EVENT:ResizeControl) 
     OF ?ConsolasFQ ; IF ConsolasFQ THEN SETFONT(?ListF,'Consolas',9) ELSE SETFONT(?ListF,'Segoe UI',9). ; DISPLAY
-    OF ?CopyBtn ; F=5 ; R=14 ; P=POPUPunder(?,'Visible List|Debug Queue|TabQ|-|FieldQ VLB View') ; IF P=2 THEN F=1 ; R=99.
+    OF ?CopyBtn ; F=5 ; R=SeeMore:ColNum ; P=POPUPunder(?,'Visible List|Debug Queue|TabQ|-|FieldQ VLB View') ; IF P=2 THEN F=1 ; R=99.
                   IF P=4 THEN QueueViewListVLB(FieldQ,'FieldQ') ; CYCLE.
                   IF P<3 THEN SetClip2Queue(FieldQ,1,,'FldQ:',F,R) ELSE SetClip2Queue(TabQ).
     OF ?HaltBtn ; HaltButton(?)
@@ -1297,6 +1298,7 @@ SkipPopLabel:  PropX=PUProp[SeeX]
 LoadFieldQRtn ROUTINE
     DATA
 FType   LONG
+FldTxt  PSTRING(129)
     CODE
     Prop:HDRS[1]=PROP:Hide ; Prop:HDRS[2]=PROP:Disable ; Prop:HDRS[3]=PROP:ReadOnly ; Prop:HDRS[4]=PROP:Skip
     FREE(SELF.FeqNmQ) 
@@ -1308,7 +1310,7 @@ FType   LONG
       IF F{PROP:Parent} < 0 THEN CYCLE.     !TODO Right? 
       CLEAR(FieldQ)
       FldQ:FeqNo = F 
-      FldQ:FeqName=FeqNameUpLow(ClaFeqName(F)) !04/30/20 UpLow !; message('#1 FldQ:FeqName=' & FldQ:FeqName )
+      FldQ:FeqName=FeqNameUpLow(ClaFeqName(F))
       SELF.FeqNmQ.FEQ = F ; SELF.FeqNmQ.Name=CLIP(FldQ:FeqName) ; ADD(SELF.FeqNmQ,SELF.FeqNmQ.FEQ)  !Store for use by 
       IF FldQ:FeqName[1]='?' THEN FldQ:FeqName=FldQ:FeqName[2 : SIZE(FldQ:FeqName)] ; FldQ:QMark='?'; END
       FldQ:Text=F{PROP:Text} ; IF FldQ:FeqName[1]='V' AND FldQ:Text[1:16]='The TEXT control' THEN FldQ:Text=SUB(FldQ:Text,1,47).
@@ -1325,21 +1327,52 @@ FType   LONG
          FldQ:Text=LEFT(CLIP(FldQ:Text) &' '& QUOTE(F{PROP:Format}) &' '& F{PROP:From})
          R=F{PROP:Drop} ; IF R THEN FldQ:Type=CLIP(FldQ:Type)&'-Drop ' & R.
       OF CREATE:Entry OROF CREATE:Spin OROF CREATE:SString
-         FldQ:Text=CLIP(FldQ:Text) &' = '& LEFT(F{PROP:ScreenText}) !01-27-23
-      END 
+         FldQ:Text=CLIP(FldQ:Text) !in Value column-->  &' = '& LEFT(F{PROP:ScreenText})
+      END
+      CASE FldQ:TypeNo !09-10-26 New Value column --------------------------
+      OF CREATE:COMBO ; FldQ:Value=F{PROP:Value} !Contents(F)='' fails?
+      OF CREATE:Entry OROF CREATE:Spin OROF CREATE:SString  !Contents(F) here = PROP:Value
+         IF INSTRING(lower(FldQ:Text[1]),'dtne') THEN
+            FldQ:Value=CLIP(CONTENTS(F)) !@n d t e must be number
+            IF FldQ:Value=0 OR ~FldQ:Value THEN !No 0 in values
+               FldQ:Value=''
+            ELSE
+               FldTxt=CLIP(LEFT(F{PROP:ScreenText}))
+               IF FldTxt <> FldQ:Value THEN !No 1 = 1
+                  FldQ:Value=FldTxt &' = '& CLIP(FldQ:Value)  !e.g. "09/12/26 = 82438"
+               END
+            END
+         ELSE !@s @p @k
+            FldQ:Value=CLIP(Contents(F))  !Contents() better for SString
+         END
+      OF CREATE:Text OROF CREATE:SingleLine ; FldQ:Value=LEFT(ReplaceText(F{PROP:ScreenText},'<13,10>',' '))
+      OF CREATE:Check OROF CREATE:State3
+            CASE F{PROP:Checked}+0
+            OF 1 ; FldQ:Value='Checked '& F{PROP:Value}
+            OF 2 ; FldQ:Value='State3 '& F{PROP:State3Value}
+            ELSE ; FldTxt=F{PROP:Value,2} ; IF FldTxt THEN FldQ:Value='UnChecked '& FldTxt.
+            END
+      OF CREATE:Option; R=F{PROP:Selected} ; IF R THEN FldQ:Value='Radio '& R &'='& (F{PROP:ChoiceFEQ}){PROP:Value} &' "'& (F{PROP:ChoiceFEQ}){PROP:Text} &'"'.
+      OF CREATE:Radio ; FldQ:Value=CHOOSE(F{PROP:Checked}=0,'','Picked '& F{PROP:Value})
+      OF CREATE:LIST  ; IF F{PROP:Drop}>0 THEN FldQ:Value=CONTENTS(F) ELSE R=F{PROP:Selected} ; FldQ:Value=CHOOSE(~R,'',R&' = Choice').
+      OF CREATE:Sheet ; FldQ:Value=F{PROP:Selected} &' = '& (F{PROP:ChoiceFEQ}){PROP:Value}
+      OF CREATE:Slider; FldQ:Value=F{PROP:SliderPos}
+      !OF CREATE:button OROF CREATE:group OROF CREATE:Prompt OROF CREATE:region OROF CREATE:string OROF CREATE:tab !None
+      !ELSE ; FldQ:Value='~ '& FldQ:Type !Debug no Value
+      END   !----- End Value Column ----------------
       LOOP P=1 TO MAXIMUM(Prop:HDRS[],1) !Read Checkbox for Hide,Disable,ReadOnly,Skip PROPs
            FldQ:HDRSchk[P]=CHOOSE(F{Prop:HDRS[P]}=True,Check1w,Check0n)
            Count:HDRS[P]+=CHOOSE(FldQ:HDRSchk[P]=Check1w)
       END
-      GETPOSITION(F,FldQ:AtX,FldQ:AtY, FldQ:AtWGet,FldQ:AtHGet) 
+      GETPOSITION(F,FldQ:AtX,FldQ:AtY, FldQ:AtWGet,FldQ:AtHGet)
   !FldQ:SeeMore='GET ' & FldQ:AtWGet &','& FldQ:AtHGet &' WHProp=' & F{PROP:Width} &','& F{PROP:Height} &'  NoW='&   F{PROP:NoWidth}  &'  NoH='& F{PROP:NoHeight}
       IF FldQ:AtX=_nopos THEN FldQ:AtX=0. ; IF FldQ:AtY=_nopos THEN FldQ:AtY=0.
       FldQ:AtH=CHOOSE(~F{PROP:Full},'','full')
       FldQ:AtW=CHOOSE(~F{PROP:NoWidth} ,''&FldQ:AtWGet,FldQ:AtH)
       FldQ:AtH=CHOOSE(~F{PROP:NoHeight},''&FldQ:AtHGet,FldQ:AtH)
       FldQ:Align=ClaAlign(F,FType)
-      FldQ:Parent=F{PROP:Parent} 
-         
+      FldQ:Parent=F{PROP:Parent}
+
   COMPILE('!*C100*',_C100_)
       FldQ:Precedes=F{PROP:Precedes}
   !*C100*     
@@ -1756,7 +1789,7 @@ A   LONG,DIM(4)
     IF FeqTypeNo=CREATE:Text
        X=Feq{PROP:LineCount} ; SELF.PropQAdd(PQ,PROP:Line,'Line,1   ...',Feq{PROP:Line,1})
        IF X>1 THEN SELF.PropQAdd(PQ,PROP:Line,'Line,'&X,Feq{PROP:Line,X}).
-    END
+    END    
     DO PropHuntRtn  !Hunt thru a list of many properties
     SELF.Win32PropsAdd(PQ, FEQ{PROP:Handle}, FEQ, FeqTypeNo)     !Add Windows API properties
     EXIT
@@ -4033,7 +4066,7 @@ T LONG,AUTO     !local Type Number, out as RETURN T, same as DataType: Equates
 S LONG,AUTO     !local Size, Out as *USize
 M LONG,AUTO     !local Max, for TypeName "DIM(M)" 
 N PSTRING(24)   !local TypeName, Out as *TypeName e.g. LONG or STRING(Size)
-L USHORT
+L USHORT,AUTO
   CODE
   UAddr=ADDRESS(UAny) ; UFO&=(UAddr) ; IF UAddr=0 OR UFO &= NULL THEN TypeName='Null?' ; RETURN 0.
   T=UFO._Type(UAddr) ; S=UFO._Size(UAddr) ; M=UFO._Max(UAddr)
