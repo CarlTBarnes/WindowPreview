@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-28-26.0933')
+VersionWndPrv EQUATE('WndPrv 09-28-26.0948')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -185,6 +185,7 @@ LoadLibrary     PROCEDURE(*CSTRING pszModuleFileName),UNSIGNED,PASCAL,RAW,NAME('
 !Region Global Data                           Global Data
 HtmlHelp_fp LONG,NAME('HtmlHelpA')
 PWnd &WINDOW,THREAD,PRIVATE     !MOst data should be THREAD incase this is Run in a Real EXE
+o LONG,DIM(4),PRIVATE,AUTO !,THREAD   Temp Pos
 GloThreaded  GROUP,PRE(),THREAD,PRIVATE
 GloT:Caption       PSTRING(200) !Caption of Preview window
 GloT:ResizeControl LONG
@@ -692,6 +693,10 @@ SortCls SortClass_WnPv
   SYSTEM{7A58h}=1 ; SYSTEM{7A7Dh}=MSGMODE:CANCOPY !PROP:PropVScroll PROP:MsgModeDefault
   PWnd &= SELF.WndRef
   SELF.EvtLogWrite('** WndPreview Reflection Enter **')
+  IF PWnd{PROP:Maximize} THEN
+     GETPOSITION(0,o[1],o[2],o[3],o[4]) ; HIDE(0) ; PWnd{PROP:Maximize}='' 
+     SETPOSITION(0,o[1]+4,o[2]+4,o[3]*.95,o[4]*.95) ; YIELD() ; UNHIDE(0)
+  END !MAX is Problem for Resize Snap
   IF ~ConfigGrp_DidGet THEN SELF.ConfigGetAll().    
   SETTARGET(SELF.WndRef) ; DO LoadFieldQRtn ; SETTARGET()  !Must SETTARGET so reports work
   IF SELF.SelectedLast THEN FieldQ_LastFEQNo=SELF.SelectedLast.
