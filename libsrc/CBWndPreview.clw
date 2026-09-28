@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-28-26.1110')
+VersionWndPrv EQUATE('WndPrv 09-28-26.1159')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -73,6 +73,8 @@ _Max  PROCEDURE(LONG),LONG !+50h Elements in first dimension of an array
 _Size PROCEDURE(LONG),LONG !+54h Size of an object
 BaseType PROCEDURE(LONG),LONG
       END
+COLOR:BoxItFill EQUATE(0C0FFFFh) !Yellow
+COLOR:BoxItLine EQUATE(80FFh) !Orange
 !EndRegion Global TYPE's             
     INCLUDE('CBWndPreview.INC'),ONCE
     MAP
@@ -509,16 +511,22 @@ Save_GHide LIKE(GloT:Hide)
 CBWndPreviewClass.BoxIt PROCEDURE(LONG FEQ=0)
 P LONG,DIM(4),AUTO
 F LONG,AUTO
+InToolbarFEQ LONG,AUTO
   CODE
   IF ~FEQ AND ~SELF.BoxItFEQ THEN RETURN.
   SETTARGET(PWnd)
   IF SELF.BoxItFEQ THEN DESTROY(SELF.BoxItFEQ) ; SELF.BoxItFEQ=0.
   IF FEQ THEN 
-    IF ~FEQ{PROP:Visible} THEN DO VisibleRtn.
     GETPOSITION(FEQ,P[1],P[2],P[3],P[4])
-    F=CREATE(0,Create:Box) ; SELF.BoxItFEQ=F 
+    F=0{PROP:Type}
+    IF P[3]>0 AND P[4]>0 AND F<>CREATE:Sheet AND F<>CREATE:Tab THEN   !Menu/Item H,W<0 =_NoPos 
+    IF ~FEQ{PROP:Visible} THEN DO VisibleRtn.
+       InToolbarFEQ=0{PROP:ToolBar}
+       IF ~FEQ{PROP:InToolBar} AND FEQ<>InToolbarFEQ THEN InToolbarFEQ=0. !Ctrl In TB or is TB
+       F=CREATE(0,Create:Box,InToolbarFEQ) ; SELF.BoxItFEQ=F
     SETPOSITION(F,P[1]-2,P[2]-2,P[3]+4,P[4]+4) 
-    F{PROP:Fill}=COLOR:Yellow ; F{PROP:Color}=COLOR:Red ; UNHIDE(F)
+       F{PROP:Fill}=COLOR:BoxItFill ; F{PROP:Color}=COLOR:BoxItLine ; UNHIDE(F)
+    END
   END
   SETTARGET() ; RETURN
 VisibleRtn ROUTINE!Recurse Parents and Unhide, select Tab on Sheet
@@ -2634,6 +2642,7 @@ HideUnHide   BYTE(1),STATIC   !VScroll needs,a Group move
 BeforeWaz GROUP(PosDataType),PRE(B4Waz).    !Original Position Waz
 Poz     GROUP(PosDataType),PRE(Poz).    !This Screen Position
 Haz     GROUP(PosDataType),PRE(Haz).    !Preview Position Now
+IsOrInToolbarFEQ LONG
 IsBEVEL SHORT
 IsDROP  SHORT
 Dropped BYTE
@@ -2842,7 +2851,8 @@ BevCls BevClass
 EVENT:SnapToUnder  EQUATE(EVENT:User+100)
     CODE
 !Region BEFORE Open Window
-    IF GloT:ResizeControl THEN Message('You have Resize Open for FEQ ' & GloT:ResizeControl ) ; RETURN.
+    IF GloT:ResizeControl THEN Message('Resize is Open for FEQ ' & GloT:ResizeControl,'ResizeControl') ; RETURN.
+    IF INLIST(FeqTypeNo,CREATE:Menubar,CREATE:Menu,CREATE:Item,CREATE:Tab) THEN Message('Cannot Resize a '& FeqTypeName,'ResizeControl') ; RETURN.
     GloT:ResizeControl=FEQ ; SELF.BoxIt()
     IsENTRY=INLIST(FeqTypeNo,CREATE:Entry,CREATE:Combo,CREATE:Spin,CREATE:SString)
     IsLINE=INLIST(FeqTypeNo,CREATE:Line,CREATE:box,CREATE:ellipse)
@@ -2918,8 +2928,10 @@ EVENT:SnapToUnder  EQUATE(EVENT:User+100)
             SETTARGET(PWnd)
             IF BoxItFEQ THEN DESTROY(BoxItFEQ) ; BoxItFEQ=0
             ELSE
-                X=CREATE(0,Create:Box) ; BoxItFEQ=X; SETPOSITION(X, Poz:X-2,Poz:Y-2,Poz:Wd+4,Poz:Ht+4) !;F{PROP:TRN}=1
-                X{PROP:Fill}=COLOR:Yellow ; X{PROP:Color}=COLOR:Red ; UNHIDE(X)
+                GETPOSITION(FEQ,o[1],o[2],o[3],o[4])
+                BoxItFEQ=CREATE(0,Create:Box,IsOrInToolbarFEQ)
+                SETPOSITION(BoxItFEQ,o[1]-2,o[2]-2,o[3]+4,o[4]+4)
+                BoxItFEQ{PROP:Fill}=COLOR:BoxItFill ; BoxItFEQ{PROP:Color}=COLOR:BoxItLine ; UNHIDE(BoxItFEQ)
             END
             SETTARGET()
         OF ?DropBtn ; ListDrop(FEQ,Dropped) ; Dropped=1-Dropped ; CYCLE !PostMessage(PWnd$Feq{PROP:Handle}, 14Fh, 1, 0) ! ; PostMessage(PWnd$Feq{PROP:Handle}, 14Fh, 1, 0)
@@ -3114,6 +3126,7 @@ S1QWindowOpenRtn ROUTINE
 GetPositionOnceRtn ROUTINE !Setup the Initial Poz, Haz and Waz
     SETTARGET(PWnd)
     Poz:WndResize=0{PROP:Resize} ; Poz:WndWide=0{Prop:Width} ; Poz:WndHigh=0{Prop:Height}
+    IF Feq{PROP:InToolbar} OR FeqTypeNo=CREATE:Toolbar THEN IsOrInToolbarFEQ=0{PROP:ToolBar}.
     GETPOSITION(Feq,Poz:X,Poz:Y,Poz:Wd,Poz:Ht)
     IF Poz:X=_nopos THEN Poz:X=0 ; Poz:No_X=1 . 
     IF Poz:Y=_nopos THEN Poz:Y=0 ; Poz:No_Y=1 .
@@ -6585,7 +6598,6 @@ Fmt STRING(1024)
   END ; SETTARGET()
 !==========================================
 CBWndPreviewClass.GuideLines PROCEDURE(LONG FEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
-!TODO add this to Window Resize
 F LONG,AUTO
 X LONG,AUTO
 C LONG,AUTO
@@ -6596,6 +6608,8 @@ GuideColor   LONG           !Poz:GuideColor !Haz:GuideColor
            END      
 Poz GROUP(PosDataType),PRE(Poz).    !This Screen Position
 Haz GROUP(PosDataType),PRE(Haz).    !Preview Position Now
+IsOrInToolbarFEQ LONG  !If InToolBar else 0=Window
+GLWndRef    &WINDOW
 GridArea    &USHORT
 GridAreaS4  STRING(4) 
 GridAppend  BYTE,STATIC
@@ -6664,7 +6678,7 @@ GdY &LONG
     GridArea &= SELF.GGLines.GrdArea ; IF ~GridArea THEN GridArea=1133. ;  GridAreaS4=GridArea 
     GridQ &= SELF.GridQ    
     GETPOSITION(0,Px,Py) ; OPEN(GLWindow) ; SETPOSITION(0,Px,Py) ; SysMenuCls.Init(GLWindow)
-    MakeOverWindow()
+    MakeOverWindow() ; GLWndRef &= GLWindow
     TRNControls&=SELF.GGLines.TRNControls ; ?TRNControls{PROP:Use}=TRNControls
     HideGuides&=SELF.GGLines.GdHide       ; ?HideGuides{PROP:Use}=HideGuides
     ?GridColorBtn{PROP:Color}=Cfg:GridClr 
@@ -6676,7 +6690,7 @@ GdY &LONG
       OF ?GridBtn    ; DO GridRtn ; CYCLE
       OF ?GridOffBtn ; DO GridOffRtn ; CYCLE
       OF ?HideGuides ; PWnd$GdLineFEQ[1]{PROP:Hide}=HideGuides ; PWnd$GdLineFEQ[2]{PROP:Hide}=HideGuides ; CYCLE
-      OF ?SnapToFEQ OROF ?SnapToWnd ; DO SnapToFEQRtn ; DISPLAY           
+      OF ?SnapToFEQ OROF ?SnapToWnd ; DO SnapToFEQRtn ; DISPLAY  !FYI see below OF Event()=Accepted for code that moved G Lines
       OF ?GuideColorBtn ; IF ~COLORDIALOG('Select Guide Line Color',Cfg:GuideClr) THEN CYCLE. ; Poz:GuideColor=Cfg:GuideClr ; SELF.ConfigPut(Cfg:GuideClr)
       OF ?GridColorBtn  ; IF ~COLORDIALOG('Select Grid Line Color', Cfg:GridClr) THEN CYCLE.  ; ?GridColorBtn{PROP:Color}=Cfg:GridClr ; SELF.ConfigPut(Cfg:GridClr)
       OF ?GridAreaS4 ; GridArea=GridAreaS4 ;  ?{PROP:Tip}='GridAreaS4=' & GridAreaS4 &'  GridArea=' & GridArea
@@ -6716,7 +6730,7 @@ BY2  LONG
   END
   SETTARGET()
 Grid1Rtn ROUTINE
-  GdFEQ &= GridQ.LnFEQ ; GdFEQ=CREATE(0,CREATE:Line,0)   
+  GdFEQ &= GridQ.LnFEQ ; GdFEQ=CREATE(0,CREATE:Line,IsOrInToolbarFEQ)   
   EXECUTE GX
    SETPOSITION(GdFEQ,Fx,Fy,Fw,0) 
    SETPOSITION(GdFEQ,Fx,Fy,0 ,Fh) 
@@ -6756,13 +6770,29 @@ FyC LONG
   FyC= Fy+Fh/2
   Poz:GuideXY[2,1]=CHOOSE(X,Fx,Fx, Fx,    FxC,FxC,FxC   ,Fx+Fw,Fx+Fw,Fx+Fw,  10,10,  10   , Pw/2,Pw/2,Pw/2 , Pw-10,Pw-10,Pw-10) !X Left
   Poz:GuideXY[1,2]=CHOOSE(X,Fy,FyC,Fy+Fh, Fy ,FyC,Fy+Fh ,Fy,   FyC,  Fy+Fh,  10,ph/2,Ph-10, 10  ,Ph/2,Ph-10, 10   ,Ph/2 ,Ph-10) !Y Top
+!  DB('SnapToFEQRtn ?='& ? &'  X='& X & CHOOSE(X>9,' Picked Window','Picked Control') &' '& |
+!            'Fx,y,w,h(=' & Fx &','& Fy &','& Fw &','& Fh &') FxC='& FxC &' FyC='& FyC &' Poz:GuideXY[2,1]='& Poz:GuideXY[2,1] &' Poz:GuideXY[1,2]='& Poz:GuideXY[1,2] )
   EXIT    !-----         !  LT LC  LBot   CTp  Cen CBo   RT    RC    RBo   W LT LC   LB     CT   C    CB     RT    RC    RB     Window
 StartRtn ROUTINE
   SETTARGET(PWnd) 
-  GETPOSITION(0,Px,Py,Pw,Ph) ; PRsz=0{PROP:Resize} ; GETPOSITION(FEQ,Fx,Fy,Fw,Fh)
+  IF Feq{PROP:InToolbar} OR FeqTypeNo=CREATE:Toolbar THEN  !Control is in TB
+     IsOrInToolbarFEQ=0{PROP:ToolBar} !AbPreview has Toolbar 
+     GETPOSITION(IsOrInToolbarFEQ,Px,Py,Pw,Ph) ; PRsz=False  !Window is Toolbar
+     IF FeqTypeNo<>CREATE:Toolbar THEN 
+        GLWndRef$?SnapToWnd{PROP:Text}='S&nap to Toolbar'  !Was BUTTON('Snap to &Window')
+     ELSE
+        GLWndRef$?SnapToWnd{PROP:Disable}=1  
+ !Toolbar is control (FEQ) is problem that I have 2 Lines GdLineFEQ[] that serve for both Control and Window.
+ !Those 2 lines are CREATE at the StartRtn and have a Parent of Window or TB. I cannot chnage Parent
+ !I need separate Window and Control lines. This is just a problem for the Toolbar so not worth changing.       
+     END
+  ELSE 
+     GETPOSITION(0,Px,Py,Pw,Ph) ; PRsz=0{PROP:Resize}
+  END 
+  GETPOSITION(FEQ,Fx,Fy,Fw,Fh)
   IF GdLineFEQ[1]=0 THEN
      LOOP GX=1 TO 2
-        GdFEQ &= GdLineFEQ[GX] ; GdFEQ  =CREATE(0,CREATE:Line,0)   
+        GdFEQ &= GdLineFEQ[GX] ; GdFEQ = CREATE(0,CREATE:Line,IsOrInToolbarFEQ)   
         CASE GX
         OF 1 ; SETPOSITION(GdFEQ,0   ,Ph/2,Pw,0)  !Horz
         OF 2 ; SETPOSITION(GdFEQ,Pw/2,0   ,0,Ph)  !Vert
