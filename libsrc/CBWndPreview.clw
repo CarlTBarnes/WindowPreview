@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-28-26.1159')
+VersionWndPrv EQUATE('WndPrv 09-28-26.1217')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -520,11 +520,11 @@ InToolbarFEQ LONG,AUTO
     GETPOSITION(FEQ,P[1],P[2],P[3],P[4])
     F=0{PROP:Type}
     IF P[3]>0 AND P[4]>0 AND F<>CREATE:Sheet AND F<>CREATE:Tab THEN   !Menu/Item H,W<0 =_NoPos 
-    IF ~FEQ{PROP:Visible} THEN DO VisibleRtn.
+       IF ~FEQ{PROP:Visible} THEN DO VisibleRtn.
        InToolbarFEQ=0{PROP:ToolBar}
        IF ~FEQ{PROP:InToolBar} AND FEQ<>InToolbarFEQ THEN InToolbarFEQ=0. !Ctrl In TB or is TB
        F=CREATE(0,Create:Box,InToolbarFEQ) ; SELF.BoxItFEQ=F
-    SETPOSITION(F,P[1]-2,P[2]-2,P[3]+4,P[4]+4) 
+       SETPOSITION(F,P[1]-2,P[2]-2,P[3]+4,P[4]+4) 
        F{PROP:Fill}=COLOR:BoxItFill ; F{PROP:Color}=COLOR:BoxItLine ; UNHIDE(F)
     END
   END
@@ -584,7 +584,7 @@ Check1w EQUATE('<86>')    !"w"=Was checked originally
 FldQ:HDRSchk STRING(1),DIM(4),OVER(FieldQ)   ![1]...[4] Hide Disable ReadOnly Skip
 Prop:HDRS    LONG,DIM(4),AUTO                !Values Prop:Hide :Disable :ReadOnly :Skip
 Count:HDRS   SHORT,DIM(4)
-SheetCnt BYTE     
+SheetCnt BYTE
 MenuItemz BYTE     
 TabQ QUEUE,PRE(TabQ)
 ShFEQ LONG        !TabQ:ShFEQ
@@ -2561,7 +2561,7 @@ RegVal  STRING(256),AUTO
     ConfigGrp_DidGet=1
     RETURN
 !========================================================================================================
-CBWndPreviewClass.ResizeControl  PROCEDURE(LONG FEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName) 
+CBWndPreviewClass.ResizeControl  PROCEDURE(LONG FEQ, LONG FeqTypeNo, STRING FeqTypeName, STRING FeqName)
 X       LONG,AUTO
 S1Q QUEUE,PRE(S1Q)  !Simple ones
 Poz     &LONG       !S1Q:Poz       
@@ -6774,7 +6774,7 @@ FyC LONG
 !            'Fx,y,w,h(=' & Fx &','& Fy &','& Fw &','& Fh &') FxC='& FxC &' FyC='& FyC &' Poz:GuideXY[2,1]='& Poz:GuideXY[2,1] &' Poz:GuideXY[1,2]='& Poz:GuideXY[1,2] )
   EXIT    !-----         !  LT LC  LBot   CTp  Cen CBo   RT    RC    RBo   W LT LC   LB     CT   C    CB     RT    RC    RB     Window
 StartRtn ROUTINE
-  SETTARGET(PWnd) 
+  SETTARGET(PWnd)
   IF Feq{PROP:InToolbar} OR FeqTypeNo=CREATE:Toolbar THEN  !Control is in TB
      IsOrInToolbarFEQ=0{PROP:ToolBar} !AbPreview has Toolbar 
      GETPOSITION(IsOrInToolbarFEQ,Px,Py,Pw,Ph) ; PRsz=False  !Window is Toolbar
