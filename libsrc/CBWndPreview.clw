@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-10-26.1653')
+VersionWndPrv EQUATE('WndPrv 09-28-26.0915')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -330,9 +330,6 @@ W &WINDOW
     RETURN
 CBWndPreviewClass.Init PROCEDURE(window W, BYTE BtnType=2, LONG SecretKey=1879) !1879=Alt+Ctrl+Shift+W)
 Btn LONG
-!XQ  QUEUE(FILE:Queue),PRE(XQ).
-!EXE STRING(260),AUTO
-!Now LONG,AUTO
     CODE
     IF SELF.ReflectionBtn THEN RETURN.
 !    SELF.SelectedLast=SELECTED()
@@ -701,6 +698,7 @@ ReOpenLOOP:Label:
   FREE(SysMenuClsQ) ; CLEAR(SysMenuClsQ) ; SysMnQ:WinRef &= PWnd ; SysMnQ:hWindow=PWnd{PROP:Handle} ; SysMnQ:ZOrder=1 ; ADD(SysMenuClsQ)
   FldQ:FeqName = 0{PROP:Text}     
   OPEN(WindReflect) ; SysMenuCls.Init(WindReflect) ; SELF.AtSetOrSave(1, AtWndReflect[], AtNoSetXY) ; AtNoSetXY=0 
+  ALIAS(CtrlShiftF1,AltShiftAst) !Prevent 2nd CtrlShiftF1 if Help Hook, Cannot Alert any F1
   ?MenuItems{PROP:Use}=SELF.MenuItemShows
   0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv
   IF PWnd{'Proc_Name'} THEN 0{PROP:Text}=PWnd{'Proc_Name'} &' - '& 0{PROP:Text}. !Tpl Procedure Name
@@ -737,6 +735,7 @@ ReOpenLOOP:Label:
      DISPLAY ; AtNoSetXY=0 ; GOTO ReOpenLOOP:Label:
   END
   SELF.EvtLogWrite('** WndPreview Reflection Exit **')
+  ALIAS(CtrlShiftF1,) !Restore CtrlShiftF1
   RETURN
 AcceptLoopRtn ROUTINE !--------------------
   ACCEPT
