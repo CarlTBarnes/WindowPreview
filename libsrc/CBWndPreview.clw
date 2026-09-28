@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-28-26.0948')
+VersionWndPrv EQUATE('WndPrv 09-28-26.1110')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -688,6 +688,7 @@ DoMouseRight  EQUATE()
             END
 MouseRightSent SHORT
 SortCls SortClass_WnPv
+PWndPixels BYTE
 !------------------
   CODE
   SYSTEM{7A58h}=1 ; SYSTEM{7A7Dh}=MSGMODE:CANCOPY !PROP:PropVScroll PROP:MsgModeDefault
@@ -697,6 +698,8 @@ SortCls SortClass_WnPv
      GETPOSITION(0,o[1],o[2],o[3],o[4]) ; HIDE(0) ; PWnd{PROP:Maximize}='' 
      SETPOSITION(0,o[1]+4,o[2]+4,o[3]*.95,o[4]*.95) ; YIELD() ; UNHIDE(0)
   END !MAX is Problem for Resize Snap
+  PWndPixels=PWnd{PROP:Pixels} ; IF PWndPixels THEN PWnd{PROP:Pixels}='' ; DB('Reflection Save PWndPixels='&PWndPixels &' Prop:Pixels='& PWnd{PROP:Pixels}) .
+    !Pixels fix is quick fix for New 12 AbPreview that sets Pixels=1 for Dynamic controls. Right way would be to Retain Pixels? No Window is DLUs. Guess has Pixels Checkbox on this Window
   IF ~ConfigGrp_DidGet THEN SELF.ConfigGetAll().    
   SETTARGET(SELF.WndRef) ; DO LoadFieldQRtn ; SETTARGET()  !Must SETTARGET so reports work
   IF SELF.SelectedLast THEN FieldQ_LastFEQNo=SELF.SelectedLast.
@@ -741,6 +744,7 @@ ReOpenLOOP:Label:
      DISPLAY ; AtNoSetXY=0 ; GOTO ReOpenLOOP:Label:
   END
   SELF.EvtLogWrite('** WndPreview Reflection Exit **')
+  IF PWndPixels THEN PWnd{PROP:Pixels}='1'.
   ALIAS(CtrlShiftF1,) !Restore CtrlShiftF1
   RETURN
 AcceptLoopRtn ROUTINE !--------------------
