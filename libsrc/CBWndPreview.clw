@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-28-26.0915')
+VersionWndPrv EQUATE('WndPrv 09-28-26.0926')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -542,7 +542,7 @@ PReadOnly STRING(1)   !FldQ:PReadOnly   3
 PSkip     STRING(1)   !FldQ:PSkip       4
 FolSEQ    LONG        !FldQ:FolFEQ      5
 FeqNo     LONG        !FldQ:FeqNo       6
-Type      STRING(16)  !FldQ:Type        7
+Type      PSTRING(17) !FldQ:Type        7  !09/20/26 P
 FeqName   CSTRING(64) !FldQ:FeqName     8
 Text      STRING(128) !FldQ:Text        9
 Value     STRING(128) !FldQ:Value       10  !New 09/10/26
@@ -870,7 +870,7 @@ ShtFEQ LONG
     IF TabFEQ THEN NoTab='' ; TabNm=PopClean(CHOOSE(TabFEQ<>FldQ:FeqNo, FldQ:TabName,CLIP(FldQ:text) &' ?'&FldQ:FeqName)).
     SETKEYCODE(0)
     EXECUTE POPUP('Copy ' & CLIP(FldQ:Type) &'  '& FldQ:FeqName & |
-                '{{Copy FEQ Name<9>Ctrl+C|Copy Text|Copy Text Quoted <<Hex>|Copy See More|Copy All}|-' & |
+                '{{Copy FEQ Name<9>Ctrl+C|-|Copy Text / Description|Copy Text Quoted <<Hex>|-|Copy Value|Copy Value Quoted <<Hex>|-|Copy See More|Copy All}|-' & |
                 '|PROP: List Control Properties<9>' & CHOOSE(~Cfg:ResizeOnMouse2,'Mouse 2','Ctrl+Mouse 2') & |
                 '|Resize Control / WYSIWYG Designer<9>' & CHOOSE(~Cfg:ResizeOnMouse2,'Shift+Mouse 2','Mouse 2') & |
             CHOOSE(~TypeIsList(FldQ:TypeNo),'|~','|') & 'LIST FORMAT() && PropList Properties' & |
@@ -884,8 +884,10 @@ ShtFEQ LONG
       SETCLIPBOARD(FldQ:FeqName)
       SETCLIPBOARD(PropText1(FldQ:FeqNo,FldQ:TypeNo,FldQ:Text,0)) !SETCLIPBOARD(CHOOSE(~PWnd$FldQ:FeqNo{PROP:Text},FldQ:Text,PWnd$FldQ:FeqNo{PROP:Text})) !Copy text
       SETCLIPBOARD(PropText1(FldQ:FeqNo,FldQ:TypeNo,FldQ:Text,1))
+      SETCLIPBOARD(FldQ:Value)
+      SETCLIPBOARD(QUOTE(CLIP(FldQ:Value)))
       SETCLIPBOARD(FldQ:SeeMore)
-      SETCLIPBOARD('Feq#'&FldQ:FeqNo &' '& FldQ:Type &'<13,10>'& FldQ:FeqName &'<13,10>'& CLIP(FldQ:Text) &'<13,10>'& CLIP(FldQ:SeeMore))
+      SETCLIPBOARD('Feq#'&FldQ:FeqNo &' '& FldQ:Type &'<13,10>'& FldQ:FeqName &'<13,10>'& CLIP(FldQ:Text) &'<13,10>'& CLIP(FldQ:Value) &'<13,10>'& CLIP(FldQ:SeeMore))
       POST(EVENT:ControlPROPs)
       POST(EVENT:ResizeControl) 
       POST(EVENT:ListPROPs)       
@@ -5547,16 +5549,26 @@ SortPQCls SortClass_WnPv
        END !Case Event
     OF ?LIST:SQ
        GET(SQ,CHOICE(?LIST:SQ)) 
-       IF EVENT()=EVENT:AlertKey AND KEYCODE()=DeleteKey THEN DELETE(SQ).
-       IF EVENT()=EVENT:AlertKey AND KEYCODE()=CtrlC THEN SETCLIPBOARD('PROPSTYLE:' & SQ:Name).
        IF EVENT()=EVENT:NewSelection AND KEYCODE()=MouseRight THEN
-          X=POPUP('Copy Style Property|Copy Value') ; IF X THEN SETCLIPBOARD(CHOOSE(X,'PROPSTYLE:' & SQ:Name,SQ:Value)).
+          X=POPUP('Copy Style Property|Copy Value|-|Copy All')
+          IF X THEN SETCLIPBOARD(CHOOSE(X,'PROPSTYLE:' & SQ:Name,SQ:Value,SQ:StyleNo&' '&SQ:EqtHex &' '&CLIP(SQ:Name) &' '&CLIP(SQ:Value))).
+       ELSIF EVENT()=EVENT:AlertKey THEN
+          CASE KEYCODE()
+          OF CtrlC ; SETCLIPBOARD('PROPSTYLE:' & SQ:Name)
+          OF DeleteKey ; DELETE(SQ)
+          END
        END
     OF ?LIST:FrmFldQ
        GET(FrmFldQ,CHOICE(?LIST:FrmFldQ))
-       IF (EVENT()=EVENT:NewSelection AND KEYCODE()=MouseRight AND POPUP('Copy Field Name')=1) |
-       OR (EVENT()=EVENT:AlertKey AND KEYCODE()=CtrlC) THEN SETCLIPBOARD(FrmFldQ:Name). 
-       IF EVENT()=EVENT:AlertKey AND KEYCODE()=DeleteKey THEN DELETE(FrmFldQ).
+       IF EVENT()=EVENT:NewSelection AND KEYCODE()=MouseRight THEN
+          X=POPUP('Copy Field Name|Copy Type|Copy Value|-|Copy All')
+          IF X THEN SETCLIPBOARD(CHOOSE(X,FrmFldQ:Name,FrmFldQ:DType,FrmFldQ:Value,FrmFldQ:Column&' '&FrmFldQ:FieldX &' '&CLIP(FrmFldQ:Name) &' '&CLIP(FrmFldQ:DType) &' '&CLIP(FrmFldQ:Value))).
+       ELSIF EVENT()=EVENT:AlertKey THEN
+          CASE KEYCODE()
+          OF CtrlC ; SETCLIPBOARD(FrmFldQ:Name)
+          OF DeleteKey ; DELETE(FrmFldQ)
+          END
+       END
     END  !CASE FIELD()
   END !Accept
   SELF.AtSetOrSave(2, AtListPROPs[])
