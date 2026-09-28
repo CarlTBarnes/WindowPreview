@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-28-26.0926')
+VersionWndPrv EQUATE('WndPrv 09-28-26.0933')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -576,6 +576,7 @@ FldQ:HDRSchk STRING(1),DIM(4),OVER(FieldQ)   ![1]...[4] Hide Disable ReadOnly Sk
 Prop:HDRS    LONG,DIM(4),AUTO                !Values Prop:Hide :Disable :ReadOnly :Skip
 Count:HDRS   SHORT,DIM(4)
 SheetCnt BYTE     
+MenuItemz BYTE     
 TabQ QUEUE,PRE(TabQ)
 ShFEQ LONG        !TabQ:ShFEQ
 TbFEQ LONG        !TabQ:TbFEQ
@@ -665,7 +666,7 @@ WindReflect WINDOW('WindowReflection'),AT(,,600,220),GRAY,SYSTEM,MAX,ICON(ICON:J
                 'ers either')
         CHECK('Consola&s'),AT(553,2,43),USE(ConsolasFQ),SKIP,LEFT,FONT(,8),TIP('Field LIST in Consol' & |
                 'as font')
-        CHECK('Menus'),AT(317,2),USE(?MenuItems),SKIP,DISABLE,HIDE,FONT(,8),TIP('TODO - MENU ITEM')
+        CHECK('Menus'),AT(243,2),USE(?MenuItems),SKIP,FONT(,8),HIDE,TIP('Include MENUs and ITEMs in Controls List<13,10>Close and ReOpen to Refresh')
         LIST,AT(1,28),FULL,USE(?ListF),HVSCROLL,VCR,FROM(FieldQ),FORMAT('[12C|F~H~@s1@Z(1)12C|F~D~@s' & |
                 '1@Z(1)12C|F~RO~@s1@Z(1)13L(2)F~Skip~L(0)@s1@Z(1)]|M~Hide Disable...~16R(2)|FM~Flw' & |
                 '<13,10>Seq~C(0)@n3@22R(2)|FM~FEQ<13,10>No.~C(0)@n-_6@36L(2)|FM~Control<13,10> Type' & |
@@ -699,7 +700,7 @@ ReOpenLOOP:Label:
   FldQ:FeqName = 0{PROP:Text}     
   OPEN(WindReflect) ; SysMenuCls.Init(WindReflect) ; SELF.AtSetOrSave(1, AtWndReflect[], AtNoSetXY) ; AtNoSetXY=0 
   ALIAS(CtrlShiftF1,AltShiftAst) !Prevent 2nd CtrlShiftF1 if Help Hook, Cannot Alert any F1
-  ?MenuItems{PROP:Use}=SELF.MenuItemShows
+  ?MenuItems{PROP:Use}=SELF.MenuItemShows ; IF MenuItemz THEN UNHIDE(?MenuItems).
   0{PROP:Text} = 'CB wInspect - Controls: ' & CLIP(FldQ:FeqName) &' '& Glo:Built &' - '& VersionWndPrv
   IF PWnd{'Proc_Name'} THEN 0{PROP:Text}=PWnd{'Proc_Name'} &' - '& 0{PROP:Text}. !Tpl Procedure Name
   IF Format_ListF THEN ?ListF{PROP:Format}=Format_ListF.
@@ -1306,9 +1307,9 @@ FldTxt  PSTRING(129)
     F=0
     LOOP
       F=0{PROP:NextField,F} ; IF ~F THEN BREAK. ; IF SELF.FeqCreatedByCB(F) THEN CYCLE.
-      IF F < 0 AND ~SELF.MenuItemShows THEN CYCLE.  !TODO keep Menus in queue to quickly add 
+      IF F < 0 THEN MenuItemz=1 ; IF ~SELF.MenuItemShows THEN CYCLE . .
       !TODO Check PROP:InToolBar or BETTER if Parent is Negative
-      IF F{PROP:Parent} < 0 THEN CYCLE.     !TODO Right? 
+!Wrong 9/23/26?  IF F{PROP:Parent} < 0 THEN CYCLE.   !Hides Menus
       CLEAR(FieldQ)
       FldQ:FeqNo = F 
       FldQ:FeqName=FeqNameUpLow(ClaFeqName(F))
@@ -1319,6 +1320,7 @@ FldTxt  PSTRING(129)
       FldQ:TypeNo=BAND(FType,0FFh) ; FldQ:Type16=FType 
       FldQ:Type = UPPER(ClaControlTypeName(FType))
       CASE FldQ:TypeNo
+      OF CREATE:Menubar OROF CREATE:Menu OROF CREATE:Item ; MenuItemz=1 ; IF ~SELF.MenuItemShows THEN CYCLE.!09/19/26
       OF CREATE:BUTTON
          IF ~FldQ:Text THEN  !Btn No Text then show Icon
              FldQ:Text = F{PROP:Icon} ; ClaIconEquate(FldQ:Text)
