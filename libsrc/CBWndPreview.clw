@@ -586,7 +586,7 @@ Prop:HDRS    LONG,DIM(4),AUTO                !Values Prop:Hide :Disable :ReadOnl
 Count:HDRS   SHORT,DIM(4)
 SheetCnt BYTE
 MenuItemz BYTE     
-TabQ QUEUE,PRE(TabQ)
+TabsQ QUEUE,PRE(TabQ)
 ShFEQ LONG        !TabQ:ShFEQ
 TbFEQ LONG        !TabQ:TbFEQ
 TbNum BYTE        !TabQ:TbNum
@@ -788,7 +788,7 @@ AcceptLoopRtn ROUTINE !--------------------
     OF ?ConsolasFQ ; IF ConsolasFQ THEN SETFONT(?ListF,'Consolas',9) ELSE SETFONT(?ListF,'Segoe UI',9). ; DISPLAY
     OF ?CopyBtn ; F=5 ; R=SeeMore:ColNum ; P=POPUPunder(?,'Visible List|Debug Queue|TabQ|-|FieldQ VLB View') ; IF P=2 THEN F=1 ; R=99.
                   IF P=4 THEN QueueViewListVLB(FieldQ,'FieldQ') ; CYCLE.
-                  IF P<3 THEN SetClip2Queue(FieldQ,1,,'FldQ:',F,R) ELSE SetClip2Queue(TabQ).
+                  IF P<3 THEN SetClip2Queue(FieldQ,1,,'FldQ:',F,R) ELSE SetClip2Queue(TabsQ).
     OF ?HaltBtn ; HaltButton(?)
     OF ?HelpBtn ; GET(FieldQ,CHOICE(?ListF)) ; HelpCW(UPPER(ClaControlTypeName(FldQ:TypeNo)))
     OF ?LISTsBtn ; DO LISTsBtnRtn
@@ -1100,7 +1100,7 @@ Trick_AltKeyAnalRtn ROUTINE !Alt+Key possible, or has KEY()
 AAP BYTE
   CODE
   GET(FieldQ,CHOICE(?ListF))
-  CLEAR(TabQ) ; TabQ:TbFEQ=FldQ:TabFEQ ; IF TabQ:TbFEQ THEN GET(TabQ,TabQ:TbFEQ) ; TabQ:FName=' <9>?'&TabQ:FName .  
+  CLEAR(TabsQ) ; TabQ:TbFEQ=FldQ:TabFEQ ; IF TabQ:TbFEQ THEN GET(TabsQ,TabQ:TbFEQ) ; TabQ:FName=' <9>?'&TabQ:FName .  
   AAP=PopupUnder(?,'Alt+Key Analysis Options|-|Show Only Controls that CAN have an Alt+Key' & | !2 
                                              '|Show Only Controls that DO have an Alt+Key' & | !3
         '|-|' & CHOOSE(~FldQ:TabFEQ,'~','') & 'Analyze Controls on TAB: ' & PopClean(TabQ:Name) ) ! 4
@@ -1418,7 +1418,7 @@ FldTxt  PSTRING(129)
 LoadParentsRtn ROUTINE
   DATA
 PT   BYTE
-ParQ QUEUE,PRE(ParQ) !Parent Stack
+ParentQ QUEUE,PRE(ParQ) !Parent Stack
 PFEQ  LONG
 ShFEQ LONG
 TbFEQ LONG
@@ -1448,22 +1448,22 @@ FlwNextFEQ LONG(0) !1st follows 0=Window
      FlwNextFEQ=FldQ:FeqNo !Who Follows ME?
   END  !PROP:NextField is NOT in this order
   SORT(FieldQ,FldQ:FolSEQ,FldQ:FeqNo)
-  CLEAR(ParQ) ; ADD(ParQ,1) ; FREE(TabQ) ; SheetCnt=0
+  CLEAR(ParentQ) ; ADD(ParentQ,1) ; FREE(TabsQ) ; SheetCnt=0
   LOOP R=1 TO RECORDS(FieldQ) ; GET(FieldQ,R) ; F=FldQ:FeqNo 
     IF FldQ:Parent <> ParQ:PFeq THEN  !next Control has diff parent, Pop Stack 
-       LOOP ; GET(ParQ,1) ; IF ParQ:PFeq=FldQ:Parent OR ParQ:PFeq=0 OR ERRORCODE() THEN BREAK. ; DELETE(ParQ) ; END 
+       LOOP ; GET(ParentQ,1) ; IF ParQ:PFeq=FldQ:Parent OR ParQ:PFeq=0 OR ERRORCODE() THEN BREAK. ; DELETE(ParentQ) ; END 
     END
     FldQ:TabName=ParQ:Name ; FldQ:TabFEQ=ParQ:TbFEQ ; FldQ:SheetFEQ=ParQ:ShFEQ ; PUT(FieldQ) 
     PT=INLIST(FldQ:TypeNo,CREATE:sheet,CREATE:tab,CREATE:toolbar,CREATE:group,CREATE:option) ; IF ~PT THEN CYCLE.
     ParQ:PFeq=F 
     CASE PT
-    OF 1 ; CLEAR(TabQ) ; TabQ:ShFEQ=F ; TabQ:FName=FldQ:FeqName ; TabQ:Name=' SHEET ?'&TabQ:FName ; ADD(TabQ) ; SheetCnt+=1
+    OF 1 ; CLEAR(TabsQ) ; TabQ:ShFEQ=F ; TabQ:FName=FldQ:FeqName ; TabQ:Name=' SHEET ?'&TabQ:FName ; ADD(TabsQ) ; SheetCnt+=1
     OF 2 ; TabQ:TbFEQ=F ; TabQ:TbNum+=1 ; PopCnt+=1 ; TabQ:PopNo=PopCnt ; 
            TabQ:Text=CLIP(LEFT(F{PROP:Value})) ; IF ~CLIP(TabQ:Text) THEN TabQ:Text=CLIP(FldQ:Text).
-           TabQ:FName=FldQ:FeqName ; TabQ:Name=TabQ:Text &' ?' & TabQ:FName ; ADD(TabQ)
+           TabQ:FName=FldQ:FeqName ; TabQ:Name=TabQ:Text &' ?' & TabQ:FName ; ADD(TabsQ)
            FldQ:TabFEQ=F ; PUT(FieldQ)
     END
-    IF PT<3 THEN ParQ:Name=TabQ:Name ; ParQ:ShFEQ=TabQ:ShFEQ ; ParQ:TbFEQ=TabQ:TbFEQ . ; ADD(ParQ,1) !Push
+    IF PT<3 THEN ParQ:Name=TabQ:Name ; ParQ:ShFEQ=TabQ:ShFEQ ; ParQ:TbFEQ=TabQ:TbFEQ . ; ADD(ParentQ,1) !Push
   END !; SetClip2Queue(FieldQ) ; Message('CB FieldQ') 
 TabPickRtn ROUTINE
   DATA
@@ -1473,17 +1473,17 @@ Hyde PSTRING(16)
 SavFQ LONG
   CODE
   SETTARGET(PWnd)
-  LOOP R=1 TO RECORDS(TabQ) ; GET(TabQ,R) ; TabQ:Name=PopClean(TabQ:Name) 
+  LOOP R=1 TO RECORDS(TabsQ) ; GET(TabsQ,R) ; TabQ:Name=PopClean(TabQ:Name) 
      IF TabQ:TbFEQ=0 THEN
-        TabQ:Hide=TabQ:ShFEQ{PROP:Hide} ; PUT(TabQ) ; Hyde=CHOOSE(~TabQ:Hide,'','  <9>(hide)')
+        TabQ:Hide=TabQ:ShFEQ{PROP:Hide} ; PUT(TabsQ) ; Hyde=CHOOSE(~TabQ:Hide,'','  <9>(hide)')
         IF R=1 AND SheetCnt>1 THEN PU=TabQ:Name &Hyde &'{{' ; ELSIF R>1 THEN PU=PU&'}|' & TabQ:Name &Hyde &'{{'. 
         ChkNo=TabQ:ShFEQ{PROP:Selected} ; CYCLE
      END
-     TabQ:Hide=TabQ:TbFEQ{PROP:Hide} ; PUT(TabQ) ; Hyde=CHOOSE(~TabQ:Hide,'','(hide)      ')
+     TabQ:Hide=TabQ:TbFEQ{PROP:Hide} ; PUT(TabsQ) ; Hyde=CHOOSE(~TabQ:Hide,'','(hide)      ')
      PU=PU& CHOOSE(TabQ:TbNum=1,'','|') & CHOOSE(ChkNo=TabQ:TbNum,'+','') & PopClean(TabQ:Text) &'<9>'& Hyde &'?'& PopClean(TabQ:FName)  
   END
   SETTARGET() ; IF SheetCnt>1 THEN PU=PU&'}'. ; P=POPUPunder(?,PU) ; IF ~P THEN EXIT.
-  TabQ:PopNo=P ; GET(TabQ,TabQ:PopNo) ; FldQ:FeqNo=TabQ:TbFEQ ; GET(FieldQ,FldQ:FeqNo) 
+  TabQ:PopNo=P ; GET(TabsQ,TabQ:PopNo) ; FldQ:FeqNo=TabQ:TbFEQ ; GET(FieldQ,FldQ:FeqNo) 
   IF TabQ:Hide THEN PWnd$TabQ:TbFEQ{PROP:Hide}='' ; DO SyncFldQ:HDRSRtn. ; PWnd$TabQ:ShFEQ{PROP:Selected}=TabQ:TbNum
   SELECT(?ListF,POINTER(FieldQ)) ; DISPLAY 
 !----------------
@@ -1568,7 +1568,7 @@ PU  ANY
     CODE
     LOOP F=1 TO RECORDS(FieldQ)
         GET(FieldQ,F) ; IF ~TypeIsLIST(FldQ:TypeNo) THEN CYCLE. ; IF FldQ:FeqNo>32000 THEN CYCLE. ; IF ~PWnd$FldQ:FeqNo{PROP:Format} THEN CYCLE.
-        CLEAR(TabQ) ; TabQ:TbFEQ=FldQ:TabFEQ ; IF TabQ:TbFEQ THEN GET(TabQ,TabQ:TbFEQ) ; TabQ:FName=' <9>?'&TabQ:FName .
+        CLEAR(TabsQ) ; TabQ:TbFEQ=FldQ:TabFEQ ; IF TabQ:TbFEQ THEN GET(TabsQ,TabQ:TbFEQ) ; TabQ:FName=' <9>?'&TabQ:FName .
         P=INSTRING('-',FldQ:Type) ; IF P THEN FldQ:Type=SUB(FldQ:Type,1,P-1).
         PU=CHOOSE(~LcQ:F,'',PU&'|') & FldQ:FeqName &'  <9>'& CLIP(FldQ:Type) & CLIP(TabQ:FName) & |
             '<9>'&'  AT('& FldQ:AtX &','& FldQ:AtY &' , '& FldQ:AtWGet&','& FldQ:AtHGet &')  '& FldQ:FeqNo
