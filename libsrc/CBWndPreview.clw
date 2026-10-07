@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 10-07-26.1124')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1601')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1367,7 +1367,18 @@ TypeUpLo PSTRING(17)
       OF CREATE:Entry OROF CREATE:Spin OROF CREATE:SString
          FldQ:Text=CLIP(FldQ:Text) !in Value column-->  &' = '& LEFT(F{PROP:ScreenText})
       END
-      CASE FldQ:TypeNo !09-10-26 New Value column --------------------------
+      
+      CASE FldQ:TypeNo !09-10-26 New Value column FldQ:Value -------------------------- 
+      OF CREATE:Button
+         FldTxt=PropTFName(F,PROP:Default,'Default ')&PropTFName(F,PROP:Req,'REQ ')&PropTFName(F,PROP:IMM,'IMM ')  
+         R=F{PROP:Key} ; IF R THEN FldTxt=FldTxt&'Key('&ClaKeyCodeExplain(R,1)&') '.
+         R=F{PROP:STD} ; IF R THEN FldTxt=ClaSTDprop(R)&' '&FldTxt.
+         FldQ:Value=FldTxt
+      OF CREATE:Menu OROF CREATE:Item        
+         FldTxt=PropTFName(F,PROP:Separate,'-Separator- ','') & PropTFName(F,PROP:Check,'CHECK ')
+         R=F{PROP:Key} ; IF R THEN FldTxt=FldTxt&'Key('&ClaKeyCodeExplain(R,1)&') '.
+         R=F{PROP:STD} ; IF R THEN FldTxt=ClaSTDprop(R)&' '&FldTxt.
+         FldQ:Value=FldTxt
       OF CREATE:COMBO ; FldQ:Value=F{PROP:Value} !Contents(F)='' fails?
       OF CREATE:Entry OROF CREATE:Spin OROF CREATE:SString  !Contents(F) here = PROP:Value
          IF INSTRING(lower(FldQ:Text[1]),'dtne') THEN
@@ -1390,12 +1401,13 @@ TypeUpLo PSTRING(17)
             OF 2 ; FldQ:Value='State3 '& F{PROP:State3Value}
             ELSE ; FldTxt=F{PROP:Value,2} ; IF FldTxt THEN FldQ:Value='UnChecked '& FldTxt.
             END
+            IF ~FldQ:Text THEN FldQ:Text=F{PROP:Icon} ; ClaIconEquate(FldQ:Text).
       OF CREATE:Option; R=F{PROP:Selected} ; IF R THEN FldQ:Value='Radio '& R &'='& (F{PROP:ChoiceFEQ}){PROP:Value} &' "'& (F{PROP:ChoiceFEQ}){PROP:Text} &'"'.
       OF CREATE:Radio ; FldQ:Value=CHOOSE(F{PROP:Checked}=0,'','Picked '& F{PROP:Value})
       OF CREATE:LIST  ; IF F{PROP:Drop}>0 THEN FldQ:Value=CONTENTS(F) ELSE R=F{PROP:Selected} ; FldQ:Value=CHOOSE(~R,'',R&' = Choice').
       OF CREATE:Sheet ; FldQ:Value=F{PROP:Selected} &' = '& (F{PROP:ChoiceFEQ}){PROP:Value}
       OF CREATE:Slider; FldQ:Value=F{PROP:SliderPos}
-      !OF CREATE:button OROF CREATE:group OROF CREATE:Prompt OROF CREATE:region OROF CREATE:string OROF CREATE:tab !None
+      !OROF CREATE:group OROF CREATE:Prompt OROF CREATE:region OROF CREATE:string OROF CREATE:tab !None
       !ELSE ; FldQ:Value='~ '& FldQ:Type !Debug no Value
       END   !----- End Value Column ----------------
       LOOP P=1 TO MAXIMUM(Prop:HDRS[],1) !Read Checkbox for Hide,Disable,ReadOnly,Skip PROPs
