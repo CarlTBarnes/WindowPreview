@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 10-07-26.1104')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1115')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -4176,7 +4176,7 @@ W   SHORT,AUTO
 ClaIconEquate PROCEDURE(*STRING IcoProp)
 EQ STRING('<1,1>Application <1,2>Hand <1,3>Question <1,4>Exclamation <1,5>Asterisk <2,1>Pick <2,2>Save <2,3>Print <2,4>Paste <2,5>Open <2,6>New <2,7>Help '&|
    '<2,8>Cut <2,9>Copy <2,10>Child <2,11>Frame <2,12>Clarion <2,13>NoPrint <2,14>Zoom <2,15>NextPage <2,16>PrevPage <2,17>JumpPage <2,18>Thumbnail <2,19>Tick <2,20>Cross '&|
-   '<2,21>Connect <2,22>Print1 <2,23>Ellipsis <2,81H>VCRtop <2,82H>VCRrewind <2,83H>VCRback <2,84H>VCRplay <2,85H>VCRfastforward <2,86H>VCRbottom <2,87H>VCRlocate ') !<0FFH, x,x, 7Fh>
+   '<2,15h>Connect <2,16h>Print1 <2,17h>Ellipsis <2,18h>PageUp <2,19h>PageDown <2,1Ah>Clear <2,81H>VCRtop <2,82H>VCRrewind <2,83H>VCRback <2,84H>VCRplay <2,85H>VCRfastforward <2,86H>VCRbottom <2,87H>VCRlocate ') !<0FFH, 2h,x, 7Fh>
 B LONG,AUTO
 E LONG,AUTO
     CODE
@@ -4220,8 +4220,9 @@ ClaPicture PROCEDURE(LONG CtrlFEQ, LONG CtrlType)
 !--------------------------------- 
 ClaSTDprop PROCEDURE(LONG PropStd)!,STRING,PRIVATE
     CODE
+    IF ~PropStd THEN RETURN ''.
     RETURN 'STD:' & CHOOSE(PropStd,'WindowList','TileWindow','CascadeWindow','ArrangeIcons','HelpIndex','HelpOnHelp','HelpSearch',|
-                           'Help','Cut','Copy','Paste','Clear','Undo','Close','PrintSetup','TileHorz','TileVert','?'&PropStd)
+                           'Help','?9','Cut','Copy','Paste','Clear','Undo','Close','PrintSetup','TileHorz','TileVert','?'&PropStd)
 !---------------------------------
 GroupMoveChildren  PROCEDURE(LONG FrmGrp, LONG ToGrp, LONG XAdjust=0, LONG YAdjust=0)
 !GroupMoveChildren   PROCEDURE(LONG FromGroup, LONG ToControl, LONG XAdjust=0, LONG YAdjust=0)
