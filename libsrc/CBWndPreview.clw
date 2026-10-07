@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 10-07-26.1635')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1636')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1355,9 +1355,16 @@ TypeUpLo PSTRING(17)
       FldQ:Parent=F{PROP:Parent}
       
       CASE FldQ:TypeNo !Set FldQ:Text / Description
-      OF CREATE:Menubar OROF CREATE:Menu OROF CREATE:Item ; MenuItemz=1 ; IF ~SELF.MenuItemShows THEN CYCLE.!09/19/26
+      OF CREATE:Menubar OROF CREATE:Menu OROF CREATE:Item ; MenuItemz=1 ; IF ~SELF.MenuItemShows THEN CYCLE.
+      OF   CREATE:BOX   OROF CREATE:Ellipse
+      OROF CREATE:Panel OROF CREATE:Region 
+         FldQ:Text=TypeUpLo&' '&AtWxH&' '&DescOfBox(F, FType)     
+      OF CREATE:Group OROF CREATE:Option
+         IF ~FldQ:Text THEN
+            FldQ:Text=TypeUpLo&' '&AtWxH&' '&PropTFName(F,PROP:Boxed,'Boxed','NoBox')&' '& DescOfBox(F, FType)
+         END 
       OF CREATE:BUTTON
-         IF ~FldQ:Text THEN  !Btn No Text then show Icon
+         IF ~FldQ:Text THEN  !No ('Text') show Icon()
              FldQ:Text = F{PROP:Icon} ; ClaIconEquate(FldQ:Text)
              FldQ:Text = LEFT(CLIP(FldQ:Text) &' '& F{PROP:Tip})
          END
