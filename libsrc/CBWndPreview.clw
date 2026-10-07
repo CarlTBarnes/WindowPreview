@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 10-07-26.1120')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1124')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1322,6 +1322,8 @@ LoadFieldQRtn ROUTINE
     DATA
 FType   LONG
 FldTxt  PSTRING(129)
+AtWxH   CSTRING(16)
+TypeUpLo PSTRING(17)
     CODE
     Prop:HDRS[1]=PROP:Hide ; Prop:HDRS[2]=PROP:Disable ; Prop:HDRS[3]=PROP:ReadOnly ; Prop:HDRS[4]=PROP:Skip
     FREE(SELF.FeqNmQ) 
@@ -1336,11 +1338,23 @@ FldTxt  PSTRING(129)
       FldQ:FeqName=FeqNameUpLow(ClaFeqName(F))
       SELF.FeqNmQ.FEQ = F ; SELF.FeqNmQ.Name=CLIP(FldQ:FeqName) ; ADD(SELF.FeqNmQ,SELF.FeqNmQ.FEQ)  !Store for use by 
       IF FldQ:FeqName[1]='?' THEN FldQ:FeqName=FldQ:FeqName[2 : SIZE(FldQ:FeqName)] ; FldQ:QMark='?'; END
-      FldQ:Text=F{PROP:Text} ; IF FldQ:FeqName[1]='V' AND FldQ:Text[1:16]='The TEXT control' THEN FldQ:Text=SUB(FldQ:Text,1,47).
+      FldTxt=F{PROP:Text} ; IF FldQ:FeqName[1]='V' AND FldTxt[1:16]='The TEXT control' THEN FldTxt=SUB(FldQ:Text,1,47).
+      FldQ:Text=FldTxt
       FType=F{Prop:Type}       
       FldQ:TypeNo=BAND(FType,0FFh) ; FldQ:Type16=FType 
-      FldQ:Type = UPPER(ClaControlTypeName(FType))
-      CASE FldQ:TypeNo
+      TypeUpLo=ClaControlTypeName(FType) ; FldQ:Type=UPPER(TypeUpLo)  
+
+      GETPOSITION(F,FldQ:AtX,FldQ:AtY, FldQ:AtWGet,FldQ:AtHGet)
+      ! FldQ:SeeMore='GET ' & FldQ:AtWGet &','& FldQ:AtHGet &' WHProp=' & F{PROP:Width} &','& F{PROP:Height} &'  NoW='&   F{PROP:NoWidth}  &'  NoH='& F{PROP:NoHeight}      
+      IF FldQ:AtX=_nopos THEN FldQ:AtX=0. ; IF FldQ:AtY=_nopos THEN FldQ:AtY=0.
+      FldQ:AtH=CHOOSE(~F{PROP:Full},'','Full')
+      FldQ:AtW=CHOOSE(~F{PROP:NoWidth} ,''&FldQ:AtWGet,FldQ:AtH)
+      FldQ:AtH=CHOOSE(~F{PROP:NoHeight},''&FldQ:AtHGet,FldQ:AtH)
+      AtWxH=CLIP(FldQ:AtW)&'x'&CLIP(FldQ:AtH) ; IF AtWxH='FullxFull' THEN AtWxH='FULL'.
+      FldQ:Align=ClaAlign(F,FType)
+      FldQ:Parent=F{PROP:Parent}
+      
+      CASE FldQ:TypeNo !Set FldQ:Text / Description
       OF CREATE:Menubar OROF CREATE:Menu OROF CREATE:Item ; MenuItemz=1 ; IF ~SELF.MenuItemShows THEN CYCLE.!09/19/26
       OF CREATE:BUTTON
          IF ~FldQ:Text THEN  !Btn No Text then show Icon
@@ -1388,14 +1402,6 @@ FldTxt  PSTRING(129)
            FldQ:HDRSchk[P]=CHOOSE(F{Prop:HDRS[P]}=True,Check1w,Check0n)
            Count:HDRS[P]+=CHOOSE(FldQ:HDRSchk[P]=Check1w)
       END
-      GETPOSITION(F,FldQ:AtX,FldQ:AtY, FldQ:AtWGet,FldQ:AtHGet)
-  !FldQ:SeeMore='GET ' & FldQ:AtWGet &','& FldQ:AtHGet &' WHProp=' & F{PROP:Width} &','& F{PROP:Height} &'  NoW='&   F{PROP:NoWidth}  &'  NoH='& F{PROP:NoHeight}
-      IF FldQ:AtX=_nopos THEN FldQ:AtX=0. ; IF FldQ:AtY=_nopos THEN FldQ:AtY=0.
-      FldQ:AtH=CHOOSE(~F{PROP:Full},'','full')
-      FldQ:AtW=CHOOSE(~F{PROP:NoWidth} ,''&FldQ:AtWGet,FldQ:AtH)
-      FldQ:AtH=CHOOSE(~F{PROP:NoHeight},''&FldQ:AtHGet,FldQ:AtH)
-      FldQ:Align=ClaAlign(F,FType)
-      FldQ:Parent=F{PROP:Parent}
 
   COMPILE('!*C100*',_C100_)
       FldQ:Precedes=F{PROP:Precedes}
