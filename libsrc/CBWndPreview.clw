@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 10-07-26.1601')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1610')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1366,6 +1366,15 @@ TypeUpLo PSTRING(17)
          R=F{PROP:Drop} ; IF R THEN FldQ:Type=CLIP(FldQ:Type)&'-Drop ' & R.
       OF CREATE:Entry OROF CREATE:Spin OROF CREATE:SString
          FldQ:Text=CLIP(FldQ:Text) !in Value column-->  &' = '& LEFT(F{PROP:ScreenText})
+      OF CREATE:Line
+         IF    FldQ:AtWGet=0 THEN FldTxt='Line Vertical '  & FldQ:AtHGet ; FldQ:Align='LV'
+         ELSIF FldQ:AtHGet=0 THEN FldTxt='Line Horizontal '& FldQ:AtWGet ; FldQ:Align='LH'
+         ELSE  ;                  FldTxt='Line Diagonal '  & AtWxH       ; FldQ:Align='LD'
+         END
+         R=F{PROP:LineWidth}&')'
+         FldQ:Text=FldTxt&' '&ClaColorEquate(F{PROP:Color},0,0)&CHOOSE(~R,'','('&R&')')
+      OF PROP:OLE
+         FldQ:Text=F{PROP:Create}
       END
       
       CASE FldQ:TypeNo !09-10-26 New Value column FldQ:Value -------------------------- 
@@ -1422,19 +1431,6 @@ TypeUpLo PSTRING(17)
   !FldQ:SeeMore=CHOOSE(~F{PROP:Visible},'~Viz ','Vis1 ') &' '& CHOOSE(~F{PROP:Enabled},'~Enb ','Ena1 ') & |
       !       CHOOSE(~F{PROP:Hide},' ','Hide ') &' '& CHOOSE(~F{PROP:Disable},'','Disb ') & |
       !        ' Flw'& FldQ:Follows &' Prc'& FldQ:Precedes &'  Par'& FldQ:Parent   !find tab order DEBUG 
-      CASE FldQ:TypeNo
-      OF CREATE:Line
-         IF FldQ:AtWGet=0 THEN
-            FldQ:Type='LINE-Vert'
-            FldQ:Text='LINE VERTICAL' & CHOOSE(FldQ:AtHGet<0,' UP','') ; FldQ:Align='V '&FldQ:Align 
-         ELSIF FldQ:AtHGet=0 THEN
-            FldQ:Type='LINE-Horz'
-            FldQ:Text='LINE HORIZONTAL' & CHOOSE(FldQ:AtWGet<0,' LEFT','') ; FldQ:Align='H '&FldQ:Align
-         ELSE
-            FldQ:Type='LINE-Diag'
-            FldQ:Text='LINE DIAGONAL (' & FldQ:AtWGet &','& FldQ:AtHGet &')'
-         END
-      END        
       ADD(FieldQ,FldQ:FeqNo)
     END ; DO LoadParentsRtn
 LoadParentsRtn ROUTINE
