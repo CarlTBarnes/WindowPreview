@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 09-28-26.1217')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1104')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -79,7 +79,7 @@ COLOR:BoxItLine EQUATE(80FFh) !Orange
     INCLUDE('CBWndPreview.INC'),ONCE
     MAP
 ClaFeqName          PROCEDURE(LONG Feq),STRING,PRIVATE
-ClaColorEquate      PROCEDURE(LONG ColorRGB, BYTE Verbose=1),STRING,PRIVATE
+ClaColorEquate      PROCEDURE(LONG ColorRGB, BYTE Verbose=1, BYTE Color:Prefix=1),STRING,PRIVATE
 ClaColorEquate      PROCEDURE(*STRING InOutColorRGB, BYTE Verbose=1),PRIVATE
 ClaControlTypeName  PROCEDURE(LONG CtrlPropType),STRING,PRIVATE     !Pass FEQ{PROP:Type} to get name e.g. Button
 ClaCursorEquate     PROCEDURE(*STRING InOutCursorProp),PRIVATE
@@ -3963,7 +3963,7 @@ CN      LONG,AUTO
        Clr = ClaColorEquate(CN, Verbose) 
     END   
     RETURN
-ClaColorEquate       PROCEDURE(LONG CN, BYTE Verbose=1)!,STRING
+ClaColorEquate       PROCEDURE(LONG CN, BYTE Verbose=1, BYTE Color:Prefix=1)!,STRING
 Clr     STRING(80)
 RGB     GROUP,OVER(CN)
 R           BYTE
@@ -3976,16 +3976,21 @@ ClrHx   STRING(9)          !6 Hex Name  Space   16 Color Equates
 ColorEQT  STRING('000000Black 000080Maroon 008000Green 008080Olive 0080FFOrange 800000Navy 800080Purple 808000Teal 808080Gray C0C0C0Silver' &|
                  ' 0000FFRed 00FF00Lime 00FFFFYellow FF0000Blue FF00FFFuchsia FFFF00Aqua FFFFFFWhite' & |
                  ' E16941RoyalBlue B48246SteelBlue EBCE87SkyBlue 00DEEBEFSand 00D8E9ECLightSand 00E0E0E0LightGray ')                 
+Color:Pfx PSTRING('Color:')
     CODE
+    IF ~Color:Prefix THEN Color:Pfx=''.
     ClrHx = Hex8(CN, 6)
     IF CN=-1 THEN 
-       Clr='-1 Color:None' ; RETURN Clr
+       Clr=CHOOSE(~Verbose,'','-1 ') & Color:Pfx &'None' ; RETURN CLIP(Clr)
     ELSIF CN >= 0 THEN 
 !TODO use new Find function    
+       Clr=ClrHx    
        I=INSTRING(ClrHx[1:6],ColorEQT,1)    
-       IF I THEN 
-          E=INSTRING(' ',ColorEQT,1,I+6)
-          IF E THEN Clr=CLIP(Clr) &' Color:'& ColorEQT[I+6 : E].          
+       E=INSTRING(' ',ColorEQT,1,I+6)
+       IF I AND E THEN 
+          Clr=Color:Pfx & ColorEQT[I+6 : E]
+       ELSE          
+          Clr=ClrHx ; ClrHx=''
        END 
        IF Verbose THEN Clr=CLIP(Clr) &'  RGB('& RGB.R &','& RGB.G &',' & RGB.B &')  '& ClrHx.       
     ELSE !Negative color is System Color. Clarion Equate (80000001H) 80h and Index in Red Byte
@@ -3995,7 +4000,7 @@ ColorEQT  STRING('000000Black 000080Maroon 008000Green 008080Olive 0080FFOrange 
             'InactiveCaptionText','BtnHighlight',|
             '3DDkShadow','3DLight','InfoText','InfoBackground','Hotlight','GradientActiveCaption','GradientInactiveCaption',|
             'MenuHighlight','MenuBar','System:' & RGB.R ) 
-       Clr='Color:' & Clr 
+       Clr=Color:Pfx & Clr 
        IF Verbose THEN Clr=CLIP(Clr) &'  SysColor('& RGB.R &')  '& Hex8(CN).
     END 
     RETURN CLIP(Clr)
