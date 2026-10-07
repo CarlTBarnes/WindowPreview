@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 10-07-26.1115')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1120')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -100,8 +100,10 @@ HaltButton          PROCEDURE(LONG BtnFEQ)
 HelpCW              PROCEDURE(STRING HelpTxt, BYTE IsPROP=1),PRIVATE
 Hex8                PROCEDURE(LONG LongNum, SHORT Digits=0, BYTE AddH=1,BYTE SpaceAt5=0),STRING,PRIVATE
 Binary8             PROCEDURE(LONG  Num),STRING,PRIVATE
-HexEval             PROCEDURE(*string HexNumber, byte Digits),LONG    !Convert HEX String to LONG,PRIVATE
-DropListColor       PROCEDURE(LONG ListFEQ) !Color Drop Yellow (like Tip) to see better
+HexEval             PROCEDURE(*string HexNumber, byte Digits),LONG,PRIVATE    !Convert HEX String to LONG,PRIVATE
+DescOfBevel         PROCEDURE(LONG CtrlFEQ, LONG FeqTypeNo),STRING,PRIVATE
+DescOfBox           PROCEDURE(LONG CtrlFEQ, LONG FeqTypeNo),STRING,PRIVATE
+DropListColor       PROCEDURE(LONG ListFEQ),PRIVATE !Color Drop Yellow (like Tip) to see better
 EquateStringFind    PROCEDURE(STRING FindHex, *STRING EqtHexLabel),STRING,PRIVATE
 Equate7StringParse  PROCEDURE(Parse7QType Parse7Q, *STRING Prop7String),PRIVATE
 EquateXStringParse  PROCEDURE(Parse7QType P7Q, BYTE HexLen, *STRING CP, BYTE IsDecimal=0),PRIVATE
@@ -126,6 +128,8 @@ PopItem             PROCEDURE(STRING ItemTxt, <LONG Checked>, <LONG Disabled>,BY
 PopClean            PROCEDURE(STRING PopItemText),STRING,PRIVATE
 PopupBeside         PROCEDURE(LONG CtrlFEQ, STRING PopMenu),LONG,PRIVATE
 PopupUnder          PROCEDURE(LONG CtrlFEQ, STRING PopMenu),LONG,PRIVATE            
+Prop2               PROCEDURE(LONG CtrlFEQ, LONG PROPNumber, *PSTRING OutValue),BOOL,PRIVATE
+Prop2               PROCEDURE(LONG CtrlFEQ, LONG PROPNumber, *LONG OutValue),BOOL,PRIVATE    
 PropHuntLoadP7Q     PROCEDURE(Parse7QType OutP7Q, LONG FeqTypeNo),PRIVATE
 PropText1           PROCEDURE(LONG FEQ, LONG FType, *STRING AltText, BOOL QuoteIt=0),STRING,PRIVATE
 PropTFName          PROCEDURE(LONG CtrlFEQ, LONG PROPNumber, STRING TrueName,<STRING FalseName>),STRING,PRIVATE
@@ -1579,6 +1583,28 @@ PU  ANY
     GET(LcQ,F) ; GET(FieldQ,LcQ:F)
     ?ListF{PROP:Selected}=POINTER(FieldQ)
     POST(EVENT:ListPROPs) 
+!---------------------------------------
+DescOfBox PROCEDURE(LONG F, LONG FTypeNo)!, STRING !For BOX ELLIPSE PANEL 
+Clr1No PSTRING(12)
+FillNo PSTRING(12)
+LineWd PSTRING(8)
+Color1  CSTRING(64)
+Fill1   CSTRING(32)
+    CODE
+    IF PROP2(F,PROP:Color,Clr1No) AND Clr1No<>-1 THEN Color1=ClaColorEquate(Clr1No,0,0). !No Color() PANEL
+    IF PROP2(F,PROP:Fill ,FillNo) THEN Fill1 =ClaColorEquate(FillNo,0,0).
+    IF PROP2(F,PROP:LineWidth ,LineWd) AND LineWd<>0 THEN LineWd='('&LineWd&')' ELSE LineWd=''. !Box Ellipse
+    IF Clr1No=FillNo THEN Fill1=''.
+    IF Color1 AND LineWd THEN Color1=Color1& LineWd .
+    RETURN CLIP(LEFT(Color1&' '&Fill1&' '&DescOfBevel(F,FTypeNo)))          
+DescOfBevel PROCEDURE(LONG F, LONG FTypeNo) !Group Panel Region 
+Bev  LONG,DIM(3),AUTO
+B    BYTE,AUTO
+BMax BYTE
+    CODE
+    LOOP B=1 TO 3 ; Bev[B]=F{PROP:Bevel,B} ; IF Bev[B] THEN BMax=B. ; END 
+    IF ~BMax THEN RETURN ''.
+    RETURN 'Bevel('&Bev[1]&CHOOSE(BMax<2,'',','&Bev[2])&CHOOSE(BMax<3,'',','&Hex8(Bev[3],-2,1)) &')'   
 !---------------------------------------
 FmtNumSM PROCEDURE(STRING Numbr,BYTE pWidth)!,STRING  !To align SeeMore Numbers "sort of" add 2 spaces per blank
 LenNum SHORT
@@ -4410,6 +4436,18 @@ H LONG,AUTO
     GETPOSITION(CtrlFEQ,X,Y,,H)
     IF CtrlFEQ{PROP:InToolBar} THEN Y -= (0{PROP:ToolBar}){PROP:Height}.
     RETURN POPUP(PopMenu,X,Y+H+1,1) 
+!-----------------------------------------
+Prop2 PROCEDURE(LONG F, LONG PROP:No, *PSTRING OutValue)!,BOOL
+    CODE
+    OutValue=F{Prop:No}
+    RETURN CHOOSE(~OutValue,0,1)
+    
+Prop2 PROCEDURE(LONG F, LONG PROP:No, *LONG OutValue)!,BOOL
+PVal PSTRING(12),AUTO
+    CODE
+    PVal=F{Prop:No}
+    OutValue=PVal
+    RETURN CHOOSE(~PVal,0,1) !Blank returns Flase    
 !-----------------------------------------
 PropHuntLoadP7Q     PROCEDURE(Parse7QType OutP7Q, LONG FeqTypeNo)
 CPGroup  GROUP,PRE()
