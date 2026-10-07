@@ -3,7 +3,7 @@
 ! CBWndPreviewClass (c) Carl Barnes 2018-2021 - MIT License
 ! Download: https://github.com/CarlTBarnes/WindowPreview
 !------------------------------------------------------------
-VersionWndPrv EQUATE('WndPrv 10-07-26.1610')
+VersionWndPrv EQUATE('WndPrv 10-07-26.1635')
     INCLUDE('KEYCODES.CLW'),ONCE
     INCLUDE('EQUATES.CLW'),ONCE
 CREATE:Slider_MIA   EQUATE(36)      !Not defined in Equates until C11 sometime
@@ -1362,10 +1362,21 @@ TypeUpLo PSTRING(17)
              FldQ:Text = LEFT(CLIP(FldQ:Text) &' '& F{PROP:Tip})
          END
       OF CREATE:LIST OROF CREATE:COMBO  
-         FldQ:Text=LEFT(CLIP(FldQ:Text) &' '& QUOTE(F{PROP:Format}) &' '& F{PROP:From})
+         FldQ:Text=LEFT(FldTxt &' '& QUOTE(F{PROP:Format}) &' '& F{PROP:From})
          R=F{PROP:Drop} ; IF R THEN FldQ:Type=CLIP(FldQ:Type)&'-Drop ' & R.
-      OF CREATE:Entry OROF CREATE:Spin OROF CREATE:SString
-         FldQ:Text=CLIP(FldQ:Text) !in Value column-->  &' = '& LEFT(F{PROP:ScreenText})
+      OF CREATE:Entry
+         FldQ:Text=FldTxt&'  '&PropTFName(F,PROP:ReadOnly,' ReadOnly')&PropTFName(F,PROP:REQ,' REQ')&PropTFName(F,PROP:UPR,' UPR')&PropTFName(F,PROP:Cap,' CAP')&PropTFName(F,PROP:Mask,' MASK')
+      OF CREATE:Text OROF CREATE:SingleLine
+         FldQ:Text=PropTFName(F,PROP:ReadOnly,'ReadOnly ')&PropTFName(F,PROP:REQ,'REQ ')&PropTFName(F,PROP:UPR,'UPR ')
+      OF CREATE:Spin
+         FldQ:Text=FldTxt&'  ['& F{PROP:Range,1}&'-'&F{PROP:Range,2}&' by '&F{PROP:Step} &']'
+      OF CREATE:Sheet
+         FldTxt='Sheet '&F{PROP:NumTabs}&' Tabs '
+         LOOP R=1 TO 5 ; P = CHOOSE(R,PROP:NoSheet,PROP:Wizard,PROP:Below,PROP:Left,PROP:Right,0) ; IF ~R THEN BREAK.
+            FldTxt=FldTxt&PropTFName(F,P,CHOOSE(R,'NoSheet ','Wizard ','Below ','Left ','Right '))
+         END ; FldQ:Text=FldTxt
+      OF CREATE:Image
+         ClaIconEquate(FldQ:Text)
       OF CREATE:Line
          IF    FldQ:AtWGet=0 THEN FldTxt='Line Vertical '  & FldQ:AtHGet ; FldQ:Align='LV'
          ELSIF FldQ:AtHGet=0 THEN FldTxt='Line Horizontal '& FldQ:AtWGet ; FldQ:Align='LH'
