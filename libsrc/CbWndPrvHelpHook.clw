@@ -1,4 +1,5 @@
   MEMBER
+  PRAGMA ('define(init_priority=>19)')      !FOr the CONSTRUC of Auto Init I want it to Run last
 HlpEngMaxIndex  EQUATE(16)          !Max SYSTEM{PROP:HelpEngine,Index},  Undocumented found by simple tests that {,17} fails
 extCHEK         EQUATE('CHEK')      !EXT dded to Chm so ChmCHEK or HlpCHEK or any XxxxCHEK
 
@@ -279,4 +280,19 @@ ThisWndPrvCls   &CBWndPreviewClass
   END
   WndPrvGrp.WndPrvCls.Reflection()
   RETURN 
- 
+!=====================================================================================
+!October 2026 - New Idea this Class with a CONSTRUCT that Does the Hook.Init().
+!=====================================================================================
+CbWndPrvHelpHook_AutoInit_Class.CONSTRUCT PROCEDURE()   !PRAGMA ('define(init_priority=>19)') at top to run last
+cDbg CSTRING(512)
+    CODE
+    SELF.WndPrvHelpHookCls &= NEW(CbWndPrvHelpHookClass)  
+    IF ~SELF.WndPrvHelpHookCls.IsInited THEN
+       SELF.InitFailCode = SELF.WndPrvHelpHookCls.Init('YourHelp.CHM')  !Help file does NOT need to exist, but need a Name
+       IF SELF.InitFailCode THEN 
+          cDbg='CbWndPrvHelpHook_AutoInit_Class.WndPrvHelpHookCls failed reason ' & SELF.InitFailCode ; OutDbg(CDbg)
+       ELSE          
+       !   Message('CbWndPrvHelpHook_AutoInit_Class.WndPrvHelpHookCls returned good code ' & SELF.InitFailCode  &' |So Ctrl+Shift+F1 will not work' )
+       END
+    END    
+    RETURN

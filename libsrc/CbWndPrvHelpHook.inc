@@ -3,7 +3,9 @@
 ! This uses that method to make the CBWndPreview class available in all windows by just adding code in frame
 !-------------------------------------------------------------------------------------------
 ! Disclaimer
-! Version 0.1 so YMMV
+! 2019      - Version 0.1 made for CIDC 2019 and worked
+! 2026-10   - Version 0.2 add AutoInit Class for Scratch programs that CONSTRUCT calls Init, 2 lines of code
+!
 ! The HelpEngine documentation is limited to:
 !       LibSrc CWHELP.INT file 
 !       Property.CLW new line PROP:HelpEngine         EQUATE (7D40H) ! array[integer]
@@ -84,5 +86,22 @@ HelpCmd         PROCEDURE(UNSIGNED _HWnd, <CONST *CSTRING _HelpFile>, UNSIGNED _
 
               END
 
-_EndOfInclude_
+!====================================================================================
+!October 2026 - New Idea that at the Top of the Program simply declare this Class with 
+!               a CONSTRUCT that Does the Hook.Init(). 
+!               Experimental. Made for small Scratch programs.
+!------------------------------
+  OMIT('##### ** Add to AutoInit Class to a CwProj ** #####')
+    INCLUDE('CbWndPrvHelpHook.INC'),ONCE        !Include the CB Window Preview AutoInit Help Hook Class
+! n/a Help2WndPreviewCls    &CbWndPrvHelpHookClass            !Old Not AutoInit way with &REF
+Help2WndPreviewAutoInitCls  CbWndPrvHelpHook_AutoInit_Class   !Declare AutoInit globally, is NOT a &REF
+    !This will allow Ctrl+Shift+F1 to see all the controls   
+  !End of OMIT('##### ** Add to AutoInit Class to a CwProj ** #####' 
+!====================================================================================
+CbWndPrvHelpHook_AutoInit_Class CLASS,TYPE,MODULE('CbWndPrvHelpHook.clw'), LINK('CbWndPrvHelpHook.clw',1),DLL(0)
+CONSTRUCT           PROCEDURE()                !New and .Init  WndPrvHelpHookCls
+WndPrvHelpHookCls   &CbWndPrvHelpHookClass
+InitFailCode        LONG        !Return Value from  CbWndPrvHelpHookClass.Init
+            END
 
+_EndOfInclude_
